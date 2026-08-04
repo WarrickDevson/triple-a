@@ -1,0 +1,6 @@
+@KPW.Api_HostAddress = http://localhost:5057
+
+GET {{KPW.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

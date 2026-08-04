@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="KPW Companion — guided pet rehabilitation for owners and veterinary physiotherapists."
+    />
+    <meta name="theme-color" content="#0C3C54" />
+    <meta property="og:title" content="KPW Companion" />
+    <meta
+      property="og:description"
+      content="Guided rehabilitation for pets. Choose the owner app or physio portal to get started."
+    />
+    <meta property="og:type" content="website" />
+    <title>KPW Companion</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Source+Sans+3:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <div class="page__wash" aria-hidden="true"></div>
+      <div class="page__pattern" aria-hidden="true"></div>
+
+      <section class="hero" aria-labelledby="brand-title">
+        <div class="hero__mark" aria-hidden="true">
+          <img src="/favicon.svg" alt="" width="52" height="52" />
+        </div>
+
+        <h1 id="brand-title" class="hero__brand">KPW Companion</h1>
+        <p class="hero__headline">Rehabilitation that moves with your pet</p>
+        <p class="hero__support">
+          Guided exercise programmes, progress tracking, and clinician feedback — in one place.
+        </p>
+
+        <nav class="cta-group" aria-label="Choose your application">
+          <a class="cta cta--primary" href="/app/" aria-label="Open the KPW Companion owner app">
+            <svg class="cta__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="5" y="2" width="14" height="20" rx="2" />
+              <path d="M12 18h.01" stroke-linecap="round" />
+            </svg>
+            Open Owner App
+          </a>
+          <a class="cta cta--secondary" href="/portal/" aria-label="Open the KPW Companion physio portal">
+            <svg class="cta__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="2" y="3" width="20" height="14" rx="2" />
+              <path d="M8 21h8M12 17v4" stroke-linecap="round" />
+            </svg>
+            Open Physio Portal
+          </a>
+        </nav>
+      </section>
+    </main>
+  </body>
+</html>

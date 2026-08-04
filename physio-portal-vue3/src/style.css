@@ -1,0 +1,195 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand palette — KPW navy / sage */
+  --color-navy: #0a1a2e;
+  --color-navy-light: #1a2b3c;
+  --color-sage: #6b7a4d;
+  --color-sage-light: #7a8a5c;
+  --color-sage-muted: #e8ede0;
+
+  /* Semantic aliases */
+  --color-primary-dark: #0a1a2e;
+  --color-primary-light: #1a2b3c;
+  --color-accent: #6b7a4d;
+  --color-accent-amber: #c9a227;
+  --color-success-green: #5a8f5e;
+  --color-neutral-dark: #1e2328;
+  --color-neutral-muted: #6b7280;
+  --color-neutral-light: #f5f6f4;
+  --color-neutral-grey: #e5e7e3;
+  --color-surface: #f8f9f7;
+  --color-card: #ffffff;
+  --color-alert-red: #c53030;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-script: "Caveat", cursive;
+
+  --radius-card: 0.875rem;
+  --shadow-card: 0 1px 3px rgb(10 26 46 / 0.06), 0 8px 24px rgb(10 26 46 / 0.08);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  color: var(--color-neutral-dark);
+  background-color: var(--color-surface);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+a[href] {
+  cursor: pointer;
+}
+
+/* ── Portal cards ── */
+.portal-card {
+  border-radius: var(--radius-card);
+  border: 1px solid rgb(10 26 46 / 0.06);
+  background: var(--color-card);
+  box-shadow: var(--shadow-card);
+}
+
+.portal-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.portal-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-navy);
+}
+
+.portal-card-link {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-sage);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.portal-card-link:hover {
+  color: var(--color-navy);
+}
+
+/* ── Status badges ── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.status-badge--improving {
+  background: var(--color-sage-muted);
+  color: var(--color-sage);
+}
+
+.status-badge--stable {
+  background: #f0f1ee;
+  color: var(--color-neutral-muted);
+}
+
+.status-badge--at-risk {
+  background: #fef3e2;
+  color: #b45309;
+}
+
+/* ── Sidebar nav ── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.72);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-item:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+}
+
+.nav-item--active {
+  background: var(--color-sage);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ── Quick stat tiles ── */
+.quick-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  border-radius: var(--radius-card);
+  border: 1px solid rgb(10 26 46 / 0.06);
+  background: var(--color-card);
+  box-shadow: var(--shadow-card);
+  padding: 1rem 1.25rem;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.quick-stat:hover {
+  border-color: rgb(107 122 77 / 0.25);
+  box-shadow: 0 4px 16px rgb(10 26 46 / 0.1);
+}
+
+/* ── Empty states ── */
+.empty-state {
+  border-radius: 0.75rem;
+  border: 1px dashed rgb(10 26 46 / 0.15);
+  background: rgb(255 255 255 / 0.7);
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+/* ── Legacy aliases (keep existing views compiling) ── */
+.panel {
+  border-radius: var(--radius-card);
+  border: 1px solid rgb(10 26 46 / 0.06);
+  background: var(--color-card);
+  box-shadow: var(--shadow-card);
+}
+
+.stat-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  border: 1px solid rgb(10 26 46 / 0.06);
+  background: linear-gradient(145deg, #ffffff 0%, #f3f5f2 100%);
+  padding: 1.25rem;
+}
+
+.stat-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--color-sage);
+}
+
+/* ── Decorative pattern (login / surfaces) ── */
+.portal-pattern {
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 35c0-8 6-14 14-14s14 6 14 14-6 14-14 14' fill='none' stroke='%230a1a2e' stroke-width='1.5'/%3E%3Ccircle cx='28' cy='32' r='2' fill='%230a1a2e'/%3E%3Ccircle cx='36' cy='32' r='2' fill='%230a1a2e'/%3E%3C/svg%3E");
+}

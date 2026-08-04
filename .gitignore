@@ -1,0 +1,38 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Node
+node_modules/
+dist/
+
+# Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDE
+.idea/
+*.iml
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Google Cloud credentials
+*-sa.json
+secrets/
+gcp-credentials.json
+devson-development-*.json
+**/KPW.Api/*-*.json
+
+# OS
+Thumbs.db
+.DS_Store
+/publish

@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="KPW.Api/KPW.Api.csproj" />
+  <Project Path="KPW.Application/KPW.Application.csproj" />
+  <Project Path="KPW.Domain/KPW.Domain.csproj" />
+  <Project Path="KPW.Infrastructure/KPW.Infrastructure.csproj" />
+</Solution>

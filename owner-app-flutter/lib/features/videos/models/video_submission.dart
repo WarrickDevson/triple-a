@@ -1,0 +1,43 @@
+class VideoSubmission {
+  const VideoSubmission({
+    required this.videoSubmissionId,
+    required this.petId,
+    required this.petName,
+    required this.exerciseId,
+    required this.exerciseTitle,
+    required this.rawVideoStorageUrl,
+    this.processedVideoStreamingUrl,
+    required this.processingStatus,
+    required this.isReviewed,
+    this.physioFeedbackNotes,
+    required this.createdDate,
+  });
+
+  final int videoSubmissionId;
+  final int petId;
+  final String petName;
+  final int exerciseId;
+  final String exerciseTitle;
+  final String rawVideoStorageUrl;
+  final String? processedVideoStreamingUrl;
+  final String processingStatus;
+  final bool isReviewed;
+  final String? physioFeedbackNotes;
+  final DateTime createdDate;
+
+  factory VideoSubmission.fromJson(Map<String, dynamic> json) {
+    return VideoSubmission(
+      videoSubmissionId: json['videoSubmissionId'] as int,
+      petId: json['petId'] as int,
+      petName: json['petName'] as String,
+      exerciseId: json['exerciseId'] as int,
+      exerciseTitle: json['exerciseTitle'] as String,
+      rawVideoStorageUrl: json['rawVideoStorageUrl'] as String,
+      processedVideoStreamingUrl: json['processedVideoStreamingUrl'] as String?,
+      processingStatus: json['processingStatus'] as String,
+      isReviewed: json['isReviewed'] as bool,
+      physioFeedbackNotes: json['physioFeedbackNotes'] as String?,
+      createdDate: DateTime.parse(json['createdDate'] as String),
+    );
+  }
+}

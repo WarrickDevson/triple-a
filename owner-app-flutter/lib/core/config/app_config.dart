@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 enum AppEnvironment {
   development,
   staging,
@@ -17,24 +19,30 @@ class AppConfig {
 
   static AppConfig fromEnvironment() {
     const envName = String.fromEnvironment('ENV', defaultValue: 'development');
+    const customBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+
     switch (envName) {
       case 'staging':
-        return const AppConfig(
+        return AppConfig(
           environment: AppEnvironment.staging,
-          apiBaseUrl: 'https://kpw.devson.co.za',
+          apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : 'https://kpw.devson.co.za',
           appName: 'Triple A (Staging)',
         );
       case 'production':
-        return const AppConfig(
+        return AppConfig(
           environment: AppEnvironment.production,
-          apiBaseUrl: 'https://api.kpw.movewell',
+          apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : 'https://api.kpw.movewell',
           appName: 'Triple A',
         );
       case 'development':
       default:
-        return const AppConfig(
+        String defaultDevUrl = 'http://localhost:5057';
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+          defaultDevUrl = 'http://10.0.2.2:5057';
+        }
+        return AppConfig(
           environment: AppEnvironment.development,
-          apiBaseUrl: 'https://localhost:7112',
+          apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : defaultDevUrl,
           appName: 'Triple A (Dev)',
         );
     }

@@ -50,8 +50,10 @@ public static class DependencyInjection
     private static void RegisterVideoServices(IServiceCollection services, IConfiguration configuration)
     {
         var videoProvider = configuration.GetSection(VideoOptions.SectionName).Get<VideoOptions>()?.Provider ?? "Local";
+        var gcpCredsEnv = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+        var hasGcpCreds = !string.IsNullOrWhiteSpace(gcpCredsEnv) && File.Exists(gcpCredsEnv);
 
-        if (videoProvider.Equals("Google", StringComparison.OrdinalIgnoreCase))
+        if (videoProvider.Equals("Google", StringComparison.OrdinalIgnoreCase) && hasGcpCreds)
         {
             services.AddSingleton<GcsVideoStorage>();
             services.AddSingleton<IVideoStorage>(sp => sp.GetRequiredService<GcsVideoStorage>());

@@ -58,7 +58,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
         handler.next(options);
       },
       onError: (error, handler) async {
-        if (error.response?.statusCode != 401) {
+        final path = error.requestOptions.path;
+        final isAuthEndpoint = path.contains('/api/auth/login') ||
+            path.contains('/api/auth/change-password') ||
+            path.contains('/api/auth/refresh') ||
+            path.contains('/api/auth/forgot-password') ||
+            path.contains('/api/auth/reset-password');
+
+        if (error.response?.statusCode != 401 || isAuthEndpoint) {
           return handler.next(error);
         }
 
@@ -68,20 +75,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
           return handler.next(error);
         }
 
+        bool refreshSucceeded = false;
         try {
           final response = await Dio(BaseOptions(baseUrl: _config.apiBaseUrl)).post<Map<String, dynamic>>(
             '/api/auth/refresh',
             data: {'refreshToken': refreshToken},
           );
           await applyAuth(AuthResponse.fromJson(response.data!));
-
-          final request = error.requestOptions;
-          request.headers['Authorization'] = 'Bearer ${_tokenStorage.accessToken}';
-          final retryResponse = await dio.fetch(request);
-          return handler.resolve(retryResponse);
+          refreshSucceeded = true;
         } catch (_) {
           await logout();
           return handler.next(error);
+        }
+
+        if (refreshSucceeded) {
+          try {
+            final request = error.requestOptions;
+            request.headers['Authorization'] = 'Bearer ${_tokenStorage.accessToken}';
+            final retryResponse = await dio.fetch(request);
+            return handler.resolve(retryResponse);
+          } catch (e) {
+            return handler.next(e is DioException ? e : error);
+          }
         }
       },
     ));

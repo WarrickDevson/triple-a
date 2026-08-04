@@ -12,6 +12,7 @@ import '../../pets/models/pet.dart';
 import '../../pets/providers/pets_provider.dart';
 import '../../pets/screens/pet_detail_screen.dart';
 import '../../reminders/providers/reminders_provider.dart';
+import '../../reminders/screens/reminders_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, this.embedded = false});
@@ -41,7 +42,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((s) => s.user));
     final petsState = ref.watch(petsProvider);
     final appointmentsState = ref.watch(appointmentsProvider);
     final reminderCount = ref.watch(remindersProvider).reminders.length;
@@ -239,22 +240,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
           if (reminderCount > 0) ...[
             const SizedBox(height: 16),
-            SectionCard(
-              child: Row(
-                children: [
-                  const Icon(Icons.notifications_outlined, color: AppColors.sage),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      '$reminderCount reminder${reminderCount == 1 ? '' : 's'} due soon',
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy),
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RemindersScreen()),
+                );
+              },
+              child: SectionCard(
+                child: Row(
+                  children: [
+                    const Icon(Icons.notifications_outlined, color: AppColors.sage),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '$reminderCount reminder${reminderCount == 1 ? '' : 's'} due soon',
+                        style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy),
+                      ),
                     ),
-                  ),
-                ],
+                    const Icon(Icons.chevron_right, color: AppColors.neutralMuted),
+                  ],
+                ),
               ),
             ),
           ],
         ],
+      ),
+    );
+
+    final notificationButton = IconButton(
+      onPressed: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const RemindersScreen()),
+        );
+      },
+      icon: Badge(
+        isLabelVisible: reminderCount > 0,
+        label: Text('$reminderCount'),
+        child: const Icon(Icons.notifications_outlined, color: AppColors.navy),
       ),
     );
 
@@ -267,14 +289,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 title: 'Dashboard',
                 showLogo: true,
                 actions: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: Badge(
-                      isLabelVisible: reminderCount > 0,
-                      label: Text('$reminderCount'),
-                      child: const Icon(Icons.notifications_outlined, color: AppColors.navy),
-                    ),
-                  ),
+                  notificationButton,
                 ],
               ),
               Expanded(child: content),
@@ -287,6 +302,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return AppPageScaffold(
       title: 'Dashboard',
       showBrand: true,
+      actions: [
+        notificationButton,
+      ],
       body: content,
     );
   }

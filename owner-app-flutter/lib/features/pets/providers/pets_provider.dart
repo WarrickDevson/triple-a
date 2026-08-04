@@ -85,7 +85,7 @@ class PetsNotifier extends StateNotifier<PetsState> {
 }
 
 final petsProvider = StateNotifierProvider<PetsNotifier, PetsState>((ref) {
-  final auth = ref.watch(authProvider);
+  final userId = ref.watch(authProvider.select((s) => s.user?.userId));
   final authNotifier = ref.read(authProvider.notifier);
-  return PetsNotifier(authNotifier.client, auth.user?.userId);
+  return PetsNotifier(authNotifier.client, userId);
 });

@@ -59,11 +59,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("DevCors", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5287",
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "http://localhost:8068")
+        policy.SetIsOriginAllowed(origin =>
+                {
+                    var host = new Uri(origin).Host;
+                    return host == "localhost" || host == "127.0.0.1";
+                })
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -126,18 +126,26 @@ app.Run();
 
 static void ConfigureGoogleApplicationCredentials(string contentRootPath)
 {
-    if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS")))
+    var envPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+    if (!string.IsNullOrWhiteSpace(envPath))
     {
-        return;
+        var fullEnvPath = Path.IsPathRooted(envPath) ? envPath : Path.Combine(contentRootPath, envPath);
+        if (File.Exists(fullEnvPath))
+        {
+            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", Path.GetFullPath(fullEnvPath));
+            return;
+        }
+        else
+        {
+            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", null);
+        }
     }
 
     var credentialsPath = Path.Combine(contentRootPath, GcpCredentialsFileName);
-    if (!File.Exists(credentialsPath))
+    if (File.Exists(credentialsPath))
     {
-        return;
+        Environment.SetEnvironmentVariable(
+            "GOOGLE_APPLICATION_CREDENTIALS",
+            Path.GetFullPath(credentialsPath));
     }
-
-    Environment.SetEnvironmentVariable(
-        "GOOGLE_APPLICATION_CREDENTIALS",
-        Path.GetFullPath(credentialsPath));
 }

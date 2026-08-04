@@ -34,8 +34,15 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
+    const url = originalRequest?.url || ''
+    const isAuthEndpoint =
+      url.includes('/api/auth/login') ||
+      url.includes('/api/auth/change-password') ||
+      url.includes('/api/auth/refresh') ||
+      url.includes('/api/auth/forgot-password') ||
+      url.includes('/api/auth/reset-password')
 
-    if (error.response?.status === 401 && refreshToken && !originalRequest._retry) {
+    if (error.response?.status === 401 && refreshToken && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true
       try {
         const { data } = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
@@ -49,7 +56,7 @@ apiClient.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       onUnauthorized?.()
     }
 

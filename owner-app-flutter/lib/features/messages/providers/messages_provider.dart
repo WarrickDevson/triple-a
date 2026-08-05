@@ -23,10 +23,12 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
   final Dio _dio;
   int? _petId;
 
-  Future<void> loadForPet(int petId, {bool force = false}) async {
+  Future<void> loadForPet(int petId, {bool force = false, bool silent = false}) async {
     if (_petId == petId && state.messages.isNotEmpty && !force) return;
     _petId = petId;
-    state = const MessagesState(isLoading: true);
+    if (!silent && (state.messages.isEmpty || force)) {
+      state = MessagesState(messages: state.messages, isLoading: state.messages.isEmpty);
+    }
     try {
       final response = await _dio.get<List<dynamic>>('/api/pets/$petId/messages');
       final messages = response.data!
@@ -34,7 +36,9 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
           .toList();
       state = MessagesState(messages: messages);
     } on DioException {
-      state = const MessagesState(error: 'Unable to load messages.');
+      if (!silent) {
+        state = MessagesState(messages: state.messages, error: 'Unable to load messages.');
+      }
     }
   }
 

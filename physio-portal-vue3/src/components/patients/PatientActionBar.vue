@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import {
   ClipboardList,
   Dumbbell,
@@ -10,15 +11,19 @@ import {
 } from '@lucide/vue'
 import { RouterLink } from 'vue-router'
 
-const actions = [
-  { label: 'Add Assessment', icon: Stethoscope, route: 'treatment-plans' },
-  { label: 'Build / Edit Plan', icon: ClipboardList, route: 'treatment-plans' },
+const props = defineProps<{
+  petId?: number
+}>()
+
+const actions = computed(() => [
+  { label: 'Add Assessment', icon: Stethoscope, route: 'treatment-plans', params: props.petId ? { petId: props.petId } : undefined },
+  { label: 'Build / Edit Plan', icon: ClipboardList, route: 'treatment-plans', params: props.petId ? { petId: props.petId } : undefined },
   { label: 'Exercise Library', icon: Dumbbell, route: 'exercises' },
-  { label: 'Video Review', icon: Video, route: 'progress' },
+  { label: 'Video Review', icon: Video, route: 'progress', params: props.petId ? { petId: props.petId } : undefined },
   { label: 'Reports', icon: FileBarChart, route: 'reports' },
-  { label: 'Message Owner', icon: MessageSquare, route: 'messages' },
+  { label: 'Message Owner', icon: MessageSquare, route: props.petId ? 'message-thread' : 'messages', params: props.petId ? { petId: props.petId } : undefined },
   { label: 'Share Plan', icon: Share2, route: 'documents' },
-]
+])
 </script>
 
 <template>
@@ -26,7 +31,7 @@ const actions = [
     <RouterLink
       v-for="action in actions"
       :key="action.label"
-      :to="{ name: action.route }"
+      :to="action.params ? { name: action.route, params: action.params } : { name: action.route }"
       class="flex flex-col items-center gap-2 rounded-xl border border-neutral-grey/80 bg-surface p-3 text-center transition-colors hover:border-sage/30 hover:bg-sage-muted/30"
     >
       <component :is="action.icon" class="h-5 w-5 text-sage" :stroke-width="1.75" />

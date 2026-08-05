@@ -29,14 +29,24 @@ internal static class MessageThreadService
         int petId,
         CancellationToken cancellationToken)
     {
-        var pet = await dbContext.Set<Pet>()
+        var existingThread = await dbContext.Set<MessageThread>()
             .AsNoTracking()
-            .FirstAsync(p => p.PetId == petId, cancellationToken);
+            .FirstOrDefaultAsync(t => t.PetId == petId, cancellationToken);
+
+        var pet = await dbContext.Set<Pet>()
+            .Include(p => p.Owner)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.PetId == petId, cancellationToken);
+
+        if (pet is null)
+        {
+            throw new KeyNotFoundException("Pet not found.");
+        }
 
         if (currentUser.Role is UserRole.Physio or UserRole.SysAdmin)
         {
             var physioId = currentUser.Role == UserRole.SysAdmin
-                ? await ResolvePhysioForPetAsync(dbContext, petId, cancellationToken)
+                ? (existingThread?.PhysioId ?? await ResolvePhysioForPetAsync(dbContext, pet, cancellationToken))
                 : currentUser.UserId!.Value;
 
             return (pet.OwnerId, physioId);
@@ -49,7 +59,7 @@ internal static class MessageThreadService
                 throw new UnauthorizedAccessException("You can only message about your own pets.");
             }
 
-            var physioId = await ResolvePhysioForPetAsync(dbContext, petId, cancellationToken);
+            var physioId = existingThread?.PhysioId ?? await ResolvePhysioForPetAsync(dbContext, pet, cancellationToken);
             return (pet.OwnerId, physioId);
         }
 
@@ -85,20 +95,63 @@ internal static class MessageThreadService
 
     private static async Task<int> ResolvePhysioForPetAsync(
         DbContext dbContext,
-        int petId,
+        Pet pet,
         CancellationToken cancellationToken)
     {
         var activeProgram = await dbContext.Set<RehabProgram>()
-            .Where(p => p.PetId == petId && p.IsActive)
+            .Where(p => p.PetId == pet.PetId && p.IsActive)
             .OrderByDescending(p => p.StartDate)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (activeProgram is null)
+        if (activeProgram is not null)
         {
-            throw new InvalidOperationException(
-                "No active rehabilitation programme found for this pet. Please contact your physiotherapist.");
+            return activeProgram.PhysioId;
         }
 
-        return activeProgram.PhysioId;
+        var anyProgram = await dbContext.Set<RehabProgram>()
+            .Where(p => p.PetId == pet.PetId)
+            .OrderByDescending(p => p.StartDate)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (anyProgram is not null)
+        {
+            return anyProgram.PhysioId;
+        }
+
+        var appointment = await dbContext.Set<Appointment>()
+            .Where(a => a.PetId == pet.PetId)
+            .OrderByDescending(a => a.ScheduledDateTime)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (appointment is not null)
+        {
+            return appointment.PhysioId;
+        }
+
+        if (pet.Owner?.ClinicId is not null)
+        {
+            var clinicPhysio = await dbContext.Set<User>()
+                .Where(u => u.ClinicId == pet.Owner.ClinicId && u.UserRole == UserRole.Physio && u.IsActive)
+                .Select(u => (int?)u.UserId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (clinicPhysio.HasValue)
+            {
+                return clinicPhysio.Value;
+            }
+        }
+
+        var fallbackPhysio = await dbContext.Set<User>()
+            .Where(u => u.UserRole == UserRole.Physio && u.IsActive)
+            .Select(u => (int?)u.UserId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (fallbackPhysio.HasValue)
+        {
+            return fallbackPhysio.Value;
+        }
+
+        throw new InvalidOperationException(
+            "No physiotherapist assigned to this pet or clinic. Please contact support.");
     }
 }

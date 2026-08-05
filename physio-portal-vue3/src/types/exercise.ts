@@ -34,6 +34,7 @@ export interface CreateRehabProgramExercise {
   repetitions: number
   sets: number
   frequencyPerDay: number
+  phaseId?: number
 }
 
 export interface CreateRehabProgramRequest {
@@ -52,6 +53,7 @@ export interface RehabProgramExercise {
   repetitions: number
   sets: number
   frequencyPerDay: number
+  phaseId?: number
   shortDescription: string | null
   safetyNotes: string | null
   commonMistakes: string | null

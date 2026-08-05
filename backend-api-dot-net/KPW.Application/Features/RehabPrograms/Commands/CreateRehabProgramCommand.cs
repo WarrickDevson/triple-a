@@ -33,14 +33,17 @@ public class CreateRehabProgramCommandHandler : IRequestHandler<CreateRehabProgr
             _dbContext, _currentUserService, request.PetId, cancellationToken);
 
         var exerciseIds = request.Exercises.Select(e => e.ExerciseId).Distinct().ToList();
-        var existingExercises = await _dbContext.Set<Exercise>()
-            .Where(e => exerciseIds.Contains(e.ExerciseId))
-            .Select(e => e.ExerciseId)
-            .ToListAsync(cancellationToken);
-
-        if (existingExercises.Count != exerciseIds.Count)
+        if (exerciseIds.Count > 0)
         {
-            throw new InvalidOperationException("One or more exercises were not found.");
+            var existingExercises = await _dbContext.Set<Exercise>()
+                .Where(e => exerciseIds.Contains(e.ExerciseId))
+                .Select(e => e.ExerciseId)
+                .ToListAsync(cancellationToken);
+
+            if (existingExercises.Count != exerciseIds.Count)
+            {
+                throw new InvalidOperationException("One or more exercises were not found.");
+            }
         }
 
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);

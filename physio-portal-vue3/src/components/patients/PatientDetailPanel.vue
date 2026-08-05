@@ -112,7 +112,7 @@ const activeTab = ref<(typeof tabs)[number]['id']>('overview')
             description="Clinical notes and session observations will appear here."
           />
 
-          <PatientActionBar v-if="activeTab === 'overview'" />
+          <PatientActionBar v-if="activeTab === 'overview'" :pet-id="patient.petId" />
         </template>
       </div>
     </template>

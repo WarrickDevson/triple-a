@@ -26,7 +26,7 @@ public class GetRemindersQueryHandler : IRequestHandler<GetRemindersQuery, IRead
     {
         if (_currentUserService.Role != UserRole.Owner)
         {
-            throw new UnauthorizedAccessException("Only pet owners can view reminders.");
+            return new List<ReminderDto>();
         }
 
         var ownerId = _currentUserService.UserId!.Value;

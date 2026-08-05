@@ -4,18 +4,25 @@ import { RouterLink } from 'vue-router'
 import MessageComposer from './MessageComposer.vue'
 import { useAuthStore } from '../../store/auth'
 import type { Message, MessageThread } from '../../types/message'
+import type { Pet } from '../../types/pet'
 
 const props = defineProps<{
   thread: MessageThread | null
+  patient?: Pet | null
+  selectedPetId?: number | null
   messages: Message[]
   loading?: boolean
 }>()
 
 const auth = useAuthStore()
 
-const headerTitle = computed(() =>
-  props.thread ? `${props.thread.petName} / Owner: ${props.thread.ownerName}` : 'Select a conversation',
-)
+const activePetId = computed(() => props.thread?.petId ?? props.patient?.petId ?? props.selectedPetId ?? null)
+
+const headerTitle = computed(() => {
+  if (props.thread) return `${props.thread.petName} / Owner: ${props.thread.ownerName}`
+  if (props.patient) return `${props.patient.petName} / Owner: ${props.patient.ownerName}`
+  return 'Select a conversation'
+})
 
 function isOutgoing(message: Message) {
   return message.senderUserId === auth.user?.userId
@@ -47,24 +54,27 @@ function scrollToBottom() {
     <div class="flex items-center justify-between border-b border-neutral-grey/80 px-4 py-3">
       <div>
         <h2 class="text-sm font-bold text-navy">{{ headerTitle }}</h2>
-        <p v-if="thread" class="text-xs text-success-green">Online</p>
+        <p v-if="activePetId" class="text-xs text-success-green">Online</p>
       </div>
       <RouterLink
-        v-if="thread"
-        :to="{ name: 'patient-detail', params: { petId: thread.petId } }"
+        v-if="activePetId"
+        :to="{ name: 'patient-detail', params: { petId: activePetId } }"
         class="text-xs font-semibold text-sage hover:text-navy"
       >
         Patient Profile
       </RouterLink>
     </div>
 
-    <div v-if="!thread" class="flex flex-1 items-center justify-center p-8">
+    <div v-if="!activePetId" class="flex flex-1 items-center justify-center p-8">
       <p class="text-sm text-neutral-muted">Select a conversation to start messaging.</p>
     </div>
 
     <template v-else>
       <div class="flex-1 space-y-3 overflow-y-auto p-4">
         <div v-if="loading" class="text-center text-sm text-neutral-muted">Loading messages...</div>
+        <div v-else-if="messages.length === 0" class="py-12 text-center text-sm text-neutral-muted">
+          No messages in this conversation yet. Type below to send a message.
+        </div>
         <div
           v-for="message in messages"
           :key="message.messageId"

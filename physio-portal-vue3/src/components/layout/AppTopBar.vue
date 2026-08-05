@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Bell, CircleHelp, Search } from '@lucide/vue'
 import { useAuthStore } from '../../store/auth'
+import { useMessagesStore } from '../../store/messages'
 
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
+const messagesStore = useMessagesStore()
 
 const pageTitle = computed(() => (route.meta.title as string) ?? 'Dashboard')
+
+function goToMessages() {
+  router.push({ name: 'messages' })
+}
 </script>
 
 <template>
@@ -27,10 +34,17 @@ const pageTitle = computed(() => (route.meta.title as string) ?? 'Dashboard')
       <div class="ml-auto flex items-center gap-2">
         <button
           type="button"
-          class="flex h-10 w-10 items-center justify-center rounded-full text-neutral-muted transition-colors hover:bg-navy/5 hover:text-navy"
+          class="relative flex h-10 w-10 items-center justify-center rounded-full text-neutral-muted transition-colors hover:bg-navy/5 hover:text-navy"
           aria-label="Notifications"
+          @click="goToMessages"
         >
           <Bell class="h-5 w-5" :stroke-width="1.75" />
+          <span
+            v-if="messagesStore.totalUnreadCount > 0"
+            class="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-amber px-1 text-[9px] font-bold text-navy"
+          >
+            {{ messagesStore.totalUnreadCount }}
+          </span>
         </button>
         <button
           type="button"

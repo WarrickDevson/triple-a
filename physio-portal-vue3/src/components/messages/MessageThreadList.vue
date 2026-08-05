@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Star } from '@lucide/vue'
+import { Plus, Star } from '@lucide/vue'
 import { formatMessageTime, loadStarredThreadIds } from '../../data/messageDemo'
+import { usePatientsStore } from '../../store/patients'
 import type { MessageThread } from '../../types/message'
 
 const props = defineProps<{
@@ -14,9 +15,17 @@ const emit = defineEmits<{
   select: [petId: number]
 }>()
 
+const patientsStore = usePatientsStore()
 const search = ref('')
 const filterTab = ref<'all' | 'unread' | 'starred'>('all')
 const starredIds = ref(loadStarredThreadIds())
+const showNewChatSelect = ref(false)
+
+const existingPetIds = computed(() => new Set(props.threads.map((t) => t.petId)))
+
+const availableNewPatients = computed(() =>
+  patientsStore.patients.filter((p) => !existingPetIds.value.has(p.petId)),
+)
 
 const filteredThreads = computed(() => {
   const query = search.value.trim().toLowerCase()
@@ -36,6 +45,7 @@ const filteredThreads = computed(() => {
 })
 
 function selectThread(petId: number) {
+  showNewChatSelect.value = false
   emit('select', petId)
 }
 </script>
@@ -43,6 +53,35 @@ function selectThread(petId: number) {
 <template>
   <section class="portal-card flex h-full flex-col overflow-hidden">
     <div class="border-b border-neutral-grey/80 p-4">
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <h2 class="text-sm font-bold text-navy">Messages</h2>
+        <button
+          v-if="availableNewPatients.length > 0"
+          type="button"
+          class="inline-flex items-center gap-1 text-xs font-semibold text-sage hover:text-navy"
+          @click="showNewChatSelect = !showNewChatSelect"
+        >
+          <Plus class="h-3.5 w-3.5" :stroke-width="2" />
+          {{ showNewChatSelect ? 'Cancel' : 'New Message' }}
+        </button>
+      </div>
+
+      <div v-if="showNewChatSelect" class="mb-3 rounded-lg border border-sage/40 bg-sage-muted/20 p-2">
+        <p class="mb-1 text-xs font-semibold text-navy">Start chat with patient:</p>
+        <div class="max-h-36 overflow-y-auto space-y-1">
+          <button
+            v-for="patient in availableNewPatients"
+            :key="patient.petId"
+            type="button"
+            class="flex w-full items-center justify-between rounded px-2 py-1.5 text-xs text-navy hover:bg-white"
+            @click="selectThread(patient.petId)"
+          >
+            <span class="font-medium">{{ patient.petName }}</span>
+            <span class="text-[10px] text-neutral-muted">Owner: {{ patient.ownerName }}</span>
+          </button>
+        </div>
+      </div>
+
       <input
         v-model="search"
         type="search"

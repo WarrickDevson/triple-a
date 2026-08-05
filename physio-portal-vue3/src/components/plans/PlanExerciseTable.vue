@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { getExerciseStatus, statusBadgeClass } from '../../data/planDemo'
-import type { RehabProgram } from '../../types/exercise'
+import type { RehabProgramExercise } from '../../types/exercise'
 
 defineProps<{
-  program: RehabProgram | null
+  exercises: RehabProgramExercise[]
 }>()
 
 function exerciseImage(exercise: { steps: { imageUrl: string | null }[] }) {
@@ -12,8 +12,8 @@ function exerciseImage(exercise: { steps: { imageUrl: string | null }[] }) {
 </script>
 
 <template>
-  <div v-if="!program || program.exercises.length === 0" class="empty-state py-8">
-    <p class="text-sm text-neutral-muted">No exercises in this plan yet.</p>
+  <div v-if="!exercises || exercises.length === 0" class="empty-state py-8">
+    <p class="text-sm text-neutral-muted">No exercises assigned to this phase yet.</p>
   </div>
   <div v-else class="overflow-x-auto">
     <table class="w-full min-w-[480px] text-left text-sm">
@@ -27,7 +27,7 @@ function exerciseImage(exercise: { steps: { imageUrl: string | null }[] }) {
       </thead>
       <tbody>
         <tr
-          v-for="(exercise, index) in program.exercises"
+          v-for="(exercise, index) in exercises"
           :key="exercise.rehabProgramExerciseId"
           class="border-b border-neutral-grey/60"
         >

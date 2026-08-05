@@ -1,3 +1,4 @@
+import 'async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
@@ -28,6 +29,7 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   int? _videoSubmissionId;
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -40,10 +42,16 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
       await ref.read(messagesProvider.notifier).loadForPet(widget.pet.petId, force: true);
       _scrollToBottom();
     });
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted) {
+        ref.read(messagesProvider.notifier).loadForPet(widget.pet.petId, force: true, silent: true);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _pollTimer?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -85,6 +93,12 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
   Widget build(BuildContext context) {
     final userId = ref.watch(authProvider).user?.userId;
     final messagesState = ref.watch(messagesProvider);
+
+    ref.listen<MessagesState>(messagesProvider, (previous, next) {
+      if ((previous?.messages.length ?? 0) < next.messages.length) {
+        _scrollToBottom();
+      }
+    });
 
     return AppPageScaffold(
       title: widget.pet.petName,

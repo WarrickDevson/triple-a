@@ -30,8 +30,14 @@ const sessionType = computed(() =>
   props.appointment ? getAppointmentType(props.appointment.appointmentId) : null,
 )
 
+function parseUtcDate(value: string) {
+  const str = value.endsWith('Z') || value.includes('+') ? value : `${value}Z`
+  return new Date(str)
+}
+
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString([], {
+  return parseUtcDate(value).toLocaleString([], {
+    timeZone: 'UTC',
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -42,15 +48,20 @@ function formatDateTime(value: string) {
 
 function openReschedule() {
   if (!props.appointment) return
-  const d = new Date(props.appointment.scheduledDateTime)
-  rescheduleDate.value = d.toISOString().slice(0, 10)
-  rescheduleTime.value = d.toTimeString().slice(0, 5)
+  const d = parseUtcDate(props.appointment.scheduledDateTime)
+  const y = d.getUTCFullYear()
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  const hh = String(d.getUTCHours()).padStart(2, '0')
+  const mm = String(d.getUTCMinutes()).padStart(2, '0')
+  rescheduleDate.value = `${y}-${m}-${day}`
+  rescheduleTime.value = `${hh}:${mm}`
   showReschedule.value = true
 }
 
 function submitReschedule() {
   if (!props.appointment || !rescheduleDate.value) return
-  const newDatetime = new Date(`${rescheduleDate.value}T${rescheduleTime.value}`).toISOString()
+  const newDatetime = `${rescheduleDate.value}T${rescheduleTime.value}:00Z`
   emit('reschedule', props.appointment, newDatetime)
   showReschedule.value = false
 }
@@ -181,8 +192,8 @@ function submitReschedule() {
         >
           <span class="font-medium text-navy">{{ item.petName }}</span>
           <span class="text-xs text-neutral-muted">
-            {{ new Date(item.scheduledDateTime).toLocaleDateString([], { month: 'short', day: 'numeric' }) }}
-            {{ new Date(item.scheduledDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+            {{ parseUtcDate(item.scheduledDateTime).toLocaleDateString([], { timeZone: 'UTC', month: 'short', day: 'numeric' }) }}
+            {{ parseUtcDate(item.scheduledDateTime).toLocaleTimeString([], { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' }) }}
           </span>
         </li>
       </ul>

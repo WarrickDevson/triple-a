@@ -104,11 +104,11 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
   }
 
   String _formatDateTime(DateTime value) {
-    final local = value.toLocal();
+    final utc = value.toUtc();
     final date =
-        '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
+        '${utc.year}-${utc.month.toString().padLeft(2, '0')}-${utc.day.toString().padLeft(2, '0')}';
     final time =
-        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+        '${utc.hour.toString().padLeft(2, '0')}:${utc.minute.toString().padLeft(2, '0')}';
     return '$date at $time';
   }
 

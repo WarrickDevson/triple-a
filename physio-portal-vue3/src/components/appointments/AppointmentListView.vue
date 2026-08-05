@@ -12,7 +12,9 @@ const emit = defineEmits<{
 }>()
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString([], {
+  const str = value.endsWith('Z') || value.includes('+') ? value : `${value}Z`
+  return new Date(str).toLocaleString([], {
+    timeZone: 'UTC',
     weekday: 'short',
     month: 'short',
     day: 'numeric',

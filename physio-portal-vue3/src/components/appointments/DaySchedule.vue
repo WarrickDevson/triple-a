@@ -18,30 +18,35 @@ const emit = defineEmits<{
 
 const hours = Array.from({ length: 11 }, (_, i) => 8 + i)
 
+function parseUtcDate(value: string) {
+  const str = value.endsWith('Z') || value.includes('+') ? value : `${value}Z`
+  return new Date(str)
+}
+
 const dayAppointments = computed(() => {
   return props.appointments
     .filter((a) => {
-      const d = new Date(a.scheduledDateTime)
+      const d = parseUtcDate(a.scheduledDateTime)
       const sameDay =
-        d.getFullYear() === props.selectedDate.getFullYear() &&
-        d.getMonth() === props.selectedDate.getMonth() &&
-        d.getDate() === props.selectedDate.getDate()
+        d.getUTCFullYear() === props.selectedDate.getFullYear() &&
+        d.getUTCMonth() === props.selectedDate.getMonth() &&
+        d.getUTCDate() === props.selectedDate.getDate()
       if (!sameDay) return false
       const status = a.appointmentStatus.toLowerCase()
       if (!props.showCancelled && status.includes('cancel')) return false
       if (!props.showCompleted && status.includes('complete')) return false
       return true
     })
-    .sort((a, b) => new Date(a.scheduledDateTime).getTime() - new Date(b.scheduledDateTime).getTime())
+    .sort((a, b) => parseUtcDate(a.scheduledDateTime).getTime() - parseUtcDate(b.scheduledDateTime).getTime())
 })
 
 function formatTime(value: string) {
-  return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return parseUtcDate(value).toLocaleTimeString([], { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' })
 }
 
 function blockTop(datetime: string) {
-  const d = new Date(datetime)
-  const minutes = (d.getHours() - 8) * 60 + d.getMinutes()
+  const d = parseUtcDate(datetime)
+  const minutes = (d.getUTCHours() - 8) * 60 + d.getUTCMinutes()
   return `${(minutes / 600) * 100}%`
 }
 

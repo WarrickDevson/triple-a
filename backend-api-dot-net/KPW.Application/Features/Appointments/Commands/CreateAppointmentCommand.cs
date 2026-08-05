@@ -75,7 +75,7 @@ public class CreateAppointmentCommandHandler : IRequestHandler<CreateAppointment
             PhysioId = physioId,
             OwnerId = ownerId,
             PetId = request.PetId,
-            ScheduledDateTime = request.ScheduledDateTime.ToUniversalTime(),
+            ScheduledDateTime = DateTime.SpecifyKind(request.ScheduledDateTime, DateTimeKind.Utc),
             AppointmentStatus = _currentUserService.Role == UserRole.Owner
                 ? AppointmentStatus.Requested
                 : AppointmentStatus.Scheduled,

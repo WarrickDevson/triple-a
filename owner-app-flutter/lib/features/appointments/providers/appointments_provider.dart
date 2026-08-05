@@ -42,11 +42,18 @@ class AppointmentsNotifier extends StateNotifier<AppointmentsState> {
   }) async {
     state = AppointmentsState(appointments: state.appointments, isLoading: true);
     try {
+      final y = scheduledDateTime.year.toString().padLeft(4, '0');
+      final m = scheduledDateTime.month.toString().padLeft(2, '0');
+      final d = scheduledDateTime.day.toString().padLeft(2, '0');
+      final h = scheduledDateTime.hour.toString().padLeft(2, '0');
+      final min = scheduledDateTime.minute.toString().padLeft(2, '0');
+      final isoString = '$y-$m-$d' 'T' '$h:$min:00Z';
+
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/appointments',
         data: {
           'petId': petId,
-          'scheduledDateTime': scheduledDateTime.toUtc().toIso8601String(),
+          'scheduledDateTime': isoString,
           if (clientNotes != null && clientNotes.isNotEmpty) 'clientNotes': clientNotes,
         },
       );

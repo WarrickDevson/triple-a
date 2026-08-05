@@ -15,6 +15,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  accept: [appointmentId: number]
+  reject: [appointmentId: number]
   cancel: [appointmentId: number]
   complete: [appointmentId: number]
   reschedule: [appointment: Appointment, newDatetime: string]
@@ -68,7 +70,7 @@ function submitReschedule() {
           <div>
             <p class="font-semibold text-navy">{{ appointment.petName }}</p>
             <p class="text-xs text-neutral-muted">{{ sessionType?.label }}</p>
-            <span :class="statusBadgeClass(appointment.appointmentStatus)" class="mt-2">
+            <span :class="statusBadgeClass(appointment.appointmentStatus)" class="mt-2 inline-block">
               {{ appointment.appointmentStatus }}
             </span>
           </div>
@@ -95,25 +97,59 @@ function submitReschedule() {
           </div>
         </dl>
 
-        <div class="mt-4 grid grid-cols-3 gap-2">
-          <BaseButton size="sm" variant="secondary" @click="openReschedule">Reschedule</BaseButton>
-          <BaseButton size="sm" variant="secondary">Edit</BaseButton>
+        <!-- Owner Notes Box -->
+        <div v-if="appointment.clientNotes" class="mt-4 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-sm">
+          <p class="text-xs font-bold text-amber-900 flex items-center gap-1">
+            <span class="text-amber-600">📝</span> Owner Notes:
+          </p>
+          <p class="mt-1 text-xs text-amber-950 font-medium whitespace-pre-line">
+            {{ appointment.clientNotes }}
+          </p>
+        </div>
+
+        <!-- Action Buttons depending on status -->
+        <div v-if="appointment.appointmentStatus === 'Requested'" class="mt-4 space-y-2">
+          <div class="flex gap-2">
+            <BaseButton
+              class="flex-1"
+              variant="accent"
+              size="sm"
+              @click="emit('accept', appointment.appointmentId)"
+            >
+              ✓ Accept Request
+            </BaseButton>
+            <BaseButton
+              class="flex-1"
+              variant="danger"
+              size="sm"
+              @click="emit('reject', appointment.appointmentId)"
+            >
+              ✕ Reject Request
+            </BaseButton>
+          </div>
+        </div>
+
+        <div v-else-if="appointment.appointmentStatus === 'Scheduled'" class="mt-4">
+          <div class="grid grid-cols-3 gap-2">
+            <BaseButton size="sm" variant="secondary" @click="openReschedule">Reschedule</BaseButton>
+            <BaseButton size="sm" variant="secondary">Edit</BaseButton>
+            <BaseButton
+              size="sm"
+              variant="danger"
+              @click="emit('cancel', appointment.appointmentId)"
+            >
+              Cancel
+            </BaseButton>
+          </div>
           <BaseButton
+            class="mt-2 w-full"
+            variant="accent"
             size="sm"
-            variant="danger"
-            @click="emit('cancel', appointment.appointmentId)"
+            @click="emit('complete', appointment.appointmentId)"
           >
-            Cancel
+            Mark Complete
           </BaseButton>
         </div>
-        <BaseButton
-          class="mt-2 w-full"
-          variant="accent"
-          size="sm"
-          @click="emit('complete', appointment.appointmentId)"
-        >
-          Mark Complete
-        </BaseButton>
 
         <div v-if="showReschedule" class="mt-4 rounded-xl border border-neutral-grey/80 bg-surface p-3">
           <p class="text-xs font-semibold text-navy">Reschedule to</p>

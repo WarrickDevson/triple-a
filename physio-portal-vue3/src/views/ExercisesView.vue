@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Search, SlidersHorizontal } from '@lucide/vue'
+import { Plus, Search, SlidersHorizontal } from '@lucide/vue'
+import CreateExerciseModal from '../components/exercises/CreateExerciseModal.vue'
 import ExerciseCategorySidebar from '../components/exercises/ExerciseCategorySidebar.vue'
 import ExerciseFilterPanel from '../components/exercises/ExerciseFilterPanel.vue'
 import ExerciseGrid from '../components/exercises/ExerciseGrid.vue'
 import ExerciseTabs from '../components/exercises/ExerciseTabs.vue'
+import BaseButton from '../components/BaseButton.vue'
 import { getCategoryLabel } from '../data/exerciseDemo'
 import { useExercisesStore } from '../store/exercises'
 
@@ -91,6 +93,10 @@ function clearFilters() {
           class="w-full rounded-lg border border-neutral-grey bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-sage focus:ring-2 focus:ring-sage/15"
         />
       </div>
+      <BaseButton size="sm" variant="accent" @click="showNewExerciseModal = true">
+        <Plus class="h-4 w-4" />
+        New Exercise
+      </BaseButton>
       <button
         type="button"
         class="inline-flex items-center gap-2 rounded-lg border border-neutral-grey bg-white px-4 py-2.5 text-sm font-semibold text-navy lg:hidden"
@@ -140,24 +146,9 @@ function clearFilters() {
       </div>
     </div>
 
-    <div
-      v-if="showNewExerciseModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4"
-      @click.self="showNewExerciseModal = false"
-    >
-      <div class="portal-card max-w-sm p-6 text-center">
-        <h3 class="text-lg font-bold text-navy">Coming Soon</h3>
-        <p class="mt-2 text-sm text-neutral-muted">
-          Custom exercise creation will be available in a future update.
-        </p>
-        <button
-          type="button"
-          class="mt-4 rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white"
-          @click="showNewExerciseModal = false"
-        >
-          Close
-        </button>
-      </div>
-    </div>
+    <CreateExerciseModal
+      :open="showNewExerciseModal"
+      @close="showNewExerciseModal = false"
+    />
   </div>
 </template>

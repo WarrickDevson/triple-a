@@ -50,6 +50,9 @@ function formatDateTime(value: string) {
             <p class="text-xs text-neutral-muted">
               {{ appointment.ownerName }} · {{ getAppointmentLocation(appointment.appointmentId) }}
             </p>
+            <p v-if="appointment.clientNotes" class="mt-1 text-xs font-medium text-amber-800 bg-amber-50/80 rounded px-1.5 py-0.5 inline-block">
+              📝 Owner note attached
+            </p>
           </div>
         </button>
       </li>

@@ -51,12 +51,36 @@ export const useAppointmentsStore = defineStore('appointments', () => {
     return updated
   }
 
+  async function acceptAppointment(appointmentId: number, clinicianNotes?: string) {
+    const updated = await updateAppointmentStatus(appointmentId, {
+      status: 'Scheduled',
+      clinicianNotes,
+    })
+    appointments.value = appointments.value.map((a) =>
+      a.appointmentId === appointmentId ? updated : a,
+    )
+    return updated
+  }
+
+  async function rejectAppointment(appointmentId: number, clinicianNotes?: string) {
+    const updated = await updateAppointmentStatus(appointmentId, {
+      status: 'Rejected',
+      clinicianNotes,
+    })
+    appointments.value = appointments.value.map((a) =>
+      a.appointmentId === appointmentId ? updated : a,
+    )
+    return updated
+  }
+
   return {
     appointments,
     loading,
     error,
     loadAppointments,
     scheduleAppointment,
+    acceptAppointment,
+    rejectAppointment,
     completeAppointment,
     cancelAppointment,
   }

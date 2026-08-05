@@ -20,6 +20,26 @@ export interface Exercise {
   steps: ExerciseStep[]
 }
 
+export interface CreateExerciseStepRequest {
+  stepNumber: number
+  stepInstruction: string
+  imageUrl?: string
+}
+
+export interface CreateExerciseRequest {
+  title: string
+  shortDescription?: string
+  targetedMuscles?: string
+  clinicalPurpose?: string
+  safetyNotes?: string
+  commonMistakes?: string
+  videoUrl?: string
+  targetSpecies?: string
+  conditionCategory?: string
+  difficultyLevel: number
+  steps?: CreateExerciseStepRequest[]
+}
+
 export interface ProgramBuilderExercise {
   exerciseId: number
   title: string

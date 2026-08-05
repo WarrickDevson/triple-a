@@ -21,9 +21,11 @@ public class UpdateAppointmentStatusRequestValidator : AbstractValidator<UpdateA
 {
     private static readonly string[] AllowedStatuses =
     [
+        AppointmentStatus.Requested,
         AppointmentStatus.Scheduled,
         AppointmentStatus.Completed,
-        AppointmentStatus.Cancelled
+        AppointmentStatus.Cancelled,
+        AppointmentStatus.Rejected
     ];
 
     public UpdateAppointmentStatusRequestValidator()
@@ -31,7 +33,7 @@ public class UpdateAppointmentStatusRequestValidator : AbstractValidator<UpdateA
         RuleFor(x => x.Status)
             .NotEmpty()
             .Must(s => AllowedStatuses.Contains(s))
-            .WithMessage("Status must be Scheduled, Completed, or Cancelled.");
+            .WithMessage("Status must be Requested, Scheduled, Completed, Cancelled, or Rejected.");
         RuleFor(x => x.ClinicianNotes).MaximumLength(4000);
     }
 }

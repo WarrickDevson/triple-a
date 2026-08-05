@@ -7,6 +7,7 @@ import '../../../core/widgets/pet_avatar.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../appointments/models/appointment.dart';
 import '../../appointments/providers/appointments_provider.dart';
+import '../../appointments/screens/appointments_screen.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../pets/models/pet.dart';
 import '../../pets/providers/pets_provider.dart';
@@ -152,12 +153,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
           if (nextAppointment != null) ...[
             const SizedBox(height: 8),
-            const Text(
-              'Upcoming Appointment',
-              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.navy, fontSize: 15),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Upcoming Appointment',
+                  style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.navy, fontSize: 15),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: nextAppointment.appointmentStatus == 'Requested'
+                        ? const Color(0xFFFEF3C7)
+                        : const Color(0xFFD1FAE5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    nextAppointment.appointmentStatus == 'Requested'
+                        ? '⏳ Pending Approval'
+                        : '✅ Booked',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: nextAppointment.appointmentStatus == 'Requested'
+                          ? const Color(0xFF92400E)
+                          : const Color(0xFF065F46),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             SectionCard(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AppointmentsScreen()),
+                );
+              },
               child: Row(
                 children: [
                   Container(

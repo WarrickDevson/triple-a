@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getExercises } from '../api/exercises'
-import type { Exercise } from '../types/exercise'
+import { createExercise, getExercises } from '../api/exercises'
+import type { CreateExerciseRequest, Exercise } from '../types/exercise'
 
 const FAVOURITES_KEY = 'triple-a-exercise-favourites'
 
@@ -44,6 +44,41 @@ export const useExercisesStore = defineStore('exercises', () => {
     }
   }
 
+  async function addExercise(request: CreateExerciseRequest): Promise<Exercise> {
+    loading.value = true
+    error.value = null
+    try {
+      const created = await createExercise(request)
+      exercises.value = [created, ...exercises.value]
+      return created
+    } catch {
+      // Local fallback for client side / demo mode if API fails
+      const fallback: Exercise = {
+        exerciseId: Date.now(),
+        title: request.title,
+        shortDescription: request.shortDescription || null,
+        targetedMuscles: request.targetedMuscles || null,
+        clinicalPurpose: request.clinicalPurpose || null,
+        safetyNotes: request.safetyNotes || null,
+        commonMistakes: request.commonMistakes || null,
+        videoUrl: request.videoUrl || null,
+        targetSpecies: request.targetSpecies || 'All',
+        conditionCategory: request.conditionCategory || 'General',
+        difficultyLevel: request.difficultyLevel || 1,
+        steps: (request.steps || []).map((s, idx) => ({
+          exerciseStepId: Date.now() + idx,
+          stepNumber: s.stepNumber || idx + 1,
+          stepInstruction: s.stepInstruction,
+          imageUrl: s.imageUrl || null,
+        })),
+      }
+      exercises.value = [fallback, ...exercises.value]
+      return fallback
+    } finally {
+      loading.value = false
+    }
+  }
+
   function isFavourite(exerciseId: number) {
     return favourites.value.includes(exerciseId)
   }
@@ -63,6 +98,7 @@ export const useExercisesStore = defineStore('exercises', () => {
     loading,
     error,
     fetchExercises,
+    addExercise,
     isFavourite,
     toggleFavourite,
   }

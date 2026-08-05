@@ -81,6 +81,14 @@ function shiftDay(delta: number) {
   selectedDate.value = next
 }
 
+async function onAccept(appointmentId: number) {
+  await appointmentsStore.acceptAppointment(appointmentId)
+}
+
+async function onReject(appointmentId: number) {
+  await appointmentsStore.rejectAppointment(appointmentId)
+}
+
 async function onCancel(appointmentId: number) {
   await appointmentsStore.cancelAppointment(appointmentId)
 }
@@ -167,6 +175,8 @@ async function onReschedule(appointment: { appointmentId: number; petId: number;
         <AppointmentDetailPanel
           :appointment="selectedAppointment"
           :upcoming="upcomingAppointments"
+          @accept="onAccept"
+          @reject="onReject"
           @cancel="onCancel"
           @complete="onComplete"
           @reschedule="onReschedule"

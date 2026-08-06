@@ -63,4 +63,10 @@ public record SendOwnerInviteRequestDto(
 public record MessageResponseDto(
     string Message);
 
+public record UpdateProfileRequestDto(
+    string FirstName,
+    string LastName,
+    string? PhoneNumber = null,
+    string? ClinicName = null);
+
 

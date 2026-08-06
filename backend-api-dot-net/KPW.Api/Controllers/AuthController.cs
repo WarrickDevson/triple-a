@@ -144,6 +144,29 @@ public class AuthController : ControllerBase
         }
     }
 
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<ActionResult<AuthUserDto>> UpdateProfile(
+        [FromBody] UpdateProfileRequestDto request,
+        [FromServices] IValidator<UpdateProfileRequestDto> validator,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(request, cancellationToken);
+        try
+        {
+            var result = await _mediator.Send(new UpdateProfileCommand(request), cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("verify-email")]
     [AllowAnonymous]
     public async Task<ActionResult<MessageResponseDto>> VerifyEmail(

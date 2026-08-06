@@ -3,6 +3,7 @@ class AuthUser {
   final String email;
   final String firstName;
   final String lastName;
+  final String? phoneNumber;
   final String userRole;
   final String subscriptionTier;
   final int? clinicId;
@@ -15,6 +16,7 @@ class AuthUser {
     required this.email,
     required this.firstName,
     required this.lastName,
+    this.phoneNumber,
     required this.userRole,
     required this.subscriptionTier,
     this.clinicId,
@@ -29,6 +31,7 @@ class AuthUser {
       email: json['email'] as String,
       firstName: json['firstName'] as String,
       lastName: json['lastName'] as String,
+      phoneNumber: json['phoneNumber'] as String?,
       userRole: json['userRole'] as String,
       subscriptionTier: json['subscriptionTier'] as String,
       clinicId: json['clinicId'] as int?,

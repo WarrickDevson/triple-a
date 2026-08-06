@@ -9,6 +9,7 @@ import type {
   RegisterRequest,
   ResetPasswordRequest,
   SendOwnerInviteRequest,
+  UpdateProfileRequest,
 } from '../types/auth'
 
 export async function login(payload: LoginRequest): Promise<AuthResponse> {
@@ -23,6 +24,11 @@ export async function register(payload: RegisterRequest): Promise<AuthResponse> 
 
 export async function fetchCurrentUser(): Promise<AuthUser> {
   const { data } = await apiClient.get<AuthUser>('/api/auth/me')
+  return data
+}
+
+export async function updateProfile(payload: UpdateProfileRequest): Promise<AuthUser> {
+  const { data } = await apiClient.put<AuthUser>('/api/auth/profile', payload)
   return data
 }
 

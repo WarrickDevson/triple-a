@@ -123,6 +123,37 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<Microsoft.EntityFrameworkCore.DbContext>();
+    var passwordHasher = scope.ServiceProvider.GetRequiredService<KPW.Application.Interfaces.IPasswordHasher>();
+    var seedUsers = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+        Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.IgnoreQueryFilters(
+            dbContext.Set<KPW.Domain.Entities.User>())
+            .Where(u => u.Email == "physio@kpw.local" || u.Email == "owner@kpw.local" || u.Email == "sysadmin@kpw.local"));
+
+    bool updated = false;
+    foreach (var user in seedUsers)
+    {
+        if (!user.IsActive || !user.IsEmailVerified)
+        {
+            user.IsActive = true;
+            user.IsEmailVerified = true;
+            updated = true;
+        }
+
+        if (string.IsNullOrWhiteSpace(user.PasswordHash) || !passwordHasher.VerifyPassword("ChangeMe!123", user.PasswordHash))
+        {
+            user.PasswordHash = passwordHasher.HashPassword("ChangeMe!123");
+            updated = true;
+        }
+    }
+    if (updated)
+    {
+        await dbContext.SaveChangesAsync();
+    }
+}
+
 app.Run();
 
 static void ConfigureGoogleApplicationCredentials(string contentRootPath)

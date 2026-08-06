@@ -315,6 +315,39 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<bool> updateProfile({
+    required String firstName,
+    required String lastName,
+    String? phoneNumber,
+  }) async {
+    state = AuthState(user: state.user, isLoading: true);
+    try {
+      final response = await _dio.put<Map<String, dynamic>>(
+        '/api/auth/profile',
+        data: {
+          'firstName': firstName,
+          'lastName': lastName,
+          if (phoneNumber != null && phoneNumber.isNotEmpty) 'phoneNumber': phoneNumber,
+        },
+      );
+      final updatedUser = AuthUser.fromJson(response.data!);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('${_userKeyPrefix}firstName', updatedUser.firstName);
+      await prefs.setString('${_userKeyPrefix}lastName', updatedUser.lastName);
+      if (updatedUser.phoneNumber != null) {
+        await prefs.setString('${_userKeyPrefix}phoneNumber', updatedUser.phoneNumber!);
+      }
+      state = AuthState(user: updatedUser, message: 'Profile updated successfully!');
+      return true;
+    } on DioException catch (e) {
+      final message = e.response?.data is Map
+          ? (e.response?.data['message'] as String?) ?? 'Failed to update profile.'
+          : 'Failed to update profile.';
+      state = AuthState(user: state.user, error: message);
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     _tokenStorage.accessToken = null;
     _tokenStorage.refreshToken = null;

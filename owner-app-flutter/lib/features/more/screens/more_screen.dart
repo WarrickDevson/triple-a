@@ -7,6 +7,7 @@ import '../../ai/screens/ai_chat_screen.dart';
 import '../../appointments/screens/appointments_screen.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/screens/change_password_screen.dart';
+import '../../auth/screens/edit_profile_screen.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../reminders/screens/reminders_screen.dart';
 import '../../tracking/screens/tracking_screen.dart';
@@ -57,21 +58,37 @@ class MoreScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: SectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      user?.firstName != null ? '${user!.firstName} ${user.lastName}' : 'Owner',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        color: AppColors.navy,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user?.firstName != null ? '${user!.firstName} ${user.lastName}' : 'Owner',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              color: AppColors.navy,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            user?.email ?? '',
+                            style: const TextStyle(color: AppColors.neutralMuted, fontSize: 13),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      user?.email ?? '',
-                      style: const TextStyle(color: AppColors.neutralMuted, fontSize: 13),
+                    TextButton.icon(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                      ),
+                      icon: const Icon(Icons.edit_outlined, size: 16),
+                      label: const Text('Edit'),
                     ),
                   ],
                 ),

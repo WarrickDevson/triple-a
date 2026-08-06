@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import * as authApi from '../api/auth'
 import { setAuthTokens } from '../api/client'
-import type { AuthResponse, AuthUser, LoginRequest } from '../types/auth'
+import type { AuthResponse, AuthUser, LoginRequest, UpdateProfileRequest } from '../types/auth'
 
 const STORAGE_KEY = 'kpw_auth'
 
@@ -83,6 +83,24 @@ export const useAuthStore = defineStore('auth', () => {
     const data = await authApi.fetchCurrentUser()
     user.value = data
     persist()
+  }
+
+  async function updateProfile(payload: UpdateProfileRequest) {
+    loading.value = true
+    error.value = null
+    message.value = null
+    try {
+      const updatedUser = await authApi.updateProfile(payload)
+      user.value = updatedUser
+      persist()
+      message.value = 'Profile updated successfully.'
+      return true
+    } catch (err: any) {
+      error.value = err?.response?.data?.message || 'Failed to update profile.'
+      return false
+    } finally {
+      loading.value = false
+    }
   }
 
   async function forgotPassword(email: string) {
@@ -168,6 +186,7 @@ export const useAuthStore = defineStore('auth', () => {
     initialize,
     login,
     fetchCurrentUser,
+    updateProfile,
     forgotPassword,
     resetPassword,
     changePassword,

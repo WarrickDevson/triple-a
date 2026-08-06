@@ -76,3 +76,14 @@ public class SendOwnerInviteRequestValidator : AbstractValidator<SendOwnerInvite
         RuleFor(x => x.OwnerName).MaximumLength(100);
     }
 }
+
+public class UpdateProfileRequestValidator : AbstractValidator<UpdateProfileRequestDto>
+{
+    public UpdateProfileRequestValidator()
+    {
+        RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.PhoneNumber).MaximumLength(20);
+        RuleFor(x => x.ClinicName).MaximumLength(200);
+    }
+}

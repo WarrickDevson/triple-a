@@ -8,6 +8,7 @@ import type {
   MessageResponse,
   RegisterRequest,
   ResetPasswordRequest,
+  SendOwnerInviteRequest,
 } from '../types/auth'
 
 export async function login(payload: LoginRequest): Promise<AuthResponse> {
@@ -37,5 +38,10 @@ export async function resetPassword(payload: ResetPasswordRequest): Promise<Mess
 
 export async function changePassword(payload: ChangePasswordRequest): Promise<MessageResponse> {
   const { data } = await apiClient.put<MessageResponse>('/api/auth/change-password', payload)
+  return data
+}
+
+export async function sendOwnerInvite(payload: SendOwnerInviteRequest): Promise<MessageResponse> {
+  const { data } = await apiClient.post<MessageResponse>('/api/auth/send-owner-invite', payload)
   return data
 }

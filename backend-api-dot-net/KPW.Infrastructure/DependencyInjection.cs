@@ -25,8 +25,11 @@ public static class DependencyInjection
         services.Configure<VideoOptions>(configuration.GetSection(VideoOptions.SectionName));
         services.Configure<AiOptions>(configuration.GetSection(AiOptions.SectionName));
         services.Configure<AppOptions>(configuration.GetSection(AppOptions.SectionName));
+        services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
 
-        services.AddSingleton<IEmailSender, LoggingEmailSender>();
+        services.AddSingleton<LoggingEmailSender>();
+        services.AddHttpClient<SendGridEmailSender>();
+        services.AddTransient<IEmailSender>(sp => sp.GetRequiredService<SendGridEmailSender>());
 
         RegisterVideoServices(services, configuration);
         RegisterAiServices(services, configuration);

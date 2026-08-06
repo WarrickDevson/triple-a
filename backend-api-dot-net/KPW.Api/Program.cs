@@ -16,6 +16,7 @@ const string GcpCredentialsFileName = "devson-development-6d4da133b74e.json";
 
 var builder = WebApplication.CreateBuilder(args);
 
+LoadDotEnv(builder.Environment.ContentRootPath);
 ConfigureGoogleApplicationCredentials(builder.Environment.ContentRootPath);
 
 builder.Host.UseSerilog((context, services, configuration) =>
@@ -147,5 +148,37 @@ static void ConfigureGoogleApplicationCredentials(string contentRootPath)
         Environment.SetEnvironmentVariable(
             "GOOGLE_APPLICATION_CREDENTIALS",
             Path.GetFullPath(credentialsPath));
+    }
+}
+
+static void LoadDotEnv(string contentRootPath)
+{
+    var candidates = new[]
+    {
+        Path.Combine(contentRootPath, ".env"),
+        Path.Combine(contentRootPath, "..", ".env"),
+        Path.Combine(contentRootPath, "..", "..", ".env")
+    };
+
+    foreach (var file in candidates)
+    {
+        if (!File.Exists(file)) continue;
+
+        foreach (var rawLine in File.ReadAllLines(file))
+        {
+            var line = rawLine.Trim();
+            if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#")) continue;
+
+            var parts = line.Split('=', 2);
+            if (parts.Length == 2)
+            {
+                var key = parts[0].Trim();
+                var value = parts[1].Trim().Trim('"', '\'');
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    Environment.SetEnvironmentVariable(key, value);
+                }
+            }
+        }
     }
 }

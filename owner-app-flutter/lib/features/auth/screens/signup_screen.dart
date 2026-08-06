@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../providers/auth_provider.dart';
-import '../../shell/main_shell.dart';
 import 'login_screen.dart';
+import 'verify_email_screen.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
-  const SignupScreen({super.key});
+  final String? initialInviteCode;
+  const SignupScreen({super.key, this.initialInviteCode});
 
   @override
   ConsumerState<SignupScreen> createState() => _SignupScreenState();
@@ -23,6 +24,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   bool _passwordVisible = false;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialInviteCode != null) {
+      _inviteController.text = widget.initialInviteCode!;
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -34,8 +43,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Future<void> _submit() async {
+    final email = _emailController.text.trim();
     final ok = await ref.read(authProvider.notifier).register(
-          email: _emailController.text.trim(),
+          email: email,
           password: _passwordController.text,
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
@@ -45,7 +55,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainShell()),
+        MaterialPageRoute(
+          builder: (_) => VerifyEmailScreen(email: email),
+        ),
       );
     }
   }

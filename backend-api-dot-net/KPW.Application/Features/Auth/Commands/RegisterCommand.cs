@@ -6,6 +6,8 @@ using KPW.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
+using Microsoft.Extensions.Options;
+
 namespace KPW.Application.Features.Auth.Commands;
 
 public record RegisterCommand(RegisterRequestDto Request) : IRequest<AuthResponseDto>;
@@ -15,15 +17,21 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
     private readonly DbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IEmailSender _emailSender;
+    private readonly AppOptions _appOptions;
 
     public RegisterCommandHandler(
         DbContext dbContext,
         IPasswordHasher passwordHasher,
-        IJwtTokenService jwtTokenService)
+        IJwtTokenService jwtTokenService,
+        IEmailSender emailSender,
+        IOptions<AppOptions> appOptions)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
+        _emailSender = emailSender;
+        _appOptions = appOptions.Value;
     }
 
     public async Task<AuthResponseDto> Handle(RegisterCommand command, CancellationToken cancellationToken)
@@ -48,6 +56,9 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             throw new InvalidOperationException("Email is already registered.");
         }
 
+        var rawVerificationToken = _jwtTokenService.GenerateRefreshToken();
+        var verificationTokenHash = _jwtTokenService.HashRefreshToken(rawVerificationToken);
+
         var user = new User
         {
             Email = email,
@@ -57,13 +68,45 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             PhoneNumber = request.PhoneNumber?.Trim(),
             UserRole = UserRole.Owner,
             SubscriptionTier = SubscriptionTier.Free,
-            ClinicId = clinic.ClinicId
+            ClinicId = clinic.ClinicId,
+            IsEmailVerified = false,
+            EmailVerificationTokenHash = verificationTokenHash,
+            EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24)
         };
 
         users.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        await SendVerificationEmailAsync(user, rawVerificationToken, cancellationToken);
+
         return await BuildAuthResponse(user, clinic, cancellationToken);
+    }
+
+    private async Task SendVerificationEmailAsync(User user, string rawToken, CancellationToken cancellationToken)
+    {
+        var baseUrl = user.UserRole == UserRole.Owner
+            ? _appOptions.PublicOwnerAppUrl.TrimEnd('/')
+            : _appOptions.PublicPortalUrl.TrimEnd('/');
+        var verifyLink = $"{baseUrl}/verify-email?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(rawToken)}";
+
+        var body = $"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2>Welcome to MoveWell, {user.FirstName}!</h2>
+                <p>Thank you for signing up. Please verify your email address to complete your account setup.</p>
+                <p style="margin: 24px 0;">
+                    <a href="{verifyLink}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Verify Email Address</a>
+                </p>
+                <p>Or copy and paste this URL into your web browser:</p>
+                <p><a href="{verifyLink}">{verifyLink}</a></p>
+                <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">This verification link will expire in 24 hours.</p>
+            </div>
+            """;
+
+        await _emailSender.SendAsync(
+            user.Email,
+            "Verify your MoveWell account",
+            body,
+            cancellationToken);
     }
 
     private async Task<AuthResponseDto> BuildAuthResponse(

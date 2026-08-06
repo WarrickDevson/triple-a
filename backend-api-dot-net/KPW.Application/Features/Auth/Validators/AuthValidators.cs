@@ -50,3 +50,29 @@ public class ChangePasswordRequestValidator : AbstractValidator<ChangePasswordRe
         RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(8).MaximumLength(128);
     }
 }
+
+public class VerifyEmailRequestValidator : AbstractValidator<VerifyEmailRequestDto>
+{
+    public VerifyEmailRequestValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
+        RuleFor(x => x.Token).NotEmpty();
+    }
+}
+
+public class ResendVerificationEmailRequestValidator : AbstractValidator<ResendVerificationEmailRequestDto>
+{
+    public ResendVerificationEmailRequestValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
+    }
+}
+
+public class SendOwnerInviteRequestValidator : AbstractValidator<SendOwnerInviteRequestDto>
+{
+    public SendOwnerInviteRequestValidator()
+    {
+        RuleFor(x => x.RecipientEmail).NotEmpty().EmailAddress().MaximumLength(256);
+        RuleFor(x => x.OwnerName).MaximumLength(100);
+    }
+}

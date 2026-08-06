@@ -8,6 +8,7 @@ export interface AuthUser {
   clinicId: number | null
   clinicName?: string | null
   clinicInviteCode?: string | null
+  isEmailVerified?: boolean
 }
 
 export interface AuthResponse {
@@ -43,6 +44,11 @@ export interface ResetPasswordRequest {
 export interface ChangePasswordRequest {
   currentPassword: string
   newPassword: string
+}
+
+export interface SendOwnerInviteRequest {
+  recipientEmail: string
+  ownerName?: string
 }
 
 export interface MessageResponse {

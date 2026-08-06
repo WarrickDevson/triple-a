@@ -36,6 +36,11 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             throw new UnauthorizedAccessException("Invalid email or password.");
         }
 
+        if (!user.IsEmailVerified)
+        {
+            throw new UnauthorizedAccessException("EMAIL_NOT_VERIFIED: Please verify your email address before logging in. Check your inbox for the verification link.");
+        }
+
         var clinic = user.ClinicId is null
             ? null
             : await _dbContext.Set<Clinic>()

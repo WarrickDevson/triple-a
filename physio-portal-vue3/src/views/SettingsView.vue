@@ -14,12 +14,14 @@ import {
   type NotificationSettings,
 } from '../data/settingsDemo'
 import { useAuthStore } from '../store/auth'
+import InviteOwnerModal from '../components/clinic/InviteOwnerModal.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 
 const activeTab = ref<'profile' | 'clinic' | 'notifications' | 'security'>('profile')
 const showStubModal = ref(false)
+const showInviteModal = ref(false)
 const stubMessage = ref('')
 
 const clinic = ref<ClinicSettings>(loadClinicSettings())
@@ -122,15 +124,23 @@ function logout() {
         <p v-if="auth.user.clinicInviteCode" class="text-sm text-neutral-muted">
           Share this code with pet owners so they can create an account linked to your clinic.
         </p>
+        <div class="pt-2">
+          <BaseButton size="sm" @click="showInviteModal = true">Send Owner Invite Email</BaseButton>
+        </div>
       </div>
     </section>
 
     <section v-else-if="activeTab === 'clinic'" class="portal-card p-6">
       <h2 class="text-sm font-bold text-navy">Clinic Settings</h2>
-      <div v-if="auth.user?.clinicInviteCode" class="mt-4 rounded-xl border border-sage/30 bg-sage-muted/40 p-4">
-        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-muted">Owner invite code</p>
-        <p class="mt-1 font-mono text-lg font-bold text-navy">{{ auth.user.clinicInviteCode }}</p>
-        <p class="mt-2 text-sm text-neutral-muted">Owners enter this when signing up in the mobile app.</p>
+      <div v-if="auth.user?.clinicInviteCode" class="mt-4 rounded-xl border border-sage/30 bg-sage-muted/40 p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-neutral-muted">Owner invite code</p>
+          <p class="mt-1 font-mono text-lg font-bold text-navy">{{ auth.user.clinicInviteCode }}</p>
+          <p class="mt-1 text-xs text-neutral-muted">Owners enter this when signing up in the mobile app.</p>
+        </div>
+        <BaseButton size="sm" variant="secondary" @click="showInviteModal = true">
+          Send Email Invite
+        </BaseButton>
       </div>
       <form class="mt-4 space-y-4" @submit.prevent="persistClinic">
         <label class="block">
@@ -227,6 +237,8 @@ function logout() {
       </div>
     </section>
   </div>
+
+  <InviteOwnerModal v-if="showInviteModal" @close="showInviteModal = false" />
 
   <div
     v-if="showStubModal"

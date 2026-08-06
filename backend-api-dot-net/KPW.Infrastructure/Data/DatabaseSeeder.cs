@@ -80,6 +80,7 @@ public static class DatabaseSeeder
                 SubscriptionTier = SubscriptionTier.Pro,
                 CreatedDate = SeedDate,
                 ModifiedDate = SeedDate,
+                IsEmailVerified = true,
                 IsActive = true
             },
             new User
@@ -95,6 +96,7 @@ public static class DatabaseSeeder
                 SubscriptionTier = SubscriptionTier.Pro,
                 CreatedDate = SeedDate,
                 ModifiedDate = SeedDate,
+                IsEmailVerified = true,
                 IsActive = true
             },
             new User
@@ -110,6 +112,7 @@ public static class DatabaseSeeder
                 SubscriptionTier = SubscriptionTier.Free,
                 CreatedDate = SeedDate,
                 ModifiedDate = SeedDate,
+                IsEmailVerified = true,
                 IsActive = true
             });
     }

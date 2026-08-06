@@ -58,8 +58,12 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   }
 
   Future<void> _loadThreads({bool silent = false}) async {
-    if (!silent) setState(() => _loadingThreads = true);
-    await ref.read(petsProvider.notifier).loadPets(force: true);
+    if (!silent) {
+      setState(() => _loadingThreads = true);
+      await ref.read(petsProvider.notifier).loadPets(force: true);
+    } else {
+      await ref.read(petsProvider.notifier).loadPets();
+    }
     final pets = ref.read(petsProvider).pets;
     final dio = ref.read(authProvider.notifier).client;
     final userId = ref.read(authProvider).user?.userId;

@@ -25,11 +25,13 @@ class PetsNotifier extends StateNotifier<PetsState> {
   final Dio _dio;
   final int? _ownerId;
 
-  Future<void> loadPets({bool force = false}) async {
+  Future<void> loadPets({bool force = false, bool silent = false}) async {
     if (_ownerId == null) return;
     if (state.pets.isNotEmpty && !force) return;
 
-    state = const PetsState(isLoading: true);
+    if (!silent && state.pets.isEmpty) {
+      state = PetsState(pets: state.pets, isLoading: true);
+    }
     try {
       final response = await _dio.get<List<dynamic>>('/api/pets/owner/$_ownerId');
       final pets = response.data!
@@ -37,7 +39,7 @@ class PetsNotifier extends StateNotifier<PetsState> {
           .toList();
       state = PetsState(pets: pets);
     } on DioException {
-      state = const PetsState(error: 'Unable to load pets.');
+      state = PetsState(pets: state.pets, error: 'Unable to load pets.');
     }
   }
 

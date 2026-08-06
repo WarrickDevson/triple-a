@@ -133,6 +133,22 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function sendOwnerInvite(recipientEmail: string, ownerName?: string) {
+    loading.value = true
+    error.value = null
+    message.value = null
+    try {
+      const data = await authApi.sendOwnerInvite({ recipientEmail, ownerName })
+      message.value = data.message
+      return data.message
+    } catch (err: any) {
+      error.value = err?.response?.data?.message || 'Failed to send invite email.'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   function logout() {
     accessToken.value = null
     refreshToken.value = null
@@ -155,6 +171,7 @@ export const useAuthStore = defineStore('auth', () => {
     forgotPassword,
     resetPassword,
     changePassword,
+    sendOwnerInvite,
     logout,
   }
 })

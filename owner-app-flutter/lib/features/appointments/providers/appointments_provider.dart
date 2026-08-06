@@ -20,10 +20,12 @@ class AppointmentsNotifier extends StateNotifier<AppointmentsState> {
 
   final Dio _dio;
 
-  Future<void> loadAppointments({bool force = false}) async {
+  Future<void> loadAppointments({bool force = false, bool silent = false}) async {
     if (state.appointments.isNotEmpty && !force) return;
 
-    state = const AppointmentsState(isLoading: true);
+    if (!silent && state.appointments.isEmpty) {
+      state = AppointmentsState(appointments: state.appointments, isLoading: true);
+    }
     try {
       final response = await _dio.get<List<dynamic>>('/api/appointments');
       final appointments = response.data!
@@ -31,7 +33,7 @@ class AppointmentsNotifier extends StateNotifier<AppointmentsState> {
           .toList();
       state = AppointmentsState(appointments: appointments);
     } on DioException {
-      state = const AppointmentsState(error: 'Unable to load appointments.');
+      state = AppointmentsState(appointments: state.appointments, error: 'Unable to load appointments.');
     }
   }
 

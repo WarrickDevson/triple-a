@@ -1,4 +1,15 @@
 class AuthUser {
+  final int userId;
+  final String email;
+  final String firstName;
+  final String lastName;
+  final String userRole;
+  final String subscriptionTier;
+  final int? clinicId;
+  final String? clinicName;
+  final String? clinicInviteCode;
+  final bool isEmailVerified;
+
   const AuthUser({
     required this.userId,
     required this.email,
@@ -9,17 +20,8 @@ class AuthUser {
     this.clinicId,
     this.clinicName,
     this.clinicInviteCode,
+    this.isEmailVerified = false,
   });
-
-  final int userId;
-  final String email;
-  final String firstName;
-  final String lastName;
-  final String userRole;
-  final String subscriptionTier;
-  final int? clinicId;
-  final String? clinicName;
-  final String? clinicInviteCode;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
@@ -32,20 +34,21 @@ class AuthUser {
       clinicId: json['clinicId'] as int?,
       clinicName: json['clinicName'] as String?,
       clinicInviteCode: json['clinicInviteCode'] as String?,
+      isEmailVerified: json['isEmailVerified'] as bool? ?? false,
     );
   }
 }
 
 class AuthResponse {
+  final String accessToken;
+  final String refreshToken;
+  final AuthUser user;
+
   const AuthResponse({
     required this.accessToken,
     required this.refreshToken,
     required this.user,
   });
-
-  final String accessToken;
-  final String refreshToken;
-  final AuthUser user;
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     return AuthResponse(

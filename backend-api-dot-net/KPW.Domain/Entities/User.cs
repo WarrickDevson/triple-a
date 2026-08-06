@@ -15,6 +15,9 @@ public class User : AuditableEntity
     public string SubscriptionTier { get; set; } = Enums.SubscriptionTier.Free;
     public string? RefreshTokenHash { get; set; }
     public DateTime? RefreshTokenExpiresAt { get; set; }
+    public bool IsEmailVerified { get; set; }
+    public string? EmailVerificationTokenHash { get; set; }
+    public DateTime? EmailVerificationTokenExpiresAt { get; set; }
 
     public Clinic? Clinic { get; set; }
     public ICollection<Pet> Pets { get; set; } = [];

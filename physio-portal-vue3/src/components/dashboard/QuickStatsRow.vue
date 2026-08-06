@@ -1,28 +1,34 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Calendar, ClipboardCheck, FileText, MessageSquare } from '@lucide/vue'
+import { useDashboardStore } from '../../store/dashboard'
+import { useMessagesStore } from '../../store/messages'
 
-defineProps<{
+const props = defineProps<{
   appointmentsToday: number
 }>()
 
-const stats = [
+const dashboardStore = useDashboardStore()
+const messagesStore = useMessagesStore()
+
+const stats = computed(() => [
   {
     label: 'Upcoming Appointments',
-    value: '4 today',
+    value: `${props.appointmentsToday ?? 0} today`,
     route: 'appointments',
     icon: Calendar,
   },
   {
     label: 'New Messages',
-    value: '3 unread',
+    value: `${messagesStore.totalUnreadCount} unread`,
     route: 'messages',
     icon: MessageSquare,
   },
   {
     label: 'Assessments Due',
-    value: '5 pending',
-    route: 'progress',
+    value: `${dashboardStore.dashboard?.pendingVideoReviews ?? 0} pending`,
+    route: 'patients',
     icon: ClipboardCheck,
   },
   {
@@ -31,7 +37,7 @@ const stats = [
     route: 'reports',
     icon: FileText,
   },
-]
+])
 </script>
 
 <template>
@@ -48,7 +54,7 @@ const stats = [
       <div>
         <p class="text-sm font-semibold text-navy">{{ stat.label }}</p>
         <p class="text-xs text-neutral-muted">
-          {{ stat.label === 'Upcoming Appointments' ? `${appointmentsToday || 4} today` : stat.value }}
+          {{ stat.value }}
         </p>
       </div>
     </RouterLink>

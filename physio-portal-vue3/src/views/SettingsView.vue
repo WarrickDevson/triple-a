@@ -14,6 +14,7 @@ import {
   type NotificationSettings,
 } from '../data/settingsDemo'
 import { useAuthStore } from '../store/auth'
+import { useNotificationsStore } from '../store/notifications'
 import InviteOwnerModal from '../components/clinic/InviteOwnerModal.vue'
 import EditProfileModal from '../components/profile/EditProfileModal.vue'
 
@@ -76,6 +77,8 @@ function onProfileUpdated() {
 
 function persistNotifications() {
   saveNotificationSettings(notifications.value)
+  const notificationsStore = useNotificationsStore()
+  notificationsStore.reloadSettings()
 }
 
 async function submitChangePassword() {

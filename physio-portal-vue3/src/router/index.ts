@@ -12,6 +12,18 @@ const router = createRouter({
       meta: { guestOnly: true },
     },
     {
+      path: '/register',
+      name: 'register',
+      component: () => import('../views/RegisterView.vue'),
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/verify-email',
+      name: 'verify-email',
+      component: () => import('../views/VerifyEmailView.vue'),
+      meta: { guestOnly: true },
+    },
+    {
       path: '/forgot-password',
       name: 'forgot-password',
       component: () => import('../views/ForgotPasswordView.vue'),
@@ -37,6 +49,12 @@ const router = createRouter({
           name: 'dashboard',
           component: () => import('../views/DashboardView.vue'),
           meta: { title: 'Dashboard' },
+        },
+        {
+          path: 'admin/physios',
+          name: 'admin-physios',
+          component: () => import('../views/AdminPhysiosView.vue'),
+          meta: { title: 'Admin Physio Management' },
         },
         {
           path: 'patients',

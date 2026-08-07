@@ -163,6 +163,10 @@ using (var scope = app.Services.CreateScope())
         IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Messages' AND COLUMN_NAME = 'AttachmentType')
         BEGIN
             ALTER TABLE [Messages] ADD [AttachmentType] nvarchar(100) NULL;
+        END
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = 'IsApproved')
+        BEGIN
+            ALTER TABLE [Users] ADD [IsApproved] bit NOT NULL CONSTRAINT [DF_Users_IsApproved] DEFAULT (1);
         END");
 
     var passwordHasher = scope.ServiceProvider.GetRequiredService<KPW.Application.Interfaces.IPasswordHasher>();
@@ -174,10 +178,11 @@ using (var scope = app.Services.CreateScope())
     bool updated = false;
     foreach (var user in seedUsers)
     {
-        if (!user.IsActive || !user.IsEmailVerified)
+        if (!user.IsActive || !user.IsEmailVerified || !user.IsApproved)
         {
             user.IsActive = true;
             user.IsEmailVerified = true;
+            user.IsApproved = true;
             updated = true;
         }
 

@@ -16,5 +16,6 @@ public static class AuthUserMapper
             user.ClinicId,
             clinic?.ClinicName,
             clinic?.InviteCode,
-            user.IsEmailVerified);
+            user.IsEmailVerified,
+            user.IsApproved);
 }

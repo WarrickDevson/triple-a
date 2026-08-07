@@ -18,6 +18,7 @@ public class User : AuditableEntity
     public bool IsEmailVerified { get; set; }
     public string? EmailVerificationTokenHash { get; set; }
     public DateTime? EmailVerificationTokenExpiresAt { get; set; }
+    public bool IsApproved { get; set; } = true;
 
     public Clinic? Clinic { get; set; }
     public ICollection<Pet> Pets { get; set; } = [];

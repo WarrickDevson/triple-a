@@ -12,7 +12,8 @@ public record AuthUserDto(
     int? ClinicId,
     string? ClinicName = null,
     string? ClinicInviteCode = null,
-    bool IsEmailVerified = false);
+    bool IsEmailVerified = false,
+    bool IsApproved = true);
 
 public record AuthResponseDto(
     string AccessToken,
@@ -25,8 +26,28 @@ public record RegisterRequestDto(
     string Password,
     string FirstName,
     string LastName,
+    string? PhoneNumber = null,
+    string? InviteCode = null,
+    string? Role = null,
+    string? ClinicName = null);
+
+public record PhysioApprovalDto(
+    int UserId,
+    string Email,
+    string FirstName,
+    string LastName,
     string? PhoneNumber,
-    string InviteCode);
+    string UserRole,
+    int? ClinicId,
+    string? ClinicName,
+    bool IsEmailVerified,
+    bool IsApproved,
+    bool IsActive,
+    DateTime CreatedDate);
+
+public record SendAdminInviteRequestDto(
+    string RecipientEmail,
+    string? ClinicName = null);
 
 public record LoginRequestDto(
     string Email,

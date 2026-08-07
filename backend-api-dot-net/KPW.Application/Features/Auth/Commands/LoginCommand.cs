@@ -55,6 +55,12 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             throw new UnauthorizedAccessException("EMAIL_NOT_VERIFIED: Please verify your email address before logging in. Check your inbox for the verification link.");
         }
 
+        if (!user.IsApproved && user.UserRole == KPW.Domain.Enums.UserRole.Physio)
+        {
+            _logger.LogWarning("Login attempt blocked: Unapproved physio account for user {Email}", email);
+            throw new UnauthorizedAccessException("PENDING_APPROVAL: Your email address is verified, but your Physio account is currently awaiting administrator approval.");
+        }
+
         _logger.LogInformation("Login successful for user {Email} (UserId: {UserId})", email, user.UserId);
 
         var clinic = user.ClinicId is null

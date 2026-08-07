@@ -12,7 +12,7 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequestDto>
         RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.PhoneNumber).MaximumLength(20);
-        RuleFor(x => x.InviteCode).NotEmpty().MaximumLength(16);
+        RuleFor(x => x.InviteCode).MaximumLength(16);
     }
 }
 

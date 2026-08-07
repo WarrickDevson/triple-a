@@ -6,10 +6,14 @@ import type {
   ForgotPasswordRequest,
   LoginRequest,
   MessageResponse,
+  PhysioApproval,
   RegisterRequest,
+  ResendVerificationEmailRequest,
   ResetPasswordRequest,
+  SendAdminInviteRequest,
   SendOwnerInviteRequest,
   UpdateProfileRequest,
+  VerifyEmailRequest,
 } from '../types/auth'
 
 export async function login(payload: LoginRequest): Promise<AuthResponse> {
@@ -18,7 +22,20 @@ export async function login(payload: LoginRequest): Promise<AuthResponse> {
 }
 
 export async function register(payload: RegisterRequest): Promise<AuthResponse> {
-  const { data } = await apiClient.post<AuthResponse>('/api/auth/register', payload)
+  const { data } = await apiClient.post<AuthResponse>('/api/auth/register', {
+    role: 'Physio',
+    ...payload,
+  })
+  return data
+}
+
+export async function verifyEmail(payload: VerifyEmailRequest): Promise<MessageResponse> {
+  const { data } = await apiClient.post<MessageResponse>('/api/auth/verify-email', payload)
+  return data
+}
+
+export async function resendVerification(payload: ResendVerificationEmailRequest): Promise<MessageResponse> {
+  const { data } = await apiClient.post<MessageResponse>('/api/auth/resend-verification', payload)
   return data
 }
 
@@ -49,5 +66,25 @@ export async function changePassword(payload: ChangePasswordRequest): Promise<Me
 
 export async function sendOwnerInvite(payload: SendOwnerInviteRequest): Promise<MessageResponse> {
   const { data } = await apiClient.post<MessageResponse>('/api/auth/send-owner-invite', payload)
+  return data
+}
+
+export async function fetchPendingPhysios(): Promise<PhysioApproval[]> {
+  const { data } = await apiClient.get<PhysioApproval[]>('/api/admin/physios')
+  return data
+}
+
+export async function approvePhysio(userId: number): Promise<MessageResponse> {
+  const { data } = await apiClient.post<MessageResponse>(`/api/admin/physios/${userId}/approve`)
+  return data
+}
+
+export async function rejectPhysio(userId: number): Promise<MessageResponse> {
+  const { data } = await apiClient.post<MessageResponse>(`/api/admin/physios/${userId}/reject`)
+  return data
+}
+
+export async function sendAdminInvite(payload: SendAdminInviteRequest): Promise<MessageResponse> {
+  const { data } = await apiClient.post<MessageResponse>('/api/admin/send-physio-invite', payload)
   return data
 }

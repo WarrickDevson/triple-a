@@ -37,15 +37,52 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
     public async Task<AuthResponseDto> Handle(RegisterCommand command, CancellationToken cancellationToken)
     {
         var request = command.Request;
-        var inviteCode = request.InviteCode.Trim().ToUpperInvariant();
+        var requestedRole = request.Role?.Trim();
+        var userRole = string.Equals(requestedRole, UserRole.Owner, StringComparison.OrdinalIgnoreCase)
+            ? UserRole.Owner
+            : UserRole.Physio;
 
-        var clinic = await _dbContext.Set<Clinic>()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.InviteCode == inviteCode, cancellationToken);
+        var rawInviteCode = request.InviteCode?.Trim().ToUpperInvariant();
+        Clinic? clinic = null;
+        bool isApproved = true;
 
-        if (clinic is null)
+        if (!string.IsNullOrWhiteSpace(rawInviteCode))
         {
-            throw new InvalidOperationException("Invalid clinic invite code.");
+            clinic = await _dbContext.Set<Clinic>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.InviteCode == rawInviteCode, cancellationToken);
+
+            if (clinic is null)
+            {
+                throw new InvalidOperationException("Invalid clinic invite code.");
+            }
+        }
+        else
+        {
+            if (userRole == UserRole.Owner)
+            {
+                throw new InvalidOperationException("Clinic invite code is required for pet owner registration.");
+            }
+
+            // Physio self-registering a new clinic -> create Clinic entry, require Admin approval
+            var clinicName = !string.IsNullOrWhiteSpace(request.ClinicName)
+                ? request.ClinicName.Trim()
+                : $"{request.FirstName.Trim()} {request.LastName.Trim()}'s Clinic";
+
+            var generatedInviteCode = "MW-" + Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
+
+            clinic = new Clinic
+            {
+                ClinicName = clinicName,
+                InviteCode = generatedInviteCode,
+                PhysicalAddress = string.Empty,
+                ContactNumber = request.PhoneNumber?.Trim() ?? string.Empty
+            };
+
+            _dbContext.Set<Clinic>().Add(clinic);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            isApproved = false; // Requires SysAdmin approval
         }
 
         var users = _dbContext.Set<User>();
@@ -66,12 +103,13 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             FirstName = request.FirstName.Trim(),
             LastName = request.LastName.Trim(),
             PhoneNumber = request.PhoneNumber?.Trim(),
-            UserRole = UserRole.Owner,
+            UserRole = userRole,
             SubscriptionTier = SubscriptionTier.Free,
             ClinicId = clinic.ClinicId,
             IsEmailVerified = false,
             EmailVerificationTokenHash = verificationTokenHash,
-            EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24)
+            EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24),
+            IsApproved = isApproved
         };
 
         users.Add(user);

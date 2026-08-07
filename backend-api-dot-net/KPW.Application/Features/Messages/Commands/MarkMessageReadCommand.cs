@@ -12,11 +12,16 @@ public class MarkMessageReadCommandHandler : IRequestHandler<MarkMessageReadComm
 {
     private readonly DbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IChatNotificationService? _chatNotificationService;
 
-    public MarkMessageReadCommandHandler(DbContext dbContext, ICurrentUserService currentUserService)
+    public MarkMessageReadCommandHandler(
+        DbContext dbContext,
+        ICurrentUserService currentUserService,
+        IChatNotificationService? chatNotificationService = null)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
+        _chatNotificationService = chatNotificationService;
     }
 
     public async Task<MessageDto> Handle(MarkMessageReadCommand command, CancellationToken cancellationToken)
@@ -52,6 +57,14 @@ public class MarkMessageReadCommandHandler : IRequestHandler<MarkMessageReadComm
         message.ReadAt ??= DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return MessageMapper.ToDto(message);
+        var dto = MessageMapper.ToDto(message);
+
+        if (_chatNotificationService is not null && message.ReadAt.HasValue)
+        {
+            await _chatNotificationService.NotifyMessageReadAsync(
+                message.Thread.PetId, message.MessageId, message.ReadAt.Value, cancellationToken);
+        }
+
+        return dto;
     }
 }

@@ -2,6 +2,7 @@
 import { computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import MessageComposer from './MessageComposer.vue'
+import { API_BASE_URL } from '../../api/config'
 import { useAuthStore } from '../../store/auth'
 import type { Message, MessageThread } from '../../types/message'
 import type { Pet } from '../../types/pet'
@@ -30,6 +31,19 @@ function isOutgoing(message: Message) {
 
 function formatTime(value: string) {
   return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function resolveMediaUrl(path: string | null | undefined): string | null {
+  if (!path) return null
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  return `${API_BASE_URL.replace(/\/+$/, '')}${path.startsWith('/') ? path : `/${path}`}`
+}
+
+function isImageAttachment(type?: string | null, url?: string | null) {
+  if (type?.startsWith('image/')) return true
+  if (!url) return false
+  const lower = url.toLowerCase()
+  return lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.webp') || lower.endsWith('.gif')
 }
 
 onMounted(() => {
@@ -89,6 +103,64 @@ function scrollToBottom() {
                 : 'rounded-bl-md bg-neutral-grey/60 text-navy'
             "
           >
+            <!-- Video Attachment Card inside Message Bubble -->
+            <div
+              v-if="message.videoSubmissionId"
+              class="mb-2 flex items-center gap-2 rounded-xl p-2.5 text-xs shadow-xs"
+              :class="isOutgoing(message) ? 'bg-white/15 text-white border border-white/20' : 'bg-white text-navy border border-neutral-grey/60'"
+            >
+              <span class="text-lg">🎥</span>
+              <div class="flex-1 min-w-0">
+                <p class="font-bold truncate">Attached Video Submission</p>
+                <p class="text-[10px]" :class="isOutgoing(message) ? 'text-white/80' : 'text-neutral-muted'">
+                  Video Submission #{{ message.videoSubmissionId }}
+                </p>
+              </div>
+              <RouterLink
+                v-if="activePetId"
+                :to="{ name: 'patient-detail', params: { petId: activePetId }, query: { tab: 'videos', videoId: message.videoSubmissionId } }"
+                class="rounded-lg px-2 py-1 text-[11px] font-bold transition hover:underline"
+                :class="isOutgoing(message) ? 'bg-white text-sage' : 'bg-sage text-white'"
+              >
+                View
+              </RouterLink>
+            </div>
+
+            <!-- Direct File / Image Attachment Card -->
+            <div
+              v-if="message.attachmentUrl"
+              class="mb-2 rounded-xl p-2 text-xs"
+              :class="isOutgoing(message) ? 'bg-white/15 text-white border border-white/20' : 'bg-white text-navy border border-neutral-grey/60'"
+            >
+              <!-- Image Thumbnail Preview -->
+              <div v-if="isImageAttachment(message.attachmentType, message.attachmentUrl)" class="overflow-hidden rounded-lg">
+                <a :href="resolveMediaUrl(message.attachmentUrl)!" target="_blank" rel="noopener noreferrer">
+                  <img
+                    :src="resolveMediaUrl(message.attachmentUrl)!"
+                    :alt="message.attachmentName || 'Attachment image'"
+                    class="max-h-48 w-full object-cover rounded-lg transition hover:opacity-90"
+                  />
+                </a>
+              </div>
+              <!-- Generic File Card -->
+              <div v-else class="flex items-center gap-2">
+                <span class="text-lg">📄</span>
+                <div class="flex-1 min-w-0">
+                  <p class="font-bold truncate">{{ message.attachmentName || 'Attachment File' }}</p>
+                </div>
+                <a
+                  :href="resolveMediaUrl(message.attachmentUrl)!"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download
+                  class="rounded-lg px-2 py-1 text-[11px] font-bold transition hover:underline"
+                  :class="isOutgoing(message) ? 'bg-white text-sage' : 'bg-sage text-white'"
+                >
+                  Open ↗
+                </a>
+              </div>
+            </div>
+
             <p>{{ message.body }}</p>
             <p
               class="mt-1 text-[10px]"

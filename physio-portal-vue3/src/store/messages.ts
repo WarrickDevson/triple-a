@@ -1,3 +1,4 @@
+import * as signalR from '@microsoft/signalr'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
@@ -6,6 +7,8 @@ import {
   markMessageRead,
   sendPetMessage,
 } from '../api/messages'
+import { API_BASE_URL } from '../api/config'
+import { useAuthStore } from './auth'
 import type { Message, MessageThread, SendMessageRequest } from '../types/message'
 
 export interface MessageToastNotification {
@@ -26,6 +29,7 @@ export const useMessagesStore = defineStore('messages', () => {
   const activeNotification = ref<MessageToastNotification | null>(null)
 
   let pollInterval: ReturnType<typeof setInterval> | null = null
+  let hubConnection: signalR.HubConnection | null = null
 
   function triggerNotification(notif: Omit<MessageToastNotification, 'id'>) {
     const id = Date.now().toString()
@@ -71,7 +75,64 @@ export const useMessagesStore = defineStore('messages', () => {
     }
   }
 
+  async function initSignalR() {
+    const auth = useAuthStore()
+    if (!auth.accessToken || hubConnection) return
+
+    const hubUrl = `${API_BASE_URL.replace(/\/+$/, '')}/hubs/chat`
+
+    hubConnection = new signalR.HubConnectionBuilder()
+      .withUrl(hubUrl, {
+        accessTokenFactory: () => auth.accessToken || '',
+      })
+      .withAutomaticReconnect()
+      .build()
+
+    hubConnection.on('ReceiveMessage', (message: Message) => {
+      if (activePetId.value !== null) {
+        const exists = activeMessages.value.some((m) => m.messageId === message.messageId)
+        if (!exists) {
+          activeMessages.value = [...activeMessages.value, message]
+        }
+      }
+      loadThreads(true)
+    })
+
+    hubConnection.on('MessageRead', (data: { messageId: number; readAt: string }) => {
+      activeMessages.value = activeMessages.value.map((m) =>
+        m.messageId === data.messageId ? { ...m, readAt: data.readAt } : m,
+      )
+    })
+
+    hubConnection.on('ThreadUpdated', () => {
+      loadThreads(true)
+    })
+
+    hubConnection.onclose(() => {
+      startPolling()
+    })
+
+    try {
+      await hubConnection.start()
+      if (activePetId.value !== null && hubConnection.state === signalR.HubConnectionState.Connected) {
+        await hubConnection.invoke('JoinPetThread', activePetId.value)
+      }
+      stopPolling()
+    } catch {
+      startPolling()
+    }
+  }
+
   async function openThread(petId: number) {
+    if (
+      activePetId.value &&
+      activePetId.value !== petId &&
+      hubConnection &&
+      hubConnection.state === signalR.HubConnectionState.Connected
+    ) {
+      await hubConnection.invoke('LeavePetThread', activePetId.value).catch(() => undefined)
+    }
+
     activePetId.value = petId
     loading.value = true
     error.value = null
@@ -80,12 +141,18 @@ export const useMessagesStore = defineStore('messages', () => {
       threads.value = threads.value.map((t) =>
         t.petId === petId ? { ...t, unreadCount: 0 } : t,
       )
+      if (hubConnection && hubConnection.state === signalR.HubConnectionState.Connected) {
+        await hubConnection.invoke('JoinPetThread', petId).catch(() => undefined)
+      }
     } catch {
       error.value = 'Unable to load messages.'
     } finally {
       loading.value = false
     }
-    startPolling()
+
+    if (!hubConnection) {
+      await initSignalR()
+    }
   }
 
   function startPolling() {
@@ -121,7 +188,10 @@ export const useMessagesStore = defineStore('messages', () => {
     error.value = null
     try {
       const message = await sendPetMessage(activePetId.value, request)
-      activeMessages.value = [...activeMessages.value, message]
+      const exists = activeMessages.value.some((m) => m.messageId === message.messageId)
+      if (!exists) {
+        activeMessages.value = [...activeMessages.value, message]
+      }
       await loadThreads(true)
       return message
     } catch {
@@ -165,5 +235,6 @@ export const useMessagesStore = defineStore('messages', () => {
     startPolling,
     stopPolling,
     dismissNotification,
+    initSignalR,
   }
 })

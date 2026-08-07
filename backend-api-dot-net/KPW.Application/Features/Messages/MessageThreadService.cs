@@ -17,6 +17,9 @@ internal static class MessageMapper
             $"{message.Sender.FirstName} {message.Sender.LastName}",
             message.Body,
             message.VideoSubmissionId,
+            message.AttachmentUrl,
+            message.AttachmentName,
+            message.AttachmentType,
             message.ReadAt,
             message.CreatedDate);
 }

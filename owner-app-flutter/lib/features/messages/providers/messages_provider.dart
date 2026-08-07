@@ -42,10 +42,35 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
     }
   }
 
+  Future<Map<String, String>?> uploadAttachment(String filePath, String fileName) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+      });
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/messages/attachments/upload',
+        data: formData,
+      );
+      if (response.data != null) {
+        return {
+          'attachmentUrl': response.data!['attachmentUrl'] as String,
+          'attachmentName': response.data!['attachmentName'] as String,
+          'attachmentType': response.data!['attachmentType'] as String,
+        };
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<bool> sendMessage({
     required int petId,
     required String body,
     int? videoSubmissionId,
+    String? attachmentUrl,
+    String? attachmentName,
+    String? attachmentType,
   }) async {
     state = MessagesState(messages: state.messages, isSending: true);
     try {
@@ -54,6 +79,9 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
         data: {
           'body': body,
           if (videoSubmissionId != null) 'videoSubmissionId': videoSubmissionId,
+          if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
+          if (attachmentName != null) 'attachmentName': attachmentName,
+          if (attachmentType != null) 'attachmentType': attachmentType,
         },
       );
       final message = PetMessage.fromJson(response.data!);

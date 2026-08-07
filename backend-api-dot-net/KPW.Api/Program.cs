@@ -1,6 +1,9 @@
 using System.Text;
 using FluentValidation;
+using KPW.Api.Hubs;
+using KPW.Api.Services;
 using KPW.Application;
+using KPW.Application.Interfaces;
 using KPW.Application.Features.Videos.Commands;
 using KPW.Application.DTOs.Auth;
 using KPW.Application.Features.Auth.Commands;
@@ -32,6 +35,9 @@ builder.Host.UseSerilog((context, services, configuration) =>
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IChatNotificationService, ChatNotificationService>();
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -46,6 +52,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = jwtSettings["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!)),
             ClockSkew = TimeSpan.Zero
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -66,13 +86,15 @@ builder.Services.AddCors(options =>
                     return host == "localhost" || host == "127.0.0.1";
                 })
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
     options.AddPolicy("StagingCors", policy =>
     {
         policy.WithOrigins("https://kpw.devson.co.za")
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -112,6 +134,7 @@ var uploadRoot = Path.IsPathRooted(videoOptions.LocalRoot)
     ? videoOptions.LocalRoot
     : Path.Combine(app.Environment.ContentRootPath, videoOptions.LocalRoot);
 Directory.CreateDirectory(uploadRoot);
+app.UseStaticFiles();
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadRoot),
@@ -122,10 +145,26 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<Microsoft.EntityFrameworkCore.DbContext>();
+    await Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRawAsync(
+        dbContext.Database,
+        @"IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Messages' AND COLUMN_NAME = 'AttachmentUrl')
+        BEGIN
+            ALTER TABLE [Messages] ADD [AttachmentUrl] nvarchar(1000) NULL;
+        END
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Messages' AND COLUMN_NAME = 'AttachmentName')
+        BEGIN
+            ALTER TABLE [Messages] ADD [AttachmentName] nvarchar(255) NULL;
+        END
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Messages' AND COLUMN_NAME = 'AttachmentType')
+        BEGIN
+            ALTER TABLE [Messages] ADD [AttachmentType] nvarchar(100) NULL;
+        END");
+
     var passwordHasher = scope.ServiceProvider.GetRequiredService<KPW.Application.Interfaces.IPasswordHasher>();
     var seedUsers = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
         Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.IgnoreQueryFilters(

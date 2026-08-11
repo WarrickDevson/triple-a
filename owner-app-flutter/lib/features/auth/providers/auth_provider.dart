@@ -40,6 +40,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   late final Dio _dio;
 
   Dio get client => _dio;
+  String? get accessToken => _tokenStorage.accessToken;
 
   Dio _createDio() {
     final dio = Dio(BaseOptions(
@@ -187,6 +188,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           'firstName': firstName,
           'lastName': lastName,
           'inviteCode': inviteCode,
+          'role': 'Owner',
           if (phoneNumber != null && phoneNumber.isNotEmpty) 'phoneNumber': phoneNumber,
         },
       );

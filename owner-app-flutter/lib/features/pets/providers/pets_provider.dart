@@ -73,8 +73,11 @@ class PetsNotifier extends StateNotifier<PetsState> {
       final pet = Pet.fromJson(response.data!);
       state = PetsState(pets: [pet, ...state.pets]);
       return true;
-    } on DioException {
-      state = PetsState(pets: state.pets, error: 'Unable to create pet profile.');
+    } on DioException catch (e) {
+      final serverMsg = e.response?.data is Map
+          ? (e.response?.data['message'] ?? e.response?.data['title'] ?? e.response?.data['errors']?.toString())
+          : null;
+      state = PetsState(pets: state.pets, error: serverMsg?.toString() ?? 'Unable to create pet profile.');
       return false;
     }
   }

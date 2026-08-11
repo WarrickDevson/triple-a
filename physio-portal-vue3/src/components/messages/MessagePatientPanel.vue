@@ -19,12 +19,15 @@ const emit = defineEmits<{
   comingSoon: [message: string]
 }>()
 
-const quickActions = computed(() => [
-  { label: 'Update Plan', icon: ClipboardList, route: 'treatment-plan-detail', routeParam: props.thread?.petId },
-  { label: 'Schedule Appointment', icon: Calendar, route: 'appointments' },
-  { label: 'Add Note', icon: FileText, action: 'note' },
-  { label: 'Send Exercise Video', icon: Video, action: 'video' },
-])
+const quickActions = computed(() => {
+  const petId = props.thread?.petId ?? props.patient?.petId ?? null
+  return [
+    { label: 'Update Plan', icon: ClipboardList, route: petId ? 'treatment-plan-detail' : 'treatment-plans', routeParam: petId },
+    { label: 'Schedule Appointment', icon: Calendar, route: 'appointments' },
+    { label: 'Add Note', icon: FileText, action: 'note' },
+    { label: 'Send Exercise Video', icon: Video, action: 'video' },
+  ]
+})
 </script>
 
 <template>

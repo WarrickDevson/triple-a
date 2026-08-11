@@ -39,20 +39,15 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   MessageFilter _filter = MessageFilter.all;
   final Map<int, List<PetMessage>> _messagesByPet = {};
   bool _loadingThreads = false;
-  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(_loadThreads);
-    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (mounted) _loadThreads(silent: true);
-    });
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }

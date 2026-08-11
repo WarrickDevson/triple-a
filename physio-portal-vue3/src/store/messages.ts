@@ -151,7 +151,7 @@ export const useMessagesStore = defineStore('messages', () => {
     }
 
     if (!hubConnection) {
-      await initSignalR()
+      await initSignalR().catch(() => undefined)
     }
   }
 

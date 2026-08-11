@@ -39,6 +39,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         var request = command.Request;
         var requestedRole = request.Role?.Trim();
         var userRole = string.Equals(requestedRole, UserRole.Owner, StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrWhiteSpace(request.InviteCode) && string.IsNullOrWhiteSpace(request.ClinicName))
             ? UserRole.Owner
             : UserRole.Physio;
 

@@ -157,7 +157,7 @@ async function handleResend() {
 
           <div class="space-y-3 pt-2">
             <BaseButton
-              variant="outline"
+              variant="secondary"
               class="w-full h-11 text-sm"
               :disabled="resendLoading"
               @click="handleResend"
@@ -204,14 +204,12 @@ async function handleResend() {
                 id="firstName"
                 v-model="form.firstName"
                 label="First Name"
-                icon="UserRound"
                 required
               />
               <BaseInput
                 id="lastName"
                 v-model="form.lastName"
                 label="Last Name"
-                icon="UserRound"
                 required
               />
             </div>
@@ -222,7 +220,6 @@ async function handleResend() {
               label="Work Email"
               type="email"
               autocomplete="email"
-              icon="Mail"
               required
             />
 
@@ -231,7 +228,6 @@ async function handleResend() {
               v-model="form.phoneNumber"
               label="Phone Number (Optional)"
               type="tel"
-              icon="Phone"
             />
 
             <BaseInput
@@ -239,7 +235,6 @@ async function handleResend() {
               v-model="form.clinicName"
               label="Clinic Name (Optional)"
               placeholder="e.g. MoveWell Rehab Centre"
-              icon="Building2"
             />
 
             <div>
@@ -248,7 +243,6 @@ async function handleResend() {
                 v-model="form.inviteCode"
                 label="Clinic / Admin Invite Code (Optional)"
                 placeholder="e.g. MW-123456"
-                icon="ShieldCheck"
               />
               <p class="mt-1 text-[11px] text-neutral-muted">
                 Entering a valid invite code provides instant account approval upon email verification.

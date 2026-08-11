@@ -33,14 +33,14 @@ class MoveWellApp extends ConsumerWidget {
       );
     } else if (resetToken != null) {
       home = ResetPasswordScreen(initialToken: resetToken);
-    } else if (inviteCode != null) {
-      home = SignupScreen(initialInviteCode: inviteCode);
     } else if (auth.isAuthenticated) {
       if (auth.user != null && !auth.user!.isEmailVerified) {
         home = VerifyEmailScreen(email: auth.user!.email);
       } else {
         home = const MainShell();
       }
+    } else if (inviteCode != null) {
+      home = SignupScreen(initialInviteCode: inviteCode);
     } else {
       home = const LoginScreen();
     }

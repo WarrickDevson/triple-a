@@ -63,7 +63,7 @@ const router = createRouter({
           meta: { title: 'Patients' },
         },
         {
-          path: 'patients/:petId',
+          path: 'patients/:petId?',
           name: 'patient-detail',
           component: () => import('../views/PatientsView.vue'),
           meta: { title: 'Patients' },
@@ -81,7 +81,7 @@ const router = createRouter({
           meta: { title: 'Treatment Plans' },
         },
         {
-          path: 'treatment-plans/:petId',
+          path: 'treatment-plans/:petId?',
           name: 'treatment-plan-detail',
           component: () => import('../views/TreatmentPlansView.vue'),
           meta: { title: 'Treatment Plans' },
@@ -99,19 +99,19 @@ const router = createRouter({
           meta: { title: 'Progress' },
         },
         {
-          path: 'progress/:petId',
+          path: 'progress/:petId?',
           name: 'progress-detail',
           component: () => import('../views/ProgressView.vue'),
           meta: { title: 'Progress' },
         },
         {
-          path: 'messages',
+          path: 'messages/:petId?',
           name: 'messages',
           component: () => import('../views/MessagesView.vue'),
           meta: { title: 'Messages' },
         },
         {
-          path: 'messages/:petId',
+          path: 'messages/thread/:petId?',
           name: 'message-thread',
           component: () => import('../views/MessagesView.vue'),
           meta: { title: 'Messages' },

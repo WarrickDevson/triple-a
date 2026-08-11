@@ -197,26 +197,6 @@ Copy `build\web\*` to `C:\inetpub\kpw\app` (includes `web.config` from `web/`).
 - Vue: `npm run dev` → `http://localhost:5287/portal/` (Vite base `/portal/`)
 - Flutter: `flutter run -d chrome` with default dev API `https://localhost:7112`
 
----
-
-## 6. Demo accounts and seed data
-
-Seeded users (password hash in `DatabaseSeeder.cs` — confirm with your team):
-
-| Role | Email |
-|------|-------|
-| SysAdmin | `sysadmin@kpw.local` |
-| Physio | `physio@kpw.local` |
-| Owner | `owner@kpw.local` |
-
-All pets belong to **Demo Owner** (`owner@kpw.local`). Demo dates are anchored to **27 July 2026** — physio dashboard “today” schedule, owner reminders, and tracking trends reflect that window.
-
-### Pet roster
-
-| Pet | Species | Condition | Active programme |
-|-----|---------|-----------|------------------|
-| Buddy | Canine (Labrador) | Hip dysplasia | Hip Recovery - Week 4 |
-| Luna | Canine (Border Collie) | Post-ACL | ACL Recovery - Week 3 |
 | Max | Canine (German Shepherd) | Lameness | Lameness Rehab |
 | Bella | Canine (Beagle) | Weight / mobility | Weight & Mobility Plan |
 | Whiskers | Feline (DSH) | Arthritis | Arthritis Care |

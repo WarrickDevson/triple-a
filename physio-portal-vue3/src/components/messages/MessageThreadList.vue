@@ -110,6 +110,37 @@ function selectThread(petId: number) {
     </div>
 
     <div v-if="loading" class="p-6 text-sm text-neutral-muted">Loading conversations...</div>
+    <div v-else-if="filteredThreads.length === 0" class="p-4">
+      <div class="rounded-xl border border-neutral-grey/80 bg-surface p-4 text-center">
+        <p class="text-sm font-bold text-navy">No Active Conversations</p>
+        <p class="mt-1 text-xs text-neutral-muted">Select a patient below to start a new chat:</p>
+      </div>
+
+      <div v-if="patientsStore.patients.length > 0" class="mt-3 space-y-1.5">
+        <p class="px-1 text-[11px] font-bold uppercase tracking-wider text-neutral-muted">Clinic Patients</p>
+        <button
+          v-for="patient in patientsStore.patients"
+          :key="patient.petId"
+          type="button"
+          class="flex w-full items-center justify-between rounded-xl border border-neutral-grey/60 bg-white p-3 text-left transition hover:border-sage/40 hover:bg-sage-muted/20"
+          @click="selectThread(patient.petId)"
+        >
+          <div class="flex items-center gap-2.5">
+            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-sage-muted text-xs font-bold text-sage">
+              {{ patient.petName.slice(0, 2).toUpperCase() }}
+            </div>
+            <div>
+              <p class="text-xs font-bold text-navy">{{ patient.petName }}</p>
+              <p class="text-[10px] text-neutral-muted">Owner: {{ patient.ownerName }}</p>
+            </div>
+          </div>
+          <span class="rounded-lg bg-sage px-2 py-1 text-[10px] font-bold text-white">Start Chat →</span>
+        </button>
+      </div>
+      <div v-else class="mt-4 text-center text-xs text-neutral-muted">
+        No patients found in your clinic yet. Add a patient in the Patients tab first.
+      </div>
+    </div>
     <ul v-else class="flex-1 overflow-y-auto">
       <li v-for="thread in filteredThreads" :key="thread.messageThreadId">
         <button

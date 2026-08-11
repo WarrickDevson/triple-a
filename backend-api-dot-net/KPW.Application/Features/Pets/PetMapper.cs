@@ -58,16 +58,36 @@ internal static class PetAuthorization
             throw new UnauthorizedAccessException();
         }
 
-        if (currentUser.Role is UserRole.SysAdmin or UserRole.Physio)
+        if (currentUser.Role is UserRole.SysAdmin)
         {
             return;
         }
 
         var pet = await dbContext.Set<Pet>()
+            .Include(p => p.Owner)
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.PetId == petId, cancellationToken);
 
-        if (pet is null || pet.OwnerId != currentUser.UserId)
+        if (pet is null)
+        {
+            throw new KeyNotFoundException("Pet not found.");
+        }
+
+        if (currentUser.Role == UserRole.Physio)
+        {
+            var physioUser = await dbContext.Set<User>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.UserId == currentUser.UserId, cancellationToken);
+
+            if (physioUser?.ClinicId != null && pet.Owner?.ClinicId == physioUser.ClinicId)
+            {
+                return;
+            }
+
+            throw new UnauthorizedAccessException("You do not have permission to access pets outside your practice.");
+        }
+
+        if (currentUser.Role == UserRole.Owner && pet.OwnerId != currentUser.UserId)
         {
             throw new UnauthorizedAccessException("You can only access your own pets.");
         }

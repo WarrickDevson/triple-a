@@ -57,13 +57,50 @@ public class CreateAppointmentCommandHandler : IRequestHandler<CreateAppointment
                 .OrderByDescending(p => p.StartDate)
                 .FirstOrDefaultAsync(cancellationToken);
 
-            if (activeProgram is null)
+            if (activeProgram is not null)
             {
-                throw new InvalidOperationException(
-                    "No active rehabilitation programme found for this pet. Please contact your physiotherapist.");
+                physioId = activeProgram.PhysioId;
             }
+            else
+            {
+                var petWithOwner = await _dbContext.Set<Pet>()
+                    .Include(p => p.Owner)
+                    .FirstOrDefaultAsync(p => p.PetId == request.PetId, cancellationToken);
 
-            physioId = activeProgram.PhysioId;
+                var clinicId = petWithOwner?.Owner?.ClinicId;
+                if (clinicId is not null)
+                {
+                    var clinicPhysio = await _dbContext.Set<User>()
+                        .Where(u => u.ClinicId == clinicId && u.UserRole == UserRole.Physio && u.IsActive)
+                        .Select(u => (int?)u.UserId)
+                        .FirstOrDefaultAsync(cancellationToken);
+
+                    if (clinicPhysio.HasValue)
+                    {
+                        physioId = clinicPhysio.Value;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("No physiotherapist found in your clinic for appointment booking.");
+                    }
+                }
+                else
+                {
+                    var fallbackPhysio = await _dbContext.Set<User>()
+                        .Where(u => u.UserRole == UserRole.Physio && u.IsActive)
+                        .Select(u => (int?)u.UserId)
+                        .FirstOrDefaultAsync(cancellationToken);
+
+                    if (fallbackPhysio.HasValue)
+                    {
+                        physioId = fallbackPhysio.Value;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("No physiotherapist is currently available for appointment scheduling.");
+                    }
+                }
+            }
         }
         else
         {

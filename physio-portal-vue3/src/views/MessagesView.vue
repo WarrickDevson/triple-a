@@ -21,7 +21,7 @@ const stubMessage = ref('')
 
 const selectedPetId = computed(() => {
   const param = route.params.petId
-  if (param) return Number(param)
+  if (param && !isNaN(Number(param))) return Number(param)
   return messagesStore.activePetId ?? messagesStore.threads[0]?.petId ?? null
 })
 
@@ -43,26 +43,39 @@ onMounted(async () => {
 })
 
 async function syncRouteAndOpenThread() {
-  const paramId = route.params.petId ? Number(route.params.petId) : null
-  const petId = paramId ?? messagesStore.threads[0]?.petId ?? null
+  try {
+    const rawParam = route.params.petId
+    const paramId = rawParam && !isNaN(Number(rawParam)) ? Number(rawParam) : null
+    const firstThreadPetId = messagesStore.threads.length > 0 ? messagesStore.threads[0].petId : null
+    const targetPetId = paramId ?? firstThreadPetId
 
-  if (paramId && petId) {
-    if (route.params.petId) {
+    if (!targetPetId) return
+
+    if (paramId) {
       mobileView.value = 'chat'
+      if (messagesStore.activePetId !== targetPetId) {
+        await messagesStore.openThread(targetPetId)
+        markUnreadAsRead()
+      }
+    } else if (typeof targetPetId === 'number' && !isNaN(targetPetId)) {
+      if (String(route.params.petId) !== String(targetPetId)) {
+        await router.replace({ name: 'message-thread', params: { petId: String(targetPetId) } }).catch(() => undefined)
+      }
+      if (messagesStore.activePetId !== targetPetId) {
+        await messagesStore.openThread(targetPetId)
+        markUnreadAsRead()
+      }
     }
-    await messagesStore.openThread(petId)
-    markUnreadAsRead()
-  } else if (petId) {
-    router.replace({ name: 'message-thread', params: { petId } })
-    await messagesStore.openThread(petId)
-    markUnreadAsRead()
+  } catch (err) {
+    console.error('Error syncing message thread:', err)
   }
 }
 
 watch(() => route.params.petId, () => syncRouteAndOpenThread())
 
 async function selectThread(petId: number) {
-  router.push({ name: 'message-thread', params: { petId } })
+  if (!petId || isNaN(petId)) return
+  router.push({ name: 'message-thread', params: { petId: String(petId) } })
   mobileView.value = 'chat'
 }
 

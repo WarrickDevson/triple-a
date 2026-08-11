@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { AlertCircle, CheckCircle2, Loader2, Mail } from '@lucide/vue'
+import { AlertCircle, CheckCircle2, Loader2 } from '@lucide/vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseInput from '../components/BaseInput.vue'
 import { brand } from '../config/brand'
@@ -50,11 +50,14 @@ async function handleResend() {
   if (!resendEmail.value.trim()) return
   resendLoading.value = true
   resendSuccess.value = false
+
   try {
     const ok = await auth.resendVerification(resendEmail.value.trim())
     if (ok) {
       resendSuccess.value = true
     }
+  } catch (err: any) {
+    errorMessage.value = err?.response?.data?.message || 'Failed to resend verification email.'
   } finally {
     resendLoading.value = false
   }
@@ -116,7 +119,6 @@ async function handleResend() {
             v-model="resendEmail"
             label="Email Address"
             type="email"
-            icon="Mail"
           />
 
           <div v-if="resendSuccess" class="rounded-lg bg-emerald-50 p-3 text-xs font-medium text-emerald-700 text-center">
@@ -124,7 +126,7 @@ async function handleResend() {
           </div>
 
           <BaseButton
-            variant="outline"
+            variant="secondary"
             class="w-full h-11 text-sm"
             :disabled="resendLoading || !resendEmail.trim()"
             @click="handleResend"
@@ -133,7 +135,7 @@ async function handleResend() {
           </BaseButton>
 
           <div class="pt-2 text-center">
-            <RouterLink to="/login" class="text-sm font-semibold text-sage hover:underline">
+            <RouterLink to="/login" class="text-xs font-semibold text-sage hover:underline">
               Back to Login
             </RouterLink>
           </div>

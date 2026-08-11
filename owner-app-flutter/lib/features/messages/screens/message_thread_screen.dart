@@ -34,7 +34,6 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
   String? _attachedFileUrl;
   String? _attachedFileName;
   String? _attachedFileType;
-  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -47,16 +46,10 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
       await ref.read(messagesProvider.notifier).loadForPet(widget.pet.petId, force: true);
       _scrollToBottom();
     });
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (mounted) {
-        ref.read(messagesProvider.notifier).loadForPet(widget.pet.petId, force: true, silent: true);
-      }
-    });
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();

@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
-  Building2,
   CheckCircle2,
   Clock,
-  Filter,
   Mail,
   Plus,
   RefreshCw,
   Search,
-  ShieldCheck,
   UserCheck,
   UserX,
   Users,
@@ -131,7 +128,7 @@ async function handleSendInvite() {
       </div>
 
       <div class="flex items-center gap-3">
-        <BaseButton variant="outline" class="gap-2 text-xs" :disabled="loading" @click="loadPhysios">
+        <BaseButton variant="secondary" class="gap-2 text-xs" :disabled="loading" @click="loadPhysios">
           <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin': loading }" />
           Refresh
         </BaseButton>
@@ -291,7 +288,7 @@ async function handleSendInvite() {
 
                   <BaseButton
                     v-if="p.isActive"
-                    variant="outline"
+                    variant="secondary"
                     class="h-8 px-3 text-[11px] text-red-600 border-red-200 hover:bg-red-50 gap-1"
                     :disabled="actionUserId === p.userId"
                     @click="handleReject(p.userId)"
@@ -327,7 +324,6 @@ async function handleSendInvite() {
             v-model="inviteEmail"
             label="Practitioner Email"
             type="email"
-            icon="Mail"
             required
           />
 
@@ -336,11 +332,10 @@ async function handleSendInvite() {
             v-model="inviteClinicName"
             label="Clinic Name (Optional)"
             placeholder="e.g. MoveWell Partner Clinic"
-            icon="Building2"
           />
 
           <div class="flex items-center justify-end gap-3 pt-2">
-            <BaseButton type="button" variant="outline" class="h-10 text-xs" @click="showInviteModal = false">
+            <BaseButton type="button" variant="secondary" class="h-10 text-xs" @click="showInviteModal = false">
               Cancel
             </BaseButton>
 

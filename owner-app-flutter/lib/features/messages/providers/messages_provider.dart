@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:signalr_netcore/signalr_client.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/message.dart';
 
@@ -18,13 +19,86 @@ class MessagesState {
 }
 
 class MessagesNotifier extends StateNotifier<MessagesState> {
-  MessagesNotifier(this._dio) : super(const MessagesState());
+  MessagesNotifier(this._dio, this._ref) : super(const MessagesState());
 
   final Dio _dio;
+  final Ref _ref;
   int? _petId;
+  HubConnection? _hubConnection;
+
+  Future<void> initSignalR() async {
+    if (_hubConnection != null && _hubConnection!.state == HubConnectionState.Connected) return;
+
+    final token = _ref.read(authProvider.notifier).accessToken;
+    if (token == null) return;
+
+    final baseUrl = _dio.options.baseUrl.replaceAll(RegExp(r'/+$'), '');
+    final hubUrl = '$baseUrl/hubs/chat';
+
+    _hubConnection = HubConnectionBuilder()
+        .withUrl(
+          hubUrl,
+          options: HttpConnectionOptions(
+            accessTokenFactory: () async => token,
+          ),
+        )
+        .withAutomaticReconnect()
+        .build();
+
+    _hubConnection!.on('ReceiveMessage', (arguments) {
+      if (arguments != null && arguments.isNotEmpty) {
+        final data = arguments[0] as Map<String, dynamic>;
+        final message = PetMessage.fromJson(data);
+        final exists = state.messages.any((m) => m.messageId == message.messageId);
+        if (!exists) {
+          state = MessagesState(messages: [...state.messages, message]);
+        }
+      }
+    });
+
+    _hubConnection!.on('MessageRead', (arguments) {
+      if (arguments != null && arguments.isNotEmpty) {
+        final data = arguments[0] as Map<String, dynamic>;
+        final messageId = data['messageId'] as int;
+        final readAtStr = data['readAt'] as String?;
+        final readAt = readAtStr != null ? DateTime.parse(readAtStr) : DateTime.now();
+        state = MessagesState(
+          messages: state.messages.map((m) {
+            return m.messageId == messageId ? PetMessage(
+              messageId: m.messageId,
+              messageThreadId: m.messageThreadId,
+              senderUserId: m.senderUserId,
+              senderName: m.senderName,
+              body: m.body,
+              videoSubmissionId: m.videoSubmissionId,
+              attachmentUrl: m.attachmentUrl,
+              attachmentName: m.attachmentName,
+              attachmentType: m.attachmentType,
+              readAt: readAt,
+              createdDate: m.createdDate,
+            ) : m;
+          }).toList(),
+        );
+      }
+    });
+
+    try {
+      await _hubConnection!.start();
+      if (_petId != null) {
+        await _hubConnection!.invoke('JoinPetThread', args: <Object>[_petId!]);
+      }
+    } catch (_) {
+      // Gracefully handle connection error
+    }
+  }
 
   Future<void> loadForPet(int petId, {bool force = false, bool silent = false}) async {
     if (_petId == petId && state.messages.isNotEmpty && !force) return;
+    
+    if (_petId != null && _petId != petId && _hubConnection?.state == HubConnectionState.Connected) {
+      await _hubConnection?.invoke('LeavePetThread', args: <Object>[_petId!]);
+    }
+
     _petId = petId;
     if (!silent && (state.messages.isEmpty || force)) {
       state = MessagesState(messages: state.messages, isLoading: state.messages.isEmpty);
@@ -39,6 +113,11 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
       if (!silent) {
         state = MessagesState(messages: state.messages, error: 'Unable to load messages.');
       }
+    }
+
+    await initSignalR();
+    if (_hubConnection?.state == HubConnectionState.Connected) {
+      await _hubConnection?.invoke('JoinPetThread', args: <Object>[petId]);
     }
   }
 
@@ -85,7 +164,12 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
         },
       );
       final message = PetMessage.fromJson(response.data!);
-      state = MessagesState(messages: [...state.messages, message]);
+      final exists = state.messages.any((m) => m.messageId == message.messageId);
+      if (!exists) {
+        state = MessagesState(messages: [...state.messages, message]);
+      } else {
+        state = MessagesState(messages: state.messages);
+      }
       return true;
     } on DioException catch (e) {
       final message = e.response?.data is Map<String, dynamic>
@@ -98,9 +182,15 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
       return false;
     }
   }
+
+  @override
+  void dispose() {
+    _hubConnection?.stop();
+    super.dispose();
+  }
 }
 
 final messagesProvider = StateNotifierProvider<MessagesNotifier, MessagesState>((ref) {
   final authNotifier = ref.read(authProvider.notifier);
-  return MessagesNotifier(authNotifier.client);
+  return MessagesNotifier(authNotifier.client, ref);
 });

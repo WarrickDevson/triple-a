@@ -167,7 +167,11 @@ using (var scope = app.Services.CreateScope())
         IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = 'IsApproved')
         BEGIN
             ALTER TABLE [Users] ADD [IsApproved] bit NOT NULL CONSTRAINT [DF_Users_IsApproved] DEFAULT (1);
-        END");
+        END
+        UPDATE u
+        SET u.ClinicId = (SELECT TOP 1 ClinicId FROM Clinics ORDER BY ClinicId ASC)
+        FROM Users u
+        WHERE u.UserRole = 'Owner' AND u.ClinicId IS NULL AND EXISTS (SELECT 1 FROM Clinics);");
 
     var passwordHasher = scope.ServiceProvider.GetRequiredService<KPW.Application.Interfaces.IPasswordHasher>();
     var seedUsers = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(

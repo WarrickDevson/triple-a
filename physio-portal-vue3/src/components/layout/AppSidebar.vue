@@ -47,8 +47,9 @@ const { logoUrl, hasLogo } = useBrandLogo()
 const navItems = computed(() => {
   if (auth.user?.userRole === 'SysAdmin') {
     return [
-      ...portalNavItems,
       { name: 'admin-physios', label: 'Admin Management', to: { name: 'admin-physios' }, icon: 'ShieldCheck' },
+      { name: 'exercises', label: 'Exercise Library', to: { name: 'exercises' }, icon: 'Dumbbell' },
+      { name: 'settings', label: 'Settings', to: { name: 'settings' }, icon: 'Settings' },
     ]
   }
   return portalNavItems

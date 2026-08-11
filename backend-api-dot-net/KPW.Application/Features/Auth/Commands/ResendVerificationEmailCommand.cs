@@ -39,6 +39,12 @@ public class ResendVerificationEmailCommandHandler : IRequestHandler<ResendVerif
 
         if (user is not null && !user.IsEmailVerified)
         {
+            if (user.EmailVerificationTokenExpiresAt.HasValue &&
+                user.EmailVerificationTokenExpiresAt.Value > DateTime.UtcNow.AddHours(23).AddMinutes(59))
+            {
+                throw new InvalidOperationException("Please wait 60 seconds before requesting another verification email.");
+            }
+
             var rawToken = _jwtTokenService.GenerateRefreshToken();
             var tokenHash = _jwtTokenService.HashRefreshToken(rawToken);
 

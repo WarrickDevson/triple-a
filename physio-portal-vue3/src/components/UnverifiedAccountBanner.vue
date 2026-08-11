@@ -38,8 +38,17 @@ function checkCooldown() {
 function startTimer() {
   if (timer) clearInterval(timer)
   timer = setInterval(() => {
-    if (cooldownRemaining.value > 1) {
-      cooldownRemaining.value--
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) {
+      cooldownRemaining.value = 0
+      if (timer) clearInterval(timer)
+      return
+    }
+    const expiry = parseInt(stored, 10)
+    const now = Math.floor(Date.now() / 1000)
+    const remaining = expiry - now
+    if (remaining > 0) {
+      cooldownRemaining.value = remaining
     } else {
       cooldownRemaining.value = 0
       if (timer) clearInterval(timer)
@@ -50,6 +59,12 @@ function startTimer() {
 
 async function handleResend() {
   if (cooldownRemaining.value > 0 || resendSending.value || !auth.user?.email) return
+  
+  const expiry = Math.floor(Date.now() / 1000) + COOLDOWN_SECONDS
+  localStorage.setItem(STORAGE_KEY, expiry.toString())
+  cooldownRemaining.value = COOLDOWN_SECONDS
+  startTimer()
+
   resendSending.value = true
   resendSuccess.value = false
   errorMessage.value = null
@@ -58,10 +73,6 @@ async function handleResend() {
     const ok = await auth.resendVerification(auth.user.email)
     if (ok) {
       resendSuccess.value = true
-      const expiry = Math.floor(Date.now() / 1000) + COOLDOWN_SECONDS
-      localStorage.setItem(STORAGE_KEY, expiry.toString())
-      cooldownRemaining.value = COOLDOWN_SECONDS
-      startTimer()
     } else {
       errorMessage.value = auth.error || 'Failed to resend email.'
     }

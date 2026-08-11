@@ -70,17 +70,21 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      if (_cooldownRemaining > 1) {
-        setState(() {
-          _cooldownRemaining--;
-        });
+      final prefs = await SharedPreferences.getInstance();
+      final expiry = prefs.getInt(_cooldownKey);
+      if (expiry == null) {
+        timer.cancel();
+        if (mounted) setState(() => _cooldownRemaining = 0);
+        return;
+      }
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final remaining = expiry - now;
+      if (remaining > 0) {
+        if (mounted) setState(() => _cooldownRemaining = remaining);
       } else {
         timer.cancel();
-        final prefs = await SharedPreferences.getInstance();
         await prefs.remove(_cooldownKey);
-        setState(() {
-          _cooldownRemaining = 0;
-        });
+        if (mounted) setState(() => _cooldownRemaining = 0);
       }
     });
   }
@@ -124,10 +128,17 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
   Future<void> _resendVerificationEmail() async {
     if (_cooldownRemaining > 0) return;
+
+    final expiry = (DateTime.now().millisecondsSinceEpoch ~/ 1000) + _cooldownSeconds;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_cooldownKey, expiry);
+
     setState(() {
       _statusMessage = null;
       _errorMessage = null;
+      _cooldownRemaining = _cooldownSeconds;
     });
+    _startTimer();
 
     final msg = await ref.read(authProvider.notifier).resendVerification(widget.email);
     if (!mounted) return;
@@ -135,18 +146,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     setState(() {
       if (msg != null) {
         _statusMessage = msg;
-        _cooldownRemaining = _cooldownSeconds;
       } else {
         _errorMessage = ref.read(authProvider).error ?? 'Failed to resend verification email.';
       }
     });
-
-    if (msg != null) {
-      final expiry = (DateTime.now().millisecondsSinceEpoch ~/ 1000) + _cooldownSeconds;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_cooldownKey, expiry);
-      _startTimer();
-    }
   }
 
   void _goToLogin() {

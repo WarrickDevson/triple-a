@@ -17,7 +17,7 @@ const CLINIC_KEY = 'triple-a-clinic-settings'
 const NOTIF_KEY = 'triple-a-notification-settings'
 
 export const defaultClinicSettings: ClinicSettings = {
-  clinicName: 'Triple A Rehabilitation Clinic',
+  clinicName: 'Personal Clinic',
   timezone: 'Africa/Johannesburg',
   defaultAppointmentMinutes: 45,
 }

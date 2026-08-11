@@ -1,6 +1,22 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { demoPatientUpdates } from '../../data/dashboardDemo'
+import { usePatientsStore } from '../../store/patients'
+
+const patientsStore = usePatientsStore()
+
+const updates = computed(() => {
+  return patientsStore.patients.map((p) => ({
+    id: p.petId,
+    initials: p.petName?.[0]?.toUpperCase() ?? 'P',
+    name: p.petName,
+    species: p.species,
+    age: 'Active',
+    note: p.medicalHistories?.[0]?.diagnosis || 'Patient active in rehabilitation program.',
+    status: 'improving',
+    timeAgo: 'Recently',
+  }))
+})
 
 function badgeClass(status: string) {
   if (status === 'improving') return 'status-badge status-badge--improving'
@@ -21,9 +37,13 @@ function badgeLabel(status: string) {
       <h2 class="portal-card-title">Recent Patient Updates</h2>
     </div>
 
-    <ul class="space-y-4">
+    <div v-if="updates.length === 0" class="py-8 text-center text-xs text-neutral-muted">
+      No recent patient updates.
+    </div>
+
+    <ul v-else class="space-y-4">
       <li
-        v-for="update in demoPatientUpdates"
+        v-for="update in updates"
         :key="update.id"
         class="flex items-start gap-3 border-b border-neutral-grey/60 pb-4 last:border-0 last:pb-0"
       >

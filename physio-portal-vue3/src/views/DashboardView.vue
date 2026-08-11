@@ -18,7 +18,7 @@ onMounted(() => {
 })
 
 const patientCount = computed(
-  () => dashboardStore.dashboard?.patientCount ?? patientsStore.patients.length ?? 28,
+  () => dashboardStore.dashboard?.patientCount ?? patientsStore.patients.length,
 )
 
 const todaysSchedule = computed(() => dashboardStore.dashboard?.todaysSchedule ?? [])

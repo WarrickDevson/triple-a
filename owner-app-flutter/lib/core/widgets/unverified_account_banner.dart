@@ -51,17 +51,21 @@ class _UnverifiedAccountBannerState extends ConsumerState<UnverifiedAccountBanne
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      if (_cooldownRemaining > 1) {
-        setState(() {
-          _cooldownRemaining--;
-        });
+      final prefs = await SharedPreferences.getInstance();
+      final expiry = prefs.getInt(_cooldownKey);
+      if (expiry == null) {
+        timer.cancel();
+        if (mounted) setState(() => _cooldownRemaining = 0);
+        return;
+      }
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final remaining = expiry - now;
+      if (remaining > 0) {
+        if (mounted) setState(() => _cooldownRemaining = remaining);
       } else {
         timer.cancel();
-        final prefs = await SharedPreferences.getInstance();
         await prefs.remove(_cooldownKey);
-        setState(() {
-          _cooldownRemaining = 0;
-        });
+        if (mounted) setState(() => _cooldownRemaining = 0);
       }
     });
   }
@@ -71,10 +75,16 @@ class _UnverifiedAccountBannerState extends ConsumerState<UnverifiedAccountBanne
     final user = authState.user;
     if (user == null || _cooldownRemaining > 0 || _isSending) return;
 
+    final expiry = (DateTime.now().millisecondsSinceEpoch ~/ 1000) + _cooldownSeconds;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_cooldownKey, expiry);
+
     setState(() {
+      _cooldownRemaining = _cooldownSeconds;
       _isSending = true;
       _sendSuccess = false;
     });
+    _startTimer();
 
     final msg = await ref.read(authProvider.notifier).resendVerification(user.email);
 
@@ -86,16 +96,6 @@ class _UnverifiedAccountBannerState extends ConsumerState<UnverifiedAccountBanne
         _sendSuccess = true;
       }
     });
-
-    if (msg != null) {
-      final expiry = (DateTime.now().millisecondsSinceEpoch ~/ 1000) + _cooldownSeconds;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(_cooldownKey, expiry);
-      setState(() {
-        _cooldownRemaining = _cooldownSeconds;
-      });
-      _startTimer();
-    }
   }
 
   @override

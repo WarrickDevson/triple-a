@@ -38,15 +38,15 @@ public class GetPendingVideosQueryHandler : IRequestHandler<GetPendingVideosQuer
             .AsNoTracking()
             .FirstAsync(u => u.UserId == _currentUserService.UserId, cancellationToken);
 
+        if (currentUser.ClinicId is null)
+        {
+            return [];
+        }
+
         var query = _dbContext.Set<VideoSubmission>()
             .Include(v => v.Pet)
             .Include(v => v.Exercise)
-            .Where(v => !v.IsReviewed);
-
-        if (currentUser.ClinicId is not null)
-        {
-            query = query.Where(v => v.Pet.Owner.ClinicId == currentUser.ClinicId);
-        }
+            .Where(v => !v.IsReviewed && v.Pet.Owner.ClinicId == currentUser.ClinicId);
 
         var submissions = await query
             .OrderByDescending(v => v.CreatedDate)

@@ -58,6 +58,10 @@ public class GetMessageThreadsQueryHandler : IRequestHandler<GetMessageThreadsQu
         {
             query = query.Where(t => t.Pet.Owner.ClinicId == currentUser.ClinicId);
         }
+        else
+        {
+            return [];
+        }
 
         var threads = await query.ToListAsync(cancellationToken);
 

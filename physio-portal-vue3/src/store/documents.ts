@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { demoDocuments, type DocumentItem } from '../data/documentsDemo'
+import type { DocumentItem } from '../data/documentsDemo'
 
 const STORAGE_KEY = 'triple-a-documents'
 
@@ -18,9 +18,9 @@ export const useDocumentsStore = defineStore('documents', () => {
         return JSON.parse(stored) as DocumentItem[]
       }
     } catch {
-      // Fallback to demo documents on parse failure
+      // Ignore parse failure
     }
-    return [...demoDocuments]
+    return []
   }
 
   function persistDocuments() {

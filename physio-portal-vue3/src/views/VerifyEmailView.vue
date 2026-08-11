@@ -46,8 +46,17 @@ function checkCooldown() {
 function startTimer() {
   if (timer) clearInterval(timer)
   timer = setInterval(() => {
-    if (cooldownRemaining.value > 1) {
-      cooldownRemaining.value--
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) {
+      cooldownRemaining.value = 0
+      if (timer) clearInterval(timer)
+      return
+    }
+    const expiry = parseInt(stored, 10)
+    const now = Math.floor(Date.now() / 1000)
+    const remaining = expiry - now
+    if (remaining > 0) {
+      cooldownRemaining.value = remaining
     } else {
       cooldownRemaining.value = 0
       if (timer) clearInterval(timer)
@@ -98,6 +107,12 @@ onUnmounted(() => {
 
 async function handleResend() {
   if (!resendEmail.value.trim() || cooldownRemaining.value > 0) return
+  
+  const expiry = Math.floor(Date.now() / 1000) + COOLDOWN_SECONDS
+  localStorage.setItem(STORAGE_KEY, expiry.toString())
+  cooldownRemaining.value = COOLDOWN_SECONDS
+  startTimer()
+
   resendLoading.value = true
   resendSuccess.value = false
 
@@ -105,10 +120,6 @@ async function handleResend() {
     const ok = await auth.resendVerification(resendEmail.value.trim())
     if (ok) {
       resendSuccess.value = true
-      const expiry = Math.floor(Date.now() / 1000) + COOLDOWN_SECONDS
-      localStorage.setItem(STORAGE_KEY, expiry.toString())
-      cooldownRemaining.value = COOLDOWN_SECONDS
-      startTimer()
     }
   } catch (err: any) {
     errorMessage.value = err?.response?.data?.message || 'Failed to resend verification email.'

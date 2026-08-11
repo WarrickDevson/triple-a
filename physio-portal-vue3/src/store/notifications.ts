@@ -18,26 +18,7 @@ export interface PortalNotification {
 export const useNotificationsStore = defineStore('notifications', () => {
   const readIds = ref<Set<string>>(new Set())
 
-  const customNotifications = ref<PortalNotification[]>([
-    {
-      id: 'notif-demo-1',
-      title: 'Video Review Needed',
-      message: 'Buster has submitted a new gait assessment video.',
-      timeAgo: '10m ago',
-      type: 'video',
-      read: false,
-      linkName: 'patients',
-    },
-    {
-      id: 'notif-demo-2',
-      title: 'Upcoming Appointment',
-      message: 'Luna - Post-op Knee Checkup at 14:00 today.',
-      timeAgo: '1h ago',
-      type: 'appointment',
-      read: false,
-      linkName: 'appointments',
-    },
-  ])
+  const customNotifications = ref<PortalNotification[]>([])
 
   const settings = ref(loadNotificationSettings())
 

@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import {
-  billingSummary,
-  demoInvoices,
   formatCurrency,
   invoiceStatusClass,
   planFeatures,
+  type InvoiceItem,
 } from '../data/billingDemo'
 import { useAuthStore } from '../store/auth'
 import BaseButton from '../components/BaseButton.vue'
@@ -14,8 +13,17 @@ const auth = useAuthStore()
 const showStubModal = ref(false)
 const stubMessage = ref('')
 
-const tier = auth.user?.subscriptionTier ?? 'Professional'
-const features = planFeatures[tier] ?? planFeatures.Professional!
+const invoices = ref<InvoiceItem[]>([])
+
+const outstandingBalance = computed(() =>
+  invoices.value.filter((i) => i.status !== 'Paid').reduce((sum, i) => sum + i.amount, 0),
+)
+const paidThisMonth = computed(() =>
+  invoices.value.filter((i) => i.status === 'Paid').reduce((sum, i) => sum + i.amount, 0),
+)
+
+const tier = auth.user?.subscriptionTier ?? 'Free'
+const features = planFeatures[tier] ?? planFeatures.Free ?? planFeatures.Professional!
 
 function showStub(message: string) {
   stubMessage.value = message
@@ -28,16 +36,16 @@ function showStub(message: string) {
     <div class="grid gap-4 sm:grid-cols-3">
       <section class="portal-card p-4">
         <p class="text-xs font-semibold uppercase tracking-wide text-neutral-muted">Outstanding</p>
-        <p class="mt-1 text-2xl font-bold text-navy">{{ formatCurrency(billingSummary.outstandingBalance) }}</p>
+        <p class="mt-1 text-2xl font-bold text-navy">{{ formatCurrency(outstandingBalance) }}</p>
       </section>
       <section class="portal-card p-4">
         <p class="text-xs font-semibold uppercase tracking-wide text-neutral-muted">Paid This Month</p>
-        <p class="mt-1 text-2xl font-bold text-success-green">{{ formatCurrency(billingSummary.paidThisMonth) }}</p>
+        <p class="mt-1 text-2xl font-bold text-success-green">{{ formatCurrency(paidThisMonth) }}</p>
       </section>
       <section class="portal-card p-4">
         <p class="text-xs font-semibold uppercase tracking-wide text-neutral-muted">Next Payment Due</p>
         <p class="mt-1 text-2xl font-bold text-navy">
-          {{ new Date(billingSummary.nextPaymentDue).toLocaleDateString([], { day: 'numeric', month: 'short' }) }}
+          {{ new Date().toLocaleDateString([], { day: 'numeric', month: 'short' }) }}
         </p>
       </section>
     </div>
@@ -60,8 +68,13 @@ function showStub(message: string) {
               </tr>
             </thead>
             <tbody>
+              <tr v-if="invoices.length === 0">
+                <td colspan="6" class="p-8 text-center text-xs text-neutral-muted">
+                  No invoices found.
+                </td>
+              </tr>
               <tr
-                v-for="invoice in demoInvoices"
+                v-for="invoice in invoices"
                 :key="invoice.id"
                 class="border-b border-neutral-grey/60 hover:bg-surface"
               >

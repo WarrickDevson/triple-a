@@ -159,7 +159,32 @@ router.beforeEach((to) => {
   }
 
   if (to.meta.guestOnly && auth.isAuthenticated) {
+    if (auth.user?.userRole === 'SysAdmin') {
+      return { name: 'admin-physios' }
+    }
     return { name: 'dashboard' }
+  }
+
+  if (auth.isAuthenticated && auth.user?.userRole === 'SysAdmin') {
+    const physioOnlyRoutes = [
+      'dashboard',
+      'patients',
+      'patient-detail',
+      'appointments',
+      'treatment-plans',
+      'treatment-plan-detail',
+      'progress',
+      'progress-detail',
+      'messages',
+      'message-thread',
+      'reports',
+      'documents',
+      'tasks',
+      'billing',
+    ]
+    if (physioOnlyRoutes.includes(String(to.name))) {
+      return { name: 'admin-physios' }
+    }
   }
 
   return true

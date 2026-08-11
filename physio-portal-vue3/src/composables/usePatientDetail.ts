@@ -58,7 +58,7 @@ export function usePatientDetail(pet: () => Pet | null) {
       const rate = Math.round((completed / progress.value.totalTrackedDays) * 100)
       return Math.min(100, Math.max(0, rate))
     }
-    return demoMeta.value?.progressPercent ?? 0
+    return 0
   })
 
   async function loadDetail(petId: number) {

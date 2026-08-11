@@ -18,15 +18,18 @@ public class AdminController : ControllerBase
 {
     private readonly DbContext _dbContext;
     private readonly IEmailSender _emailSender;
+    private readonly IJwtTokenService _jwtTokenService;
     private readonly AppOptions _appOptions;
 
     public AdminController(
         DbContext dbContext,
-        IEmailSender emailSender,
+        IEmailSender _emailSender,
+        IJwtTokenService jwtTokenService,
         IOptions<AppOptions> appOptions)
     {
         _dbContext = dbContext;
-        _emailSender = emailSender;
+        this._emailSender = _emailSender;
+        _jwtTokenService = jwtTokenService;
         _appOptions = appOptions.Value;
     }
 
@@ -85,6 +88,24 @@ public class AdminController : ControllerBase
 
         physio.IsApproved = true;
         physio.IsActive = true;
+
+        string verificationBlock = string.Empty;
+        if (!physio.IsEmailVerified)
+        {
+            var rawToken = _jwtTokenService.GenerateRefreshToken();
+            physio.EmailVerificationTokenHash = _jwtTokenService.HashRefreshToken(rawToken);
+            physio.EmailVerificationTokenExpiresAt = DateTime.UtcNow.AddHours(24);
+
+            var verifyLink = $"{_appOptions.PublicPortalUrl.TrimEnd('/')}/verify-email?email={Uri.EscapeDataString(physio.Email)}&token={Uri.EscapeDataString(rawToken)}";
+            verificationBlock = $"""
+                <div style="background-color: #fffbebfb; border: 1px solid #fef3c7; padding: 16px; border-radius: 8px; margin: 20px 0;">
+                    <p style="color: #b45309; font-weight: bold; margin: 0 0 8px 0;">Action Required: Verify Email Address</p>
+                    <p style="color: #92400e; margin: 0 0 12px 0;">Your account has been approved by admin! Please click below to verify your email address and activate full access.</p>
+                    <a href="{verifyLink}" style="background-color: #f59e0b; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Verify Email Address</a>
+                </div>
+                """;
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var loginUrl = $"{_appOptions.PublicPortalUrl.TrimEnd('/')}/login";
@@ -93,6 +114,7 @@ public class AdminController : ControllerBase
                 <h2>Account Approved!</h2>
                 <p>Hello {physio.FirstName},</p>
                 <p>Great news! Your MoveWell Physiotherapist account has been approved by our administration team.</p>
+                {verificationBlock}
                 <p style="margin: 24px 0;">
                     <a href="{loginUrl}" style="background-color: #10b981; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Log Into MoveWell Portal</a>
                 </p>
@@ -106,6 +128,30 @@ public class AdminController : ControllerBase
             cancellationToken);
 
         return Ok(new MessageResponseDto("Physio account approved successfully."));
+    }
+
+    [HttpPost("physios/{userId:int}/verify-email")]
+    public async Task<ActionResult<MessageResponseDto>> MarkEmailVerified(int userId, CancellationToken cancellationToken)
+    {
+        if (!IsSysAdmin())
+        {
+            return Forbid();
+        }
+
+        var physio = await _dbContext.Set<User>()
+            .FirstOrDefaultAsync(u => u.UserId == userId && u.UserRole == UserRole.Physio, cancellationToken);
+
+        if (physio is null)
+        {
+            return NotFound(new { message = "Physio account not found." });
+        }
+
+        physio.IsEmailVerified = true;
+        physio.EmailVerificationTokenHash = null;
+        physio.EmailVerificationTokenExpiresAt = null;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new MessageResponseDto("Physio email marked as verified."));
     }
 
     [HttpPost("physios/{userId:int}/reject")]

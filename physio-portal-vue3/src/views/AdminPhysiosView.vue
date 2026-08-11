@@ -99,6 +99,21 @@ async function handleReject(userId: number) {
   }
 }
 
+async function handleMarkEmailVerified(userId: number) {
+  actionUserId.value = userId
+  try {
+    const ok = await auth.markEmailVerified(userId)
+    if (ok) {
+      const target = physios.value.find((p) => p.userId === userId)
+      if (target) {
+        target.isEmailVerified = true
+      }
+    }
+  } finally {
+    actionUserId.value = null
+  }
+}
+
 async function handleSendInvite() {
   if (!inviteEmail.value.trim()) return
   inviteSending.value = true
@@ -275,6 +290,17 @@ async function handleSendInvite() {
               </td>
               <td class="px-5 py-4 text-right">
                 <div class="flex items-center justify-end gap-2">
+                  <BaseButton
+                    v-if="!p.isEmailVerified && p.isActive"
+                    variant="secondary"
+                    class="h-8 px-3 text-[11px] text-amber-700 border-amber-300 hover:bg-amber-50 gap-1"
+                    :disabled="actionUserId === p.userId"
+                    @click="handleMarkEmailVerified(p.userId)"
+                  >
+                    <CheckCircle2 class="h-3.5 w-3.5" />
+                    Mark Email Verified
+                  </BaseButton>
+
                   <BaseButton
                     v-if="!p.isApproved && p.isActive"
                     variant="accent"

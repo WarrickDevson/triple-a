@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
-import { AlertCircle, CheckCircle2, Loader2 } from '@lucide/vue'
+import { onMounted, onUnmounted, ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { AlertCircle, CheckCircle2, Clock, Loader2 } from '@lucide/vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseInput from '../components/BaseInput.vue'
 import { brand } from '../config/brand'
@@ -9,9 +9,12 @@ import { useAuthStore } from '../store/auth'
 
 const auth = useAuthStore()
 const route = useRoute()
+const router = useRouter()
 
 const loading = ref(true)
 const verified = ref(false)
+const isApproved = ref<boolean | null>(null)
+const redirecting = ref(false)
 const errorMessage = ref<string | null>(null)
 
 const emailParam = ref('')
@@ -21,7 +24,40 @@ const resendEmail = ref('')
 const resendLoading = ref(false)
 const resendSuccess = ref(false)
 
+const STORAGE_KEY = 'kpw_resend_cooldown_physio'
+const COOLDOWN_SECONDS = 60
+const cooldownRemaining = ref(0)
+let timer: ReturnType<typeof setInterval> | null = null
+
+function checkCooldown() {
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (!stored) return
+  const expiry = parseInt(stored, 10)
+  const now = Math.floor(Date.now() / 1000)
+  if (expiry > now) {
+    cooldownRemaining.value = expiry - now
+    startTimer()
+  } else {
+    localStorage.removeItem(STORAGE_KEY)
+    cooldownRemaining.value = 0
+  }
+}
+
+function startTimer() {
+  if (timer) clearInterval(timer)
+  timer = setInterval(() => {
+    if (cooldownRemaining.value > 1) {
+      cooldownRemaining.value--
+    } else {
+      cooldownRemaining.value = 0
+      if (timer) clearInterval(timer)
+      localStorage.removeItem(STORAGE_KEY)
+    }
+  }, 1000)
+}
+
 onMounted(async () => {
+  checkCooldown()
   emailParam.value = (route.query.email as string || '').trim()
   tokenParam.value = (route.query.token as string || '').trim()
   resendEmail.value = emailParam.value
@@ -33,9 +69,19 @@ onMounted(async () => {
   }
 
   try {
-    const success = await auth.verifyEmail(emailParam.value, tokenParam.value)
-    if (success) {
+    const res = await auth.verifyEmail(emailParam.value, tokenParam.value)
+    if (res) {
       verified.value = true
+      isApproved.value = res.isApproved
+
+      if (auth.isAuthenticated) {
+        if (res.isApproved) {
+          redirecting.value = true
+          setTimeout(() => {
+            router.push({ name: 'dashboard' })
+          }, 3000)
+        }
+      }
     } else {
       errorMessage.value = auth.error || 'Verification token has expired or is invalid.'
     }
@@ -46,8 +92,12 @@ onMounted(async () => {
   }
 })
 
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
+})
+
 async function handleResend() {
-  if (!resendEmail.value.trim()) return
+  if (!resendEmail.value.trim() || cooldownRemaining.value > 0) return
   resendLoading.value = true
   resendSuccess.value = false
 
@@ -55,6 +105,10 @@ async function handleResend() {
     const ok = await auth.resendVerification(resendEmail.value.trim())
     if (ok) {
       resendSuccess.value = true
+      const expiry = Math.floor(Date.now() / 1000) + COOLDOWN_SECONDS
+      localStorage.setItem(STORAGE_KEY, expiry.toString())
+      cooldownRemaining.value = COOLDOWN_SECONDS
+      startTimer()
     }
   } catch (err: any) {
     errorMessage.value = err?.response?.data?.message || 'Failed to resend verification email.'
@@ -90,10 +144,35 @@ async function handleResend() {
           Your email address has been successfully verified.
         </p>
 
+        <!-- Physio Approval Status Note -->
+        <div v-if="isApproved === false" class="mt-5 w-full rounded-xl border border-amber-200 bg-amber-50 p-4 text-left">
+          <div class="flex items-start gap-2.5 text-amber-800 text-xs leading-relaxed">
+            <Clock class="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <p class="font-bold text-sm text-amber-900">Pending Admin Approval</p>
+              <p class="mt-1">
+                Note: Your practitioner account is currently undergoing administrator review. Full portal features will be unlocked once approved.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="isApproved === true" class="mt-5 w-full rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-left">
+          <div class="flex items-start gap-2.5 text-emerald-800 text-xs leading-relaxed">
+            <CheckCircle2 class="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+            <div>
+              <p class="font-bold text-sm text-emerald-900">Account Approved & Verified</p>
+              <p class="mt-1">
+                {{ redirecting ? 'Auto-redirecting to your dashboard in 3 seconds...' : 'Your account is active with full practitioner access.' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div class="mt-6 w-full">
-          <RouterLink to="/login">
+          <RouterLink :to="auth.isAuthenticated ? '/dashboard' : '/login'">
             <BaseButton variant="accent" class="w-full h-11">
-              Proceed to Login
+              {{ auth.isAuthenticated ? 'Go to Dashboard' : 'Proceed to Sign In' }}
             </BaseButton>
           </RouterLink>
         </div>
@@ -128,10 +207,12 @@ async function handleResend() {
           <BaseButton
             variant="secondary"
             class="w-full h-11 text-sm"
-            :disabled="resendLoading || !resendEmail.trim()"
+            :disabled="resendLoading || !resendEmail.trim() || cooldownRemaining > 0"
             @click="handleResend"
           >
-            {{ resendLoading ? 'Sending...' : 'Resend Verification Email' }}
+            <template v-if="resendLoading">Sending...</template>
+            <template v-else-if="cooldownRemaining > 0">Resend in {{ cooldownRemaining }}s</template>
+            <template v-else>Resend Verification Email</template>
           </BaseButton>
 
           <div class="pt-2 text-center">

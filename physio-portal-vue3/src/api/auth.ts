@@ -14,6 +14,7 @@ import type {
   SendOwnerInviteRequest,
   UpdateProfileRequest,
   VerifyEmailRequest,
+  VerifyEmailResponse,
 } from '../types/auth'
 
 export async function login(payload: LoginRequest): Promise<AuthResponse> {
@@ -29,8 +30,8 @@ export async function register(payload: RegisterRequest): Promise<AuthResponse> 
   return data
 }
 
-export async function verifyEmail(payload: VerifyEmailRequest): Promise<MessageResponse> {
-  const { data } = await apiClient.post<MessageResponse>('/api/auth/verify-email', payload)
+export async function verifyEmail(payload: VerifyEmailRequest): Promise<VerifyEmailResponse> {
+  const { data } = await apiClient.post<VerifyEmailResponse>('/api/auth/verify-email', payload)
   return data
 }
 
@@ -81,6 +82,11 @@ export async function approvePhysio(userId: number): Promise<MessageResponse> {
 
 export async function rejectPhysio(userId: number): Promise<MessageResponse> {
   const { data } = await apiClient.post<MessageResponse>(`/api/admin/physios/${userId}/reject`)
+  return data
+}
+
+export async function markEmailVerified(userId: number): Promise<MessageResponse> {
+  const { data } = await apiClient.post<MessageResponse>(`/api/admin/physios/${userId}/verify-email`)
   return data
 }
 

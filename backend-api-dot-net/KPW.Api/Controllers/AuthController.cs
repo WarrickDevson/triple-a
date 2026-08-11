@@ -169,7 +169,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("verify-email")]
     [AllowAnonymous]
-    public async Task<ActionResult<MessageResponseDto>> VerifyEmail(
+    public async Task<ActionResult<VerifyEmailResponseDto>> VerifyEmail(
         [FromBody] VerifyEmailRequestDto request,
         [FromServices] IValidator<VerifyEmailRequestDto> validator,
         CancellationToken cancellationToken)

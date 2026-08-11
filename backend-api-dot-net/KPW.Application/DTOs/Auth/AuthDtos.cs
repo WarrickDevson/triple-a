@@ -74,6 +74,12 @@ public record VerifyEmailRequestDto(
     string Email,
     string Token);
 
+public record VerifyEmailResponseDto(
+    string Message,
+    bool IsEmailVerified,
+    bool IsApproved,
+    string UserRole);
+
 public record ResendVerificationEmailRequestDto(
     string Email);
 

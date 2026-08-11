@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/widgets/app_bottom_nav.dart';
+import '../../core/widgets/unverified_account_banner.dart';
 import '../dashboard/screens/home_screen.dart';
 import '../messages/screens/messages_screen.dart';
 import '../more/screens/more_screen.dart';
@@ -50,9 +51,16 @@ class _MainShellState extends ConsumerState<MainShell> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
+      body: Column(
+        children: [
+          const UnverifiedAccountBanner(),
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: screens,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: AppBottomNav(
         currentIndex: _currentIndex,

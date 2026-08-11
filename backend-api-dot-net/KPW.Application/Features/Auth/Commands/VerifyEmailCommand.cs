@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KPW.Application.Features.Auth.Commands;
 
-public record VerifyEmailCommand(VerifyEmailRequestDto Request) : IRequest<MessageResponseDto>;
+public record VerifyEmailCommand(VerifyEmailRequestDto Request) : IRequest<VerifyEmailResponseDto>;
 
-public class VerifyEmailCommandHandler : IRequestHandler<VerifyEmailCommand, MessageResponseDto>
+public class VerifyEmailCommandHandler : IRequestHandler<VerifyEmailCommand, VerifyEmailResponseDto>
 {
     private readonly DbContext _dbContext;
     private readonly IJwtTokenService _jwtTokenService;
@@ -21,7 +21,7 @@ public class VerifyEmailCommandHandler : IRequestHandler<VerifyEmailCommand, Mes
         _jwtTokenService = jwtTokenService;
     }
 
-    public async Task<MessageResponseDto> Handle(VerifyEmailCommand command, CancellationToken cancellationToken)
+    public async Task<VerifyEmailResponseDto> Handle(VerifyEmailCommand command, CancellationToken cancellationToken)
     {
         var email = command.Request.Email.Trim().ToLowerInvariant();
         var rawToken = command.Request.Token.Trim();
@@ -36,7 +36,11 @@ public class VerifyEmailCommandHandler : IRequestHandler<VerifyEmailCommand, Mes
 
         if (user.IsEmailVerified)
         {
-            return new MessageResponseDto("Email is already verified.");
+            return new VerifyEmailResponseDto(
+                "Email is already verified.",
+                true,
+                user.IsApproved,
+                user.UserRole);
         }
 
         if (string.IsNullOrWhiteSpace(user.EmailVerificationTokenHash) ||
@@ -58,6 +62,10 @@ public class VerifyEmailCommandHandler : IRequestHandler<VerifyEmailCommand, Mes
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new MessageResponseDto("Email verified successfully.");
+        return new VerifyEmailResponseDto(
+            "Email verified successfully.",
+            true,
+            user.IsApproved,
+            user.UserRole);
     }
 }

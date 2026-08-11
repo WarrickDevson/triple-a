@@ -87,6 +87,13 @@ export interface MessageResponse {
   message: string
 }
 
+export interface VerifyEmailResponse {
+  message: string
+  isEmailVerified: boolean
+  isApproved: boolean
+  userRole: string
+}
+
 export interface UpdateProfileRequest {
   firstName: string
   lastName: string

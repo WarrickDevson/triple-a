@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessageSquare, Menu, X } from '@lucide/vue'
+import UnverifiedAccountBanner from '../components/UnverifiedAccountBanner.vue'
 import AppSidebar from '../components/layout/AppSidebar.vue'
 import AppTopBar from '../components/layout/AppTopBar.vue'
 import { useMessagesStore } from '../store/messages'
@@ -73,6 +74,7 @@ function openNotifThread(petId: number) {
         </button>
       </div>
 
+      <UnverifiedAccountBanner />
       <AppTopBar />
       <main class="flex-1 px-4 py-6 sm:px-6 lg:px-8">
         <RouterView />

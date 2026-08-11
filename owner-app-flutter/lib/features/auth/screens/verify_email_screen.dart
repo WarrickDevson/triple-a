@@ -1,9 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
+import '../../shell/main_shell.dart';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';
+
+const String _cooldownKey = 'resend_cooldown_owner';
+const int _cooldownSeconds = 60;
 
 class VerifyEmailScreen extends ConsumerStatefulWidget {
   final String email;
@@ -23,15 +29,58 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   bool _isVerifyingToken = false;
   String? _statusMessage;
   String? _errorMessage;
+  int _cooldownRemaining = 0;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    _checkCooldown();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.initialToken != null && widget.initialToken!.isNotEmpty) {
         _processAutoVerification();
       } else {
         ref.read(authProvider.notifier).clearFeedback();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkCooldown() async {
+    final prefs = await SharedPreferences.getInstance();
+    final expiry = prefs.getInt(_cooldownKey);
+    if (expiry != null) {
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      if (expiry > now) {
+        setState(() {
+          _cooldownRemaining = expiry - now;
+        });
+        _startTimer();
+      } else {
+        await prefs.remove(_cooldownKey);
+      }
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (_cooldownRemaining > 1) {
+        setState(() {
+          _cooldownRemaining--;
+        });
+      } else {
+        timer.cancel();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_cooldownKey);
+        setState(() {
+          _cooldownRemaining = 0;
+        });
       }
     });
   }
@@ -53,7 +102,20 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     setState(() {
       _isVerifyingToken = false;
       if (success) {
-        _statusMessage = 'Your email has been verified successfully! You can now sign in.';
+        final isAuth = ref.read(authProvider).isAuthenticated;
+        _statusMessage = isAuth
+            ? 'Email verified successfully! Redirecting to app...'
+            : 'Your email has been verified successfully! You can now sign in.';
+
+        if (isAuth) {
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const MainShell()),
+              );
+            }
+          });
+        }
       } else {
         _errorMessage = ref.read(authProvider).error ?? 'Invalid or expired verification link.';
       }
@@ -61,6 +123,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   }
 
   Future<void> _resendVerificationEmail() async {
+    if (_cooldownRemaining > 0) return;
     setState(() {
       _statusMessage = null;
       _errorMessage = null;
@@ -72,10 +135,18 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     setState(() {
       if (msg != null) {
         _statusMessage = msg;
+        _cooldownRemaining = _cooldownSeconds;
       } else {
         _errorMessage = ref.read(authProvider).error ?? 'Failed to resend verification email.';
       }
     });
+
+    if (msg != null) {
+      final expiry = (DateTime.now().millisecondsSinceEpoch ~/ 1000) + _cooldownSeconds;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_cooldownKey, expiry);
+      _startTimer();
+    }
   }
 
   void _goToLogin() {
@@ -189,8 +260,14 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: auth.isLoading ? null : _resendVerificationEmail,
-                        child: const Text('Resend Verification Email'),
+                        onPressed: (auth.isLoading || _cooldownRemaining > 0)
+                            ? null
+                            : _resendVerificationEmail,
+                        child: Text(
+                          _cooldownRemaining > 0
+                              ? 'Resend in ${_cooldownRemaining}s'
+                              : 'Resend Verification Email',
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -198,7 +275,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                       width: double.infinity,
                       child: TextButton(
                         onPressed: _goToLogin,
-                        child: const Text('Back to Sign in'),
+                        child: Text(auth.isAuthenticated ? 'Back to App' : 'Back to Sign in'),
                       ),
                     ),
                   ],

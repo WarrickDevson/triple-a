@@ -101,10 +101,18 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const data = await authApi.verifyEmail({ email, token })
       message.value = data.message
-      return true
+      if (user.value) {
+        user.value = {
+          ...user.value,
+          isEmailVerified: true,
+          isApproved: data.isApproved,
+        }
+        persist()
+      }
+      return data
     } catch (err: any) {
       error.value = err?.response?.data?.message || 'Verification failed or link expired.'
-      return false
+      return null
     } finally {
       loading.value = false
     }
@@ -259,6 +267,22 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function markEmailVerified(userId: number) {
+    loading.value = true
+    error.value = null
+    message.value = null
+    try {
+      const data = await authApi.markEmailVerified(userId)
+      message.value = data.message
+      return true
+    } catch (err: any) {
+      error.value = err?.response?.data?.message || 'Failed to mark email as verified.'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function sendAdminInvite(recipientEmail: string, clinicName?: string) {
     loading.value = true
     error.value = null
@@ -305,6 +329,7 @@ export const useAuthStore = defineStore('auth', () => {
     fetchPendingPhysios,
     approvePhysio,
     rejectPhysio,
+    markEmailVerified,
     sendAdminInvite,
     logout,
   }

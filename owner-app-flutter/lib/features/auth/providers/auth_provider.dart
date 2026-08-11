@@ -232,6 +232,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         data: {'email': email, 'token': token},
       );
       final msg = response.data?['message'] as String? ?? 'Email verified successfully!';
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('${_userKeyPrefix}isEmailVerified', true);
+
       AuthUser? updatedUser;
       if (state.user != null) {
         updatedUser = AuthUser(
@@ -246,8 +249,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
           clinicInviteCode: state.user!.clinicInviteCode,
           isEmailVerified: true,
         );
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('${_userKeyPrefix}isEmailVerified', true);
       }
       state = AuthState(user: updatedUser ?? state.user, message: msg);
       return true;

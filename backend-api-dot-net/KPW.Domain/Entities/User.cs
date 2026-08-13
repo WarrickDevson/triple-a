@@ -25,4 +25,6 @@ public class User : AuditableEntity
     public ICollection<RehabProgram> RehabProgramsAsPhysio { get; set; } = [];
     public ICollection<Appointment> AppointmentsAsPhysio { get; set; } = [];
     public ICollection<Appointment> AppointmentsAsOwner { get; set; } = [];
+    public ICollection<SoapNote> SoapNotesAsPhysio { get; set; } = [];
+    public ICollection<SharedReport> SharedReportsAsPhysio { get; set; } = [];
 }

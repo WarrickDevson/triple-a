@@ -4,6 +4,7 @@ using KPW.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace KPW.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260812064150_AddSoapNotesAndSharedReports")]
+    partial class AddSoapNotesAndSharedReports
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2010,61 +2013,6 @@ namespace KPW.Infrastructure.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("KPW.Domain.Entities.OwnerSubjectiveNote", b =>
-                {
-                    b.Property<int>("OwnerSubjectiveNoteId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OwnerSubjectiveNoteId"));
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("CreatedUserId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("EnergyObserved")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsReviewed")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("ModifiedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ModifiedUserId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("NoteDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<int>("OwnerId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("PainObserved")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PetId")
-                        .HasColumnType("int");
-
-                    b.HasKey("OwnerSubjectiveNoteId");
-
-                    b.HasIndex("OwnerId");
-
-                    b.HasIndex("PetId");
-
-                    b.ToTable("OwnerSubjectiveNotes", (string)null);
-                });
-
             modelBuilder.Entity("KPW.Domain.Entities.PasswordResetToken", b =>
                 {
                     b.Property<int>("PasswordResetTokenId")
@@ -3119,25 +3067,6 @@ namespace KPW.Infrastructure.Data.Migrations
                     b.Navigation("Physio");
                 });
 
-            modelBuilder.Entity("KPW.Domain.Entities.OwnerSubjectiveNote", b =>
-                {
-                    b.HasOne("KPW.Domain.Entities.User", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("KPW.Domain.Entities.Pet", "Pet")
-                        .WithMany("OwnerSubjectiveNotes")
-                        .HasForeignKey("PetId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Owner");
-
-                    b.Navigation("Pet");
-                });
-
             modelBuilder.Entity("KPW.Domain.Entities.PasswordResetToken", b =>
                 {
                     b.HasOne("KPW.Domain.Entities.User", "User")
@@ -3309,8 +3238,6 @@ namespace KPW.Infrastructure.Data.Migrations
                     b.Navigation("MedicalHistories");
 
                     b.Navigation("MessageThread");
-
-                    b.Navigation("OwnerSubjectiveNotes");
 
                     b.Navigation("RehabPrograms");
 

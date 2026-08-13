@@ -8,12 +8,13 @@ import '../../../core/widgets/pet_avatar.dart';
 import '../../../core/widgets/progress_ring.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../../core/widgets/status_badge.dart';
-import '../../appointments/screens/appointments_screen.dart';
 import '../../exercises/providers/exercise_providers.dart';
 import '../../exercises/screens/exercise_program_screen.dart';
 import '../../shell/main_shell.dart';
 import '../../tracking/screens/tracking_screen.dart';
 import '../models/pet.dart';
+import 'owner_notes_history_screen.dart';
+import 'saved_reports_screen.dart';
 
 class PetDetailScreen extends ConsumerStatefulWidget {
   const PetDetailScreen({
@@ -214,6 +215,41 @@ class _OverviewTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
+          SectionCard(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => OwnerNotesHistoryScreen(pet: pet)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.sage.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.rate_review_outlined, color: AppColors.sage),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Home Observations & Notes',
+                        style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.navy, fontSize: 14),
+                      ),
+                      Text(
+                        'View submitted history & share stiffness or pain updates with your physio.',
+                        style: TextStyle(color: AppColors.neutralMuted, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: AppColors.navy.withValues(alpha: 0.3)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
@@ -237,16 +273,18 @@ class _OverviewTab extends ConsumerWidget {
                 ),
               ),
               _QuickAction(
-                icon: Icons.event_outlined,
-                label: 'Appointments',
+                icon: Icons.picture_as_pdf_outlined,
+                label: 'Saved Reports',
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AppointmentsScreen()),
+                  MaterialPageRoute(builder: (_) => SavedReportsScreen(pet: pet)),
                 ),
               ),
               _QuickAction(
                 icon: Icons.note_alt_outlined,
                 label: 'Notes',
-                onTap: onOpenNotes,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => OwnerNotesHistoryScreen(pet: pet)),
+                ),
               ),
             ],
           ),

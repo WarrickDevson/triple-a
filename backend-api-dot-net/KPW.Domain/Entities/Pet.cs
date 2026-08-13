@@ -20,4 +20,7 @@ public class Pet : AuditableEntity
     public ICollection<Appointment> Appointments { get; set; } = [];
     public MessageThread? MessageThread { get; set; }
     public ICollection<ExerciseSessionLog> ExerciseSessionLogs { get; set; } = [];
+    public ICollection<SoapNote> SoapNotes { get; set; } = [];
+    public ICollection<SharedReport> SharedReports { get; set; } = [];
+    public ICollection<OwnerSubjectiveNote> OwnerSubjectiveNotes { get; set; } = [];
 }

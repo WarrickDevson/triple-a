@@ -36,6 +36,7 @@ public static class DependencyInjection
 
         services.AddSingleton<IVideoProcessingQueue, VideoProcessingQueue>();
         services.AddSingleton<IPetReportPdfGenerator, QuestPetReportPdfGenerator>();
+        services.AddSingleton<ISoapReportPdfGenerator, QuestSoapReportPdfGenerator>();
         services.AddHostedService<VideoProcessingBackgroundService>();
 
         services.AddDbContext<ApplicationDbContext>((sp, options) =>

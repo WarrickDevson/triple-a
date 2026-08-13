@@ -150,6 +150,14 @@ app.MapHub<ChatHub>("/hubs/chat");
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<Microsoft.EntityFrameworkCore.DbContext>();
+    try
+    {
+        await Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.MigrateAsync(dbContext.Database);
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Automatic EF migration execution encountered an exception, proceeding with raw SQL fallback.");
+    }
     await Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRawAsync(
         dbContext.Database,
         @"IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Messages' AND COLUMN_NAME = 'AttachmentUrl')
@@ -167,6 +175,78 @@ using (var scope = app.Services.CreateScope())
         IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = 'IsApproved')
         BEGIN
             ALTER TABLE [Users] ADD [IsApproved] bit NOT NULL CONSTRAINT [DF_Users_IsApproved] DEFAULT (1);
+        END
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'SoapNotes')
+        BEGIN
+            CREATE TABLE [SoapNotes] (
+                [SoapNoteId] int NOT NULL IDENTITY,
+                [PetId] int NOT NULL,
+                [PhysioId] int NOT NULL,
+                [AppointmentId] int NULL,
+                [SessionDate] datetime2 NOT NULL,
+                [Subjective] nvarchar(max) NOT NULL,
+                [Objective] nvarchar(max) NOT NULL,
+                [Action] nvarchar(max) NOT NULL,
+                [Plan] nvarchar(max) NOT NULL,
+                [StiffnessScore] int NULL,
+                [PainScore] int NULL,
+                [LamenessScore] int NULL,
+                [CustomMetricsJson] nvarchar(max) NULL,
+                [IsSharedWithOwner] bit NOT NULL DEFAULT CAST(0 AS bit),
+                [SharedAtUtc] datetime2 NULL,
+                [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+                [CreatedDate] datetime2 NOT NULL DEFAULT (GETUTCDATE()),
+                [CreatedUserId] int NULL,
+                [ModifiedDate] datetime2 NULL,
+                [ModifiedUserId] int NULL,
+                CONSTRAINT [PK_SoapNotes] PRIMARY KEY ([SoapNoteId]),
+                CONSTRAINT [FK_SoapNotes_Pets_PetId] FOREIGN KEY ([PetId]) REFERENCES [Pets] ([PetId]) ON DELETE CASCADE,
+                CONSTRAINT [FK_SoapNotes_Users_PhysioId] FOREIGN KEY ([PhysioId]) REFERENCES [Users] ([UserId]),
+                CONSTRAINT [FK_SoapNotes_Appointments_AppointmentId] FOREIGN KEY ([AppointmentId]) REFERENCES [Appointments] ([AppointmentId])
+            );
+        END
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'SharedReports')
+        BEGIN
+            CREATE TABLE [SharedReports] (
+                [SharedReportId] int NOT NULL IDENTITY,
+                [PetId] int NOT NULL,
+                [SoapNoteId] int NULL,
+                [SharedByPhysioId] int NOT NULL,
+                [Title] nvarchar(200) NOT NULL,
+                [ReportType] nvarchar(50) NOT NULL,
+                [Summary] nvarchar(2000) NULL,
+                [SharedAtUtc] datetime2 NOT NULL DEFAULT (GETUTCDATE()),
+                [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+                [CreatedDate] datetime2 NOT NULL DEFAULT (GETUTCDATE()),
+                [CreatedUserId] int NULL,
+                [ModifiedDate] datetime2 NULL,
+                [ModifiedUserId] int NULL,
+                CONSTRAINT [PK_SharedReports] PRIMARY KEY ([SharedReportId]),
+                CONSTRAINT [FK_SharedReports_Pets_PetId] FOREIGN KEY ([PetId]) REFERENCES [Pets] ([PetId]) ON DELETE CASCADE,
+                CONSTRAINT [FK_SharedReports_SoapNotes_SoapNoteId] FOREIGN KEY ([SoapNoteId]) REFERENCES [SoapNotes] ([SoapNoteId]),
+                CONSTRAINT [FK_SharedReports_Users_SharedByPhysioId] FOREIGN KEY ([SharedByPhysioId]) REFERENCES [Users] ([UserId])
+            );
+        END
+        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'OwnerSubjectiveNotes')
+        BEGIN
+            CREATE TABLE [OwnerSubjectiveNotes] (
+                [OwnerSubjectiveNoteId] int NOT NULL IDENTITY,
+                [PetId] int NOT NULL,
+                [OwnerId] int NOT NULL,
+                [NoteDate] datetime2 NOT NULL,
+                [Notes] nvarchar(2000) NOT NULL,
+                [PainObserved] int NULL,
+                [EnergyObserved] int NULL,
+                [IsReviewed] bit NOT NULL,
+                [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
+                [CreatedDate] datetime2 NOT NULL DEFAULT (GETUTCDATE()),
+                [CreatedUserId] int NULL,
+                [ModifiedDate] datetime2 NULL,
+                [ModifiedUserId] int NULL,
+                CONSTRAINT [PK_OwnerSubjectiveNotes] PRIMARY KEY ([OwnerSubjectiveNoteId]),
+                CONSTRAINT [FK_OwnerSubjectiveNotes_Pets_PetId] FOREIGN KEY ([PetId]) REFERENCES [Pets] ([PetId]) ON DELETE CASCADE,
+                CONSTRAINT [FK_OwnerSubjectiveNotes_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [Users] ([UserId])
+            );
         END
         UPDATE u
         SET u.ClinicId = (SELECT TOP 1 ClinicId FROM Clinics ORDER BY ClinicId ASC)

@@ -4,6 +4,7 @@ import { ArrowLeft } from '@lucide/vue'
 import PatientActionBar from './PatientActionBar.vue'
 import PatientOverviewTab from './PatientOverviewTab.vue'
 import PatientTabStub from './PatientTabStub.vue'
+import SoapNotesTab from './SoapNotesTab.vue'
 import type { Appointment } from '../../types/appointment'
 import type { PatientDemoMeta } from '../../data/patientDemo'
 import type { RehabProgram } from '../../types/exercise'
@@ -86,10 +87,10 @@ const activeTab = ref<(typeof tabs)[number]['id']>('overview')
             :next-appointment="nextAppointment"
             :progress-percent="progressPercent"
           />
-          <PatientTabStub
-            v-else-if="activeTab === 'assessment'"
-            title="Assessment"
-            description="Record and review clinical assessments for this patient."
+          <SoapNotesTab
+            v-else-if="activeTab === 'assessment' || activeTab === 'notes'"
+            :pet-id="patient.petId"
+            :pet-name="patient.petName"
           />
           <PatientTabStub
             v-else-if="activeTab === 'plan'"
@@ -105,11 +106,6 @@ const activeTab = ref<(typeof tabs)[number]['id']>('overview')
             v-else-if="activeTab === 'documents'"
             title="Documents"
             description="Access reports, consent forms, and shared files."
-          />
-          <PatientTabStub
-            v-else-if="activeTab === 'notes'"
-            title="Notes"
-            description="Clinical notes and session observations will appear here."
           />
 
           <PatientActionBar v-if="activeTab === 'overview'" :pet-id="patient.petId" />

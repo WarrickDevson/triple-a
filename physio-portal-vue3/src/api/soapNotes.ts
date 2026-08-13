@@ -50,6 +50,15 @@ export async function updateSoapNote(soapNoteId: number, payload: UpdateSoapNote
   }
 }
 
+export async function deleteSoapNote(soapNoteId: number): Promise<boolean> {
+  try {
+    await apiClient.delete(`/soap-notes/${soapNoteId}`)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function fetchSharedReportsByPet(petId: number): Promise<SharedReport[]> {
   try {
     const res = await apiClient.get<SharedReport[]>(`/reports/pet/${petId}/shared`)

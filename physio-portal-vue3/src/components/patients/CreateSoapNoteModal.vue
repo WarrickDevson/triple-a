@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { X, Plus, Trash2, CheckCircle, Share2, Import, MessageSquareQuote } from '@lucide/vue'
-import type { CreateSoapNoteRequest, CustomMetricItem, OwnerSubjectiveNote } from '../../types/soap'
+import type { CreateSoapNoteRequest, CustomMetricItem, OwnerSubjectiveNote, SoapNote } from '../../types/soap'
 import { fetchOwnerSubjectiveNotes } from '../../api/soapNotes'
 
 const props = defineProps<{
   petId: number
   petName: string
   isOpen: boolean
+  editingNote?: SoapNote | null
 }>()
 
 const emit = defineEmits<{
   close: []
   created: [note: any]
+  updated: [noteId: number, payload: any]
 }>()
 
 const activeTab = ref<'S' | 'O' | 'A' | 'P'>('S')
@@ -39,7 +41,35 @@ async function loadOwnerNotes() {
 watch(
   () => props.isOpen,
   (val) => {
-    if (val) loadOwnerNotes()
+    if (val) {
+      loadOwnerNotes()
+      if (props.editingNote) {
+        sessionDate.value = props.editingNote.sessionDate ? props.editingNote.sessionDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
+        subjective.value = props.editingNote.subjective || ''
+        objective.value = props.editingNote.objective || ''
+        action.value = props.editingNote.action || ''
+        plan.value = props.editingNote.plan || ''
+        stiffnessScore.value = props.editingNote.stiffnessScore ?? null
+        painScore.value = props.editingNote.painScore ?? null
+        lamenessScore.value = props.editingNote.lamenessScore ?? null
+        customMetrics.value = props.editingNote.customMetrics ? JSON.parse(JSON.stringify(props.editingNote.customMetrics)) : []
+        shareWithOwner.value = props.editingNote.isSharedWithOwner ?? true
+      } else {
+        sessionDate.value = new Date().toISOString().slice(0, 10)
+        subjective.value = ''
+        objective.value = ''
+        action.value = ''
+        plan.value = ''
+        stiffnessScore.value = 3
+        painScore.value = 2
+        lamenessScore.value = 1
+        customMetrics.value = [
+          { name: 'Stifle Extension ROM', value: 130, minScale: 0, maxScale: 180, unitOrDescriptor: 'deg' },
+          { name: 'Thigh Circumference', value: 38, minScale: 10, maxScale: 80, unitOrDescriptor: 'cm' },
+        ]
+        shareWithOwner.value = true
+      }
+    }
   },
   { immediate: true }
 )
@@ -121,7 +151,11 @@ async function handleSubmit() {
     diagnosisUpdate: updateDiagnosis.value && diagnosisText.value.trim() ? diagnosisText.value.trim() : undefined,
   }
 
-  emit('created', payload)
+  if (props.editingNote) {
+    emit('updated', props.editingNote.soapNoteId, payload)
+  } else {
+    emit('created', payload)
+  }
   submitting.value = false
 }
 </script>
@@ -135,7 +169,7 @@ async function handleSubmit() {
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-neutral-grey/80 pb-4">
         <div>
-          <h2 class="text-xl font-bold text-navy">New Clinical SOAP Assessment</h2>
+          <h2 class="text-xl font-bold text-navy">{{ editingNote ? 'Edit Clinical SOAP Assessment' : 'New Clinical SOAP Assessment' }}</h2>
           <p class="text-xs text-neutral-muted">Patient: {{ petName }} · Date: {{ sessionDate }}</p>
         </div>
         <button

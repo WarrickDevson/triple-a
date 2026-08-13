@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Plus, Download, ChevronDown, ChevronUp, FileText, CheckCircle2, MessageSquareQuote } from '@lucide/vue'
+import { Plus, Download, ChevronDown, ChevronUp, FileText, CheckCircle2, MessageSquareQuote, Pencil, Trash2 } from '@lucide/vue'
 import type { SoapNote, OwnerSubjectiveNote } from '../../types/soap'
-import { fetchSoapNotesByPet, createSoapNote, downloadSoapPdf, fetchOwnerSubjectiveNotes } from '../../api/soapNotes'
+import { fetchSoapNotesByPet, createSoapNote, updateSoapNote, deleteSoapNote, downloadSoapPdf, fetchOwnerSubjectiveNotes } from '../../api/soapNotes'
 import CreateSoapNoteModal from './CreateSoapNoteModal.vue'
 
 const props = defineProps<{
@@ -14,11 +14,22 @@ const notes = ref<SoapNote[]>([])
 const ownerNotes = ref<OwnerSubjectiveNote[]>([])
 const loading = ref(true)
 const showCreateModal = ref(false)
+const editingNote = ref<SoapNote | null>(null)
 
 const expandedNoteId = ref<number | null>(null)
 
 function toggleExpand(id: number) {
   expandedNoteId.value = expandedNoteId.value === id ? null : id
+}
+
+function openCreateModal() {
+  editingNote.value = null
+  showCreateModal.value = true
+}
+
+function handleEditNote(note: SoapNote) {
+  editingNote.value = note
+  showCreateModal.value = true
 }
 
 async function loadNotes() {
@@ -46,6 +57,35 @@ async function handleNoteCreated(payload: any) {
     showCreateModal.value = false
   } catch (err) {
     console.error('Failed to create SOAP note', err)
+  }
+}
+
+async function handleNoteUpdated(soapNoteId: number, payload: any) {
+  try {
+    const updated = await updateSoapNote(soapNoteId, payload)
+    const idx = notes.value.findIndex(n => n.soapNoteId === soapNoteId)
+    if (idx !== -1) {
+      notes.value[idx] = updated
+    }
+    showCreateModal.value = false
+    editingNote.value = null
+  } catch (err) {
+    console.error('Failed to update SOAP note', err)
+    alert('Could not update SOAP note.')
+  }
+}
+
+async function handleDeleteNote(soapNoteId: number) {
+  if (!confirm('Are you sure you want to delete this SOAP note record?')) return
+  try {
+    const success = await deleteSoapNote(soapNoteId)
+    if (success) {
+      notes.value = notes.value.filter(n => n.soapNoteId !== soapNoteId)
+    } else {
+      alert('Could not delete SOAP note.')
+    }
+  } catch (err) {
+    console.error('Failed to delete SOAP note', err)
   }
 }
 
@@ -79,7 +119,7 @@ onMounted(() => {
       <button
         type="button"
         class="inline-flex items-center gap-2 rounded-xl bg-sage px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-sage/90"
-        @click="showCreateModal = true"
+        @click="openCreateModal"
       >
         <Plus class="h-4 w-4" />
         New SOAP Note
@@ -172,16 +212,37 @@ onMounted(() => {
               </span>
             </div>
 
-            <!-- PDF Download Button -->
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-neutral-grey/80 bg-surface px-2.5 py-1.5 text-xs font-bold text-navy hover:bg-neutral-grey/40"
-              title="Download PDF Report"
-              @click.stop="handleDownloadPdf(note.soapNoteId)"
-            >
-              <Download class="h-3.5 w-3.5" />
-              PDF Report
-            </button>
+            <!-- Action Buttons: PDF Report, Edit, Delete -->
+            <div class="flex items-center gap-1.5" @click.stop>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-neutral-grey/80 bg-surface px-2.5 py-1.5 text-xs font-bold text-navy hover:bg-neutral-grey/40"
+                title="Download PDF Report"
+                @click="handleDownloadPdf(note.soapNoteId)"
+              >
+                <Download class="h-3.5 w-3.5" />
+                PDF
+              </button>
+
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-2 py-1.5 text-xs font-bold text-navy hover:bg-neutral-grey/40"
+                title="Edit SOAP Note"
+                @click="handleEditNote(note)"
+              >
+                <Pencil class="h-3.5 w-3.5 text-sage" />
+                Edit
+              </button>
+
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-surface px-2 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50"
+                title="Delete SOAP Note"
+                @click="handleDeleteNote(note.soapNoteId)"
+              >
+                <Trash2 class="h-3.5 w-3.5 text-rose-500" />
+              </button>
+            </div>
 
             <!-- Expand Toggle -->
             <component
@@ -246,13 +307,15 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Create SOAP Modal -->
+    <!-- Create / Edit SOAP Modal -->
     <CreateSoapNoteModal
       :pet-id="petId"
       :pet-name="petName"
       :is-open="showCreateModal"
+      :editing-note="editingNote"
       @close="showCreateModal = false"
       @created="handleNoteCreated"
+      @updated="handleNoteUpdated"
     />
   </div>
 </template>

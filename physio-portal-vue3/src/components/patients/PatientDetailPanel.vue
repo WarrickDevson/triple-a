@@ -26,11 +26,10 @@ const emit = defineEmits<{
 
 const tabs = [
   { id: 'overview', label: 'Overview' },
-  { id: 'assessment', label: 'Assessment' },
+  { id: 'soap', label: 'SOAP Notes' },
   { id: 'plan', label: 'Plan' },
   { id: 'progress', label: 'Progress' },
   { id: 'documents', label: 'Documents' },
-  { id: 'notes', label: 'Notes' },
 ] as const
 
 const activeTab = ref<(typeof tabs)[number]['id']>('overview')
@@ -88,7 +87,7 @@ const activeTab = ref<(typeof tabs)[number]['id']>('overview')
             :progress-percent="progressPercent"
           />
           <SoapNotesTab
-            v-else-if="activeTab === 'assessment' || activeTab === 'notes'"
+            v-else-if="activeTab === 'soap'"
             :pet-id="patient.petId"
             :pet-name="patient.petName"
           />

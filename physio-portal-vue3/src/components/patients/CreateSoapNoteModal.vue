@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { X, Plus, Trash2, CheckCircle, Share2, Import, MessageSquareQuote, RotateCcw } from '@lucide/vue'
+import { X, Plus, Trash2, CheckCircle, Share2, Import, MessageSquareQuote, RotateCcw, Loader2 } from '@lucide/vue'
 import type { CreateSoapNoteRequest, CustomMetricItem, OwnerSubjectiveNote, SoapNote } from '../../types/soap'
-import { fetchOwnerSubjectiveNotes, fetchSoapNotesByPet } from '../../api/soapNotes'
+import { fetchOwnerSubjectiveNotes, fetchSoapNotesByPet, createSoapNote, updateSoapNote } from '../../api/soapNotes'
 import VoiceDictationButton from '../soap/VoiceDictationButton.vue'
 
 const props = defineProps<{
@@ -56,7 +56,9 @@ watch(
   (val) => {
     if (val) {
       loadOwnerNotes()
+      autoSaveStatus.value = ''
       if (props.editingNote) {
+        currentNoteId.value = props.editingNote.soapNoteId
         sessionDate.value = props.editingNote.sessionDate ? props.editingNote.sessionDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
         subjective.value = props.editingNote.subjective || ''
         objective.value = props.editingNote.objective || ''
@@ -68,6 +70,7 @@ watch(
         customMetrics.value = props.editingNote.customMetrics ? JSON.parse(JSON.stringify(props.editingNote.customMetrics)) : []
         shareWithOwner.value = props.editingNote.isSharedWithOwner ?? true
       } else {
+        currentNoteId.value = null
         sessionDate.value = new Date().toISOString().slice(0, 10)
         subjective.value = ''
         objective.value = ''
@@ -201,6 +204,59 @@ function removeCustomMetric(index: number) {
   customMetrics.value.splice(index, 1)
 }
 
+const currentNoteId = ref<number | null>(null)
+const isAutoSaving = ref(false)
+const autoSaveStatus = ref('')
+
+function switchTab(tab: 'S' | 'O' | 'A' | 'P') {
+  if (activeTab.value !== tab) {
+    autoSaveNote()
+  }
+  activeTab.value = tab
+}
+
+async function autoSaveNote() {
+  if (!props.petId) return
+  // Don't auto-save if everything is completely empty
+  if (!subjective.value.trim() && !objective.value.trim() && !action.value.trim() && !plan.value.trim()) {
+    return
+  }
+
+  isAutoSaving.value = true
+  try {
+    const payload: CreateSoapNoteRequest = {
+      sessionDate: sessionDate.value,
+      subjective: subjective.value,
+      objective: objective.value,
+      action: action.value,
+      plan: plan.value,
+      stiffnessScore: stiffnessScore.value,
+      painScore: painScore.value,
+      lamenessScore: lamenessScore.value,
+      customMetrics: customMetrics.value,
+      shareWithOwner: shareWithOwner.value,
+      diagnosisUpdate: updateDiagnosis.value && diagnosisText.value.trim() ? diagnosisText.value.trim() : undefined,
+    }
+
+    if (currentNoteId.value) {
+      const updated = await updateSoapNote(currentNoteId.value, payload)
+      emit('updated', currentNoteId.value, updated)
+    } else {
+      const created = await createSoapNote(props.petId, payload)
+      currentNoteId.value = created.soapNoteId
+      emit('created', created)
+    }
+
+    const now = new Date()
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    autoSaveStatus.value = `Auto-saved at ${timeStr}`
+  } catch (err) {
+    console.warn('Auto-save SOAP note error:', err)
+  } finally {
+    isAutoSaving.value = false
+  }
+}
+
 async function handleSubmit() {
   if (!subjective.value.trim() && !objective.value.trim() && !action.value.trim() && !plan.value.trim()) {
     errorMessage.value = 'Please complete at least one section of the SOAP note.'
@@ -224,12 +280,22 @@ async function handleSubmit() {
     diagnosisUpdate: updateDiagnosis.value && diagnosisText.value.trim() ? diagnosisText.value.trim() : undefined,
   }
 
-  if (props.editingNote) {
-    emit('updated', props.editingNote.soapNoteId, payload)
-  } else {
-    emit('created', payload)
+  try {
+    const targetId = currentNoteId.value || (props.editingNote ? props.editingNote.soapNoteId : null)
+    if (targetId) {
+      const updated = await updateSoapNote(targetId, payload)
+      emit('updated', targetId, updated)
+    } else {
+      const created = await createSoapNote(props.petId, payload)
+      emit('created', created)
+    }
+    emit('close')
+  } catch (err: any) {
+    console.error('Save SOAP note error:', err)
+    errorMessage.value = err.message || 'Failed to save SOAP note.'
+  } finally {
+    submitting.value = false
   }
-  submitting.value = false
 }
 </script>
 
@@ -242,7 +308,23 @@ async function handleSubmit() {
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-neutral-grey/80 pb-4">
         <div>
-          <h2 class="text-xl font-bold text-navy">{{ editingNote ? 'Edit Clinical SOAP Assessment' : 'New Clinical SOAP Assessment' }}</h2>
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-bold text-navy">{{ editingNote ? 'Edit Clinical SOAP Assessment' : 'New Clinical SOAP Assessment' }}</h2>
+            <span
+              v-if="isAutoSaving"
+              class="inline-flex items-center gap-1 rounded-full bg-neutral-grey/50 px-2.5 py-0.5 text-xs text-neutral-muted"
+            >
+              <Loader2 class="h-3 w-3 animate-spin text-sage" />
+              Saving...
+            </span>
+            <span
+              v-else-if="autoSaveStatus"
+              class="inline-flex items-center gap-1 rounded-full bg-sage-muted/70 px-2.5 py-0.5 text-xs font-semibold text-sage animate-fade-in"
+            >
+              <CheckCircle class="h-3 w-3 text-sage" />
+              {{ autoSaveStatus }}
+            </span>
+          </div>
           <p class="text-xs text-neutral-muted">Patient: {{ petName }} · Date: {{ sessionDate }}</p>
         </div>
         <button
@@ -264,7 +346,7 @@ async function handleSubmit() {
               ? 'bg-sage text-white shadow-sm'
               : 'bg-neutral-grey/40 text-navy hover:bg-neutral-grey/70'
           "
-          @click="activeTab = 'S'"
+          @click="switchTab('S')"
         >
           <span class="rounded bg-white/20 px-1.5 py-0.5 text-[10px]">S</span>
           Subjective
@@ -278,7 +360,7 @@ async function handleSubmit() {
               ? 'bg-sage text-white shadow-sm'
               : 'bg-neutral-grey/40 text-navy hover:bg-neutral-grey/70'
           "
-          @click="activeTab = 'O'"
+          @click="switchTab('O')"
         >
           <span class="rounded bg-white/20 px-1.5 py-0.5 text-[10px]">O</span>
           Objective & Metrics
@@ -292,7 +374,7 @@ async function handleSubmit() {
               ? 'bg-sage text-white shadow-sm'
               : 'bg-neutral-grey/40 text-navy hover:bg-neutral-grey/70'
           "
-          @click="activeTab = 'A'"
+          @click="switchTab('A')"
         >
           <span class="rounded bg-white/20 px-1.5 py-0.5 text-[10px]">A</span>
           Action & Treatment
@@ -306,7 +388,7 @@ async function handleSubmit() {
               ? 'bg-sage text-white shadow-sm'
               : 'bg-neutral-grey/40 text-navy hover:bg-neutral-grey/70'
           "
-          @click="activeTab = 'P'"
+          @click="switchTab('P')"
         >
           <span class="rounded bg-white/20 px-1.5 py-0.5 text-[10px]">P</span>
           Plan & Follow-up
@@ -378,6 +460,7 @@ async function handleSubmit() {
                   section-label="Subjective"
                   button-text="Dictate Subjective"
                   @transcript-chunk="handleSubjectiveDictationChunk"
+                  @dictation-finished="autoSaveNote"
                 />
               </div>
             </div>
@@ -422,6 +505,7 @@ async function handleSubmit() {
                   section-label="Objective"
                   button-text="Dictate Objective"
                   @transcript-chunk="handleObjectiveDictationChunk"
+                  @dictation-finished="autoSaveNote"
                 />
               </div>
             </div>
@@ -514,6 +598,7 @@ async function handleSubmit() {
                     button-text="Dictate"
                     :compact="true"
                     @transcript-chunk="(chunk, pause) => newMetricName = formatPausePunctuation(newMetricName, chunk, pause)"
+                    @dictation-finished="autoSaveNote"
                   />
                 </div>
               </div>
@@ -609,6 +694,7 @@ async function handleSubmit() {
                   section-label="Action"
                   button-text="Dictate Action"
                   @transcript-chunk="handleActionDictationChunk"
+                  @dictation-finished="autoSaveNote"
                 />
               </div>
             </div>
@@ -667,6 +753,7 @@ async function handleSubmit() {
                   section-label="Plan"
                   button-text="Dictate Plan"
                   @transcript-chunk="handlePlanDictationChunk"
+                  @dictation-finished="autoSaveNote"
                 />
               </div>
             </div>
@@ -702,6 +789,7 @@ async function handleSubmit() {
                   button-text="Dictate Diagnosis"
                   :compact="true"
                   @transcript-chunk="(chunk, pause) => diagnosisText = formatPausePunctuation(diagnosisText, chunk, pause)"
+                  @dictation-finished="autoSaveNote"
                 />
               </div>
             </div>
@@ -734,7 +822,7 @@ async function handleSubmit() {
               v-if="activeTab !== 'S'"
               type="button"
               class="rounded-xl border border-neutral-grey/80 px-4 py-2 text-xs font-bold text-navy hover:bg-neutral-grey/40"
-              @click="activeTab = activeTab === 'P' ? 'A' : activeTab === 'A' ? 'O' : 'S'"
+              @click="switchTab(activeTab === 'P' ? 'A' : activeTab === 'A' ? 'O' : 'S')"
             >
               Previous Section
             </button>
@@ -742,7 +830,7 @@ async function handleSubmit() {
               v-if="activeTab !== 'P'"
               type="button"
               class="rounded-xl bg-navy/10 px-4 py-2 text-xs font-bold text-navy hover:bg-navy/20"
-              @click="activeTab = activeTab === 'S' ? 'O' : activeTab === 'O' ? 'A' : 'P'"
+              @click="switchTab(activeTab === 'S' ? 'O' : activeTab === 'O' ? 'A' : 'P')"
             >
               Next Section
             </button>

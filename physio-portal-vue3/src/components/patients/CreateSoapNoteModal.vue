@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { X, Plus, Trash2, CheckCircle, Share2, Import, MessageSquareQuote } from '@lucide/vue'
+import { X, Plus, Trash2, CheckCircle, Share2, Import, MessageSquareQuote, RotateCcw } from '@lucide/vue'
 import type { CreateSoapNoteRequest, CustomMetricItem, OwnerSubjectiveNote, SoapNote } from '../../types/soap'
 import { fetchOwnerSubjectiveNotes, fetchSoapNotesByPet } from '../../api/soapNotes'
+import VoiceDictationButton from '../soap/VoiceDictationButton.vue'
 
 const props = defineProps<{
   petId: number
@@ -95,6 +96,24 @@ function importOwnerNote(note: OwnerSubjectiveNote) {
   } else {
     subjective.value += `\n\n${snippet}`
   }
+}
+
+import { formatPausePunctuation } from '../../utils/speechCleaner'
+
+function handleSubjectiveDictationChunk(chunk: string, pauseSeconds: number = 0) {
+  subjective.value = formatPausePunctuation(subjective.value, chunk, pauseSeconds)
+}
+
+function handleObjectiveDictationChunk(chunk: string, pauseSeconds: number = 0) {
+  objective.value = formatPausePunctuation(objective.value, chunk, pauseSeconds)
+}
+
+function handleActionDictationChunk(chunk: string, pauseSeconds: number = 0) {
+  action.value = formatPausePunctuation(action.value, chunk, pauseSeconds)
+}
+
+function handlePlanDictationChunk(chunk: string, pauseSeconds: number = 0) {
+  plan.value = formatPausePunctuation(plan.value, chunk, pauseSeconds)
 }
 
 // Built-in editable scores
@@ -340,9 +359,28 @@ async function handleSubmit() {
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-navy">
-              Subjective Findings (Owner Observations & Feedback)
-            </label>
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-semibold text-navy">
+                Subjective Findings (Owner Observations & Feedback)
+              </label>
+              <div class="flex items-center gap-1.5">
+                <button
+                  v-if="subjective"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-2 py-1 text-xs text-neutral-muted hover:border-danger-red/40 hover:bg-danger-red/10 hover:text-danger-red transition-all"
+                  title="Clear Subjective text"
+                  @click="subjective = ''"
+                >
+                  <RotateCcw class="h-3 w-3" />
+                  Clear
+                </button>
+                <VoiceDictationButton
+                  section-label="Subjective"
+                  button-text="Dictate Subjective"
+                  @transcript-chunk="handleSubjectiveDictationChunk"
+                />
+              </div>
+            </div>
             <p class="mt-0.5 text-[11px] text-neutral-muted">
               Record changes reported by the owner, home exercise compliance, energy/appetite levels, and any concerns.
             </p>
@@ -367,7 +405,26 @@ async function handleSubmit() {
         <!-- O - OBJECTIVE & METRICS -->
         <div v-show="activeTab === 'O'" class="space-y-5">
           <div>
-            <label class="block text-xs font-semibold text-navy">Objective Examination Notes</label>
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-semibold text-navy">Objective Examination Notes</label>
+              <div class="flex items-center gap-1.5">
+                <button
+                  v-if="objective"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-2 py-1 text-xs text-neutral-muted hover:border-danger-red/40 hover:bg-danger-red/10 hover:text-danger-red transition-all"
+                  title="Clear Objective text"
+                  @click="objective = ''"
+                >
+                  <RotateCcw class="h-3 w-3" />
+                  Clear
+                </button>
+                <VoiceDictationButton
+                  section-label="Objective"
+                  button-text="Dictate Objective"
+                  @transcript-chunk="handleObjectiveDictationChunk"
+                />
+              </div>
+            </div>
             <textarea
               v-model="objective"
               rows="3"
@@ -444,12 +501,22 @@ async function handleSubmit() {
 
             <!-- New Metric Form -->
             <div v-if="showAddMetric" class="mt-3 grid gap-3 rounded-xl bg-neutral-grey/30 p-3 sm:grid-cols-4">
-              <input
-                type="text"
-                v-model="newMetricName"
-                placeholder="Metric Name (e.g. ROM)"
-                class="rounded-lg border border-neutral-grey/80 bg-surface px-2.5 py-1.5 text-xs text-navy"
-              />
+              <div class="relative flex items-center">
+                <input
+                  type="text"
+                  v-model="newMetricName"
+                  placeholder="Metric Name (e.g. ROM)"
+                  class="w-full rounded-lg border border-neutral-grey/80 bg-surface px-2.5 py-1.5 pr-8 text-xs text-navy"
+                />
+                <div class="absolute right-1">
+                  <VoiceDictationButton
+                    section-label="Metric Name"
+                    button-text="Dictate"
+                    :compact="true"
+                    @transcript-chunk="(chunk, pause) => newMetricName = formatPausePunctuation(newMetricName, chunk, pause)"
+                  />
+                </div>
+              </div>
               <input
                 type="number"
                 v-model.number="newMetricValue"
@@ -523,9 +590,28 @@ async function handleSubmit() {
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-navy">
-              Action (Treatment Modalities & In-Session Exercises)
-            </label>
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-semibold text-navy">
+                Action (Treatment Modalities & In-Session Exercises)
+              </label>
+              <div class="flex items-center gap-1.5">
+                <button
+                  v-if="action"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-2 py-1 text-xs text-neutral-muted hover:border-danger-red/40 hover:bg-danger-red/10 hover:text-danger-red transition-all"
+                  title="Clear Action text"
+                  @click="action = ''"
+                >
+                  <RotateCcw class="h-3 w-3" />
+                  Clear
+                </button>
+                <VoiceDictationButton
+                  section-label="Action"
+                  button-text="Dictate Action"
+                  @transcript-chunk="handleActionDictationChunk"
+                />
+              </div>
+            </div>
             <p class="mt-0.5 text-[11px] text-neutral-muted">
               Document manual therapies, laser/hydro treatments, specific areas treated, and in-session exercise reps.
             </p>
@@ -562,9 +648,28 @@ async function handleSubmit() {
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-navy">
-              Plan (Future Session Focus & Home Program Adjustments)
-            </label>
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-semibold text-navy">
+                Plan (Future Session Focus & Home Program Adjustments)
+              </label>
+              <div class="flex items-center gap-1.5">
+                <button
+                  v-if="plan"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-2 py-1 text-xs text-neutral-muted hover:border-danger-red/40 hover:bg-danger-red/10 hover:text-danger-red transition-all"
+                  title="Clear Plan text"
+                  @click="plan = ''"
+                >
+                  <RotateCcw class="h-3 w-3" />
+                  Clear
+                </button>
+                <VoiceDictationButton
+                  section-label="Plan"
+                  button-text="Dictate Plan"
+                  @transcript-chunk="handlePlanDictationChunk"
+                />
+              </div>
+            </div>
             <textarea
               v-model="plan"
               rows="4"
@@ -575,10 +680,31 @@ async function handleSubmit() {
 
           <!-- Medical History Diagnosis Update Option -->
           <div class="rounded-xl border border-neutral-grey/80 bg-neutral-grey/20 p-3">
-            <label class="flex items-center gap-2 text-xs font-semibold text-navy">
-              <input type="checkbox" v-model="updateDiagnosis" class="rounded accent-sage" />
-              Update Primary Diagnosis / Condition in Patient's Profile
-            </label>
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 text-xs font-semibold text-navy">
+                <input type="checkbox" v-model="updateDiagnosis" class="rounded accent-sage" />
+                Update Primary Diagnosis / Condition in Patient's Profile
+              </label>
+              <div class="flex items-center gap-1.5">
+                <button
+                  v-if="updateDiagnosis && diagnosisText"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-2 py-1 text-xs text-neutral-muted hover:border-danger-red/40 hover:bg-danger-red/10 hover:text-danger-red transition-all"
+                  title="Clear Diagnosis text"
+                  @click="diagnosisText = ''"
+                >
+                  <RotateCcw class="h-3 w-3" />
+                  Clear
+                </button>
+                <VoiceDictationButton
+                  v-if="updateDiagnosis"
+                  section-label="Diagnosis"
+                  button-text="Dictate Diagnosis"
+                  :compact="true"
+                  @transcript-chunk="(chunk, pause) => diagnosisText = formatPausePunctuation(diagnosisText, chunk, pause)"
+                />
+              </div>
+            </div>
             <input
               v-if="updateDiagnosis"
               type="text"

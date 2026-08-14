@@ -17,15 +17,18 @@ public class SoapNotesController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ISoapReportPdfGenerator _pdfGenerator;
+    private readonly ISoapVoiceTranscriptionService _transcriptionService;
     private readonly DbContext _dbContext;
 
     public SoapNotesController(
         IMediator mediator,
         ISoapReportPdfGenerator pdfGenerator,
+        ISoapVoiceTranscriptionService transcriptionService,
         DbContext dbContext)
     {
         _mediator = mediator;
         _pdfGenerator = pdfGenerator;
+        _transcriptionService = transcriptionService;
         _dbContext = dbContext;
     }
 
@@ -160,5 +163,58 @@ public class SoapNotesController : ControllerBase
         {
             return Unauthorized(new { message = ex.Message });
         }
+    }
+
+    [HttpPost("dictation/parse-narrative")]
+    public async Task<ActionResult<StructuredSoapNoteDto>> ParseNarrative(
+        [FromBody] ParseSoapNarrativeRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _transcriptionService.ParseNarrativeAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Failed to parse clinical narrative.", error = ex.Message });
+        }
+    }
+
+    [HttpPost("dictation/transcribe-audio")]
+    public async Task<ActionResult<SoapTranscriptionResultDto>> TranscribeAudio(
+        [FromForm] IFormFile file,
+        [FromForm] string? petName,
+        [FromForm] string? species,
+        CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { message = "No audio file was uploaded." });
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await _transcriptionService.TranscribeAudioAsync(
+                stream,
+                file.ContentType,
+                petName,
+                species,
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Audio transcription failed.", error = ex.Message });
+        }
+    }
+
+    [HttpGet("dictation/vocabulary")]
+    public ActionResult<SoapVocabularyDto> GetVocabulary()
+    {
+        var vocabulary = _transcriptionService.GetDomainVocabulary();
+        return Ok(vocabulary);
     }
 }

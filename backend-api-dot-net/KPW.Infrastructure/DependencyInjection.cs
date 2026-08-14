@@ -83,6 +83,8 @@ public static class DependencyInjection
         {
             services.AddSingleton<IAiChatService, LocalAiChatService>();
         }
+
+        services.AddSingleton<ISoapVoiceTranscriptionService, SoapVoiceTranscriptionService>();
     }
 }
 

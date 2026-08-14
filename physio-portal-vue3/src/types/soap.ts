@@ -43,10 +43,10 @@ export interface CreateSoapNoteRequest {
 
 export interface UpdateSoapNoteRequest {
   sessionDate?: string | null
-  subjective?: string
-  objective?: string
-  action?: string
-  plan?: string
+  subjective: string
+  objective: string
+  action: string
+  plan: string
   stiffnessScore?: number | null
   painScore?: number | null
   lamenessScore?: number | null
@@ -78,3 +78,58 @@ export interface OwnerSubjectiveNote {
   isReviewed: boolean
 }
 
+// Voice Dictation & Audio Transcription Types
+export interface ParseSoapNarrativeRequest {
+  transcript: string
+  petId?: number | null
+  petName?: string | null
+  species?: string | null
+  targetSection?: 'S' | 'O' | 'A' | 'P' | null
+}
+
+export interface StructuredSoapNote {
+  subjective: string
+  objective: string
+  action: string
+  plan: string
+  stiffnessScore?: number | null
+  painScore?: number | null
+  lamenessScore?: number | null
+  customMetrics: CustomMetricItem[]
+  suggestedDiagnosis?: string | null
+  rawTranscript: string
+  confidenceScore: number
+  extractedTerms: string[]
+}
+
+export interface SoapTranscriptionResult {
+  transcript: string
+  structuredNote?: StructuredSoapNote | null
+  durationMs: number
+  usedLocalFallback: boolean
+}
+
+export interface VocabularyCategory {
+  category: string
+  terms: string[]
+}
+
+export interface SoapVocabulary {
+  terms: string[]
+  categories: VocabularyCategory[]
+  autoCorrections: Record<string, string>
+}
+
+export type RecordingState = 'idle' | 'recording' | 'paused' | 'processing' | 'transcribing' | 'completed' | 'error'
+
+export interface OfflineSoapRecording {
+  id: string
+  timestamp: string
+  petId?: number | null
+  petName?: string | null
+  targetSection?: 'S' | 'O' | 'A' | 'P' | 'FULL'
+  transcript: string
+  audioBlobUrl?: string
+  audioMimeType?: string
+  isSynced: boolean
+}

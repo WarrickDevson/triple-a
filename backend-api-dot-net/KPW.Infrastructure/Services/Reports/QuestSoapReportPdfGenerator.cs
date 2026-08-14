@@ -33,7 +33,7 @@ public class QuestSoapReportPdfGenerator : ISoapReportPdfGenerator
                 page.Content().Element(c => ComposeContent(c, soapNote));
                 page.Footer().AlignCenter().Text(text =>
                 {
-                    text.Span("Kruger's Pet Wellness · Clinical SOAP Report · Confidential · Page ");
+                    text.Span("Triple A Veterinary Physiotherapy · Clinical SOAP Report · Confidential · Page ");
                     text.CurrentPageNumber();
                     text.Span(" of ");
                     text.TotalPages();
@@ -54,7 +54,7 @@ public class QuestSoapReportPdfGenerator : ISoapReportPdfGenerator
     {
         container.Column(column =>
         {
-            column.Item().Text("Kruger's Pet Wellness")
+            column.Item().Text("Triple A Veterinary Physiotherapy")
                 .FontSize(18).Bold().FontColor(PrimaryDark);
             column.Item().Text("Clinical SOAP Assessment & Session Report")
                 .FontSize(14).SemiBold().FontColor(PrimaryLight);

@@ -115,7 +115,7 @@ export const useDocumentsStore = defineStore('documents', () => {
 
   function generateDemoDocumentContent(doc: DocumentItem): string {
     return `=====================================================
-KPW VETERINARY PHYSIOTHERAPY CLINIC
+TRIPLE A VETERINARY PHYSIOTHERAPY CLINIC
 CLINICAL DOCUMENT: ${doc.name.toUpperCase()}
 =====================================================
 
@@ -138,10 +138,10 @@ Summary:
 This document represents an official veterinary rehabilitation record for ${doc.petName}.
 It contains verified clinical assessment notes, owner consent documentation, or treatment protocol files recorded by the attending physiotherapist.
 
-For further information or questions regarding this document, please contact KPW Physiotherapy Clinic.
+For further information or questions regarding this document, please contact Triple A Physiotherapy Clinic.
 
 -----------------------------------------------------
-End of Document — KPW Veterinary Rehabilitation Portal
+End of Document — Triple A Veterinary Rehabilitation Portal
 =====================================================
 `
   }

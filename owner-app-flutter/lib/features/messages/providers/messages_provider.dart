@@ -157,10 +157,10 @@ class MessagesNotifier extends StateNotifier<MessagesState> {
         '/api/pets/$petId/messages',
         data: {
           'body': body,
-          if (videoSubmissionId != null) 'videoSubmissionId': videoSubmissionId,
-          if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
-          if (attachmentName != null) 'attachmentName': attachmentName,
-          if (attachmentType != null) 'attachmentType': attachmentType,
+          'videoSubmissionId': ?videoSubmissionId,
+          'attachmentUrl': ?attachmentUrl,
+          'attachmentName': ?attachmentName,
+          'attachmentType': ?attachmentType,
         },
       );
       final message = PetMessage.fromJson(response.data!);

@@ -592,7 +592,7 @@ class _NotesTab extends StatelessWidget {
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
         itemCount: pet.medicalHistories.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
           final history = pet.medicalHistories[index];
           return SectionCard(

@@ -32,7 +32,7 @@ public class QuestPetReportPdfGenerator : IPetReportPdfGenerator
                 page.Content().Element(c => ComposeContent(c, report));
                 page.Footer().AlignCenter().Text(text =>
                 {
-                    text.Span("Kruger's Pet Wellness · Confidential clinical report · Page ");
+                    text.Span("Triple A Veterinary Physiotherapy · Confidential clinical report · Page ");
                     text.CurrentPageNumber();
                     text.Span(" of ");
                     text.TotalPages();
@@ -47,7 +47,7 @@ public class QuestPetReportPdfGenerator : IPetReportPdfGenerator
     {
         container.Column(column =>
         {
-            column.Item().Text("Kruger's Pet Wellness")
+            column.Item().Text("Triple A Veterinary Physiotherapy")
                 .FontSize(18).Bold().FontColor(PrimaryDark);
             column.Item().Text("Clinical Progress Report")
                 .FontSize(14).SemiBold().FontColor(PrimaryLight);

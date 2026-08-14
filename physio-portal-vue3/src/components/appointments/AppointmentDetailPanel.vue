@@ -19,6 +19,7 @@ const emit = defineEmits<{
   reject: [appointmentId: number]
   cancel: [appointmentId: number]
   complete: [appointmentId: number]
+  startSoap: [appointment: Appointment]
   reschedule: [appointment: Appointment, newDatetime: string]
 }>()
 
@@ -140,7 +141,16 @@ function submitReschedule() {
           </div>
         </div>
 
-        <div v-else-if="appointment.appointmentStatus === 'Scheduled'" class="mt-4">
+        <div v-else-if="appointment.appointmentStatus === 'Scheduled'" class="mt-4 space-y-2">
+          <BaseButton
+            class="w-full"
+            variant="accent"
+            size="sm"
+            @click="emit('startSoap', appointment)"
+          >
+            📋 Start SOAP Assessment
+          </BaseButton>
+
           <div class="grid grid-cols-3 gap-2">
             <BaseButton size="sm" variant="secondary" @click="openReschedule">Reschedule</BaseButton>
             <BaseButton size="sm" variant="secondary">Edit</BaseButton>

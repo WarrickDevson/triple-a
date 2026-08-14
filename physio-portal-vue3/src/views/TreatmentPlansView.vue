@@ -7,9 +7,16 @@ import PlanPatientHeader from '../components/plans/PlanPatientHeader.vue'
 import PlanPhaseDetail from '../components/plans/PlanPhaseDetail.vue'
 import PlanPhasesSidebar from '../components/plans/PlanPhasesSidebar.vue'
 import PlanTabs from '../components/plans/PlanTabs.vue'
+import PlanGoalsTab from '../components/plans/PlanGoalsTab.vue'
+import PlanExercisesTab from '../components/plans/PlanExercisesTab.vue'
+import PlanNotesTab from '../components/plans/PlanNotesTab.vue'
+import PlanProgressTab from '../components/plans/PlanProgressTab.vue'
+import PlanDocumentsTab from '../components/plans/PlanDocumentsTab.vue'
+import AddPhaseModal from '../components/plans/AddPhaseModal.vue'
+import EditPhaseModal from '../components/plans/EditPhaseModal.vue'
 import BaseButton from '../components/BaseButton.vue'
 import { useTreatmentPlan } from '../composables/useTreatmentPlan'
-import { DEFAULT_PHASES } from '../data/planDemo'
+import { DEFAULT_PHASES, type PlanPhase } from '../data/planDemo'
 import { usePatientsStore } from '../store/patients'
 import { useExercisesStore } from '../store/exercises'
 import type { Exercise } from '../types/exercise'
@@ -21,7 +28,12 @@ const router = useRouter()
 
 const activeTab = ref<'overview' | 'goals' | 'exercises' | 'notes' | 'progress' | 'documents'>('overview')
 const activePhaseId = ref(1)
+const planPhases = ref<PlanPhase[]>([...DEFAULT_PHASES])
+
 const showCreateModal = ref(false)
+const showAddPhaseModal = ref(false)
+const showEditPhaseModal = ref(false)
+const selectedPhaseToEdit = ref<PlanPhase | null>(null)
 const showStubModal = ref(false)
 const stubMessage = ref('')
 const createForm = reactive({ title: '', startDate: new Date().toISOString().slice(0, 10) })
@@ -54,13 +66,13 @@ const planLoading = computed(() => plan.loading.value)
 const hasProgram = computed(() => plan.hasProgram.value)
 
 const activePhase = computed(
-  () => DEFAULT_PHASES.find((p) => p.id === activePhaseId.value) ?? DEFAULT_PHASES[0]!,
+  () => planPhases.value.find((p: PlanPhase) => p.id === activePhaseId.value) ?? planPhases.value[0]!,
 )
 
 const phaseExercises = computed(() => {
   if (!program.value) return []
   return program.value.exercises.filter((ex, index) => {
-    const assignedPhase = ex.phaseId ?? ((index % DEFAULT_PHASES.length) + 1)
+    const assignedPhase = ex.phaseId ?? ((index % planPhases.value.length) + 1)
     return assignedPhase === activePhaseId.value
   })
 })
@@ -70,7 +82,7 @@ const availableExercises = computed(() => {
   let list = exercisesStore.exercises
   if (query) {
     list = list.filter(
-      (e) =>
+      (e: Exercise) =>
         e.title.toLowerCase().includes(query) ||
         e.shortDescription?.toLowerCase().includes(query) ||
         e.targetSpecies?.toLowerCase().includes(query),
@@ -104,11 +116,6 @@ function selectPatient(petId: number) {
   router.push({ name: 'treatment-plan-detail', params: { petId } })
 }
 
-function showStub(message: string) {
-  stubMessage.value = message
-  showStubModal.value = true
-}
-
 async function createPlan() {
   if (!selectedPetId.value || !createForm.title) return
   await plan.createProgram(selectedPetId.value, createForm.title, createForm.startDate)
@@ -133,7 +140,7 @@ async function addExerciseToPlan() {
       sets: e.sets,
       repetitions: e.repetitions,
       frequencyPerDay: e.frequencyPerDay,
-      phaseId: e.phaseId ?? ((index % DEFAULT_PHASES.length) + 1),
+      phaseId: e.phaseId ?? ((index % planPhases.value.length) + 1),
     }))
 
     const newEx = {
@@ -154,6 +161,60 @@ async function addExerciseToPlan() {
     // silent catch
   } finally {
     addingExercise.value = false
+  }
+}
+
+async function removeExerciseFromPlan(exerciseId: number) {
+  if (!selectedPetId.value || !program.value) return
+  const remaining = program.value.exercises
+    .filter((e) => e.exerciseId !== exerciseId)
+    .map((e, index) => ({
+      exerciseId: e.exerciseId,
+      sets: e.sets,
+      repetitions: e.repetitions,
+      frequencyPerDay: e.frequencyPerDay,
+      phaseId: e.phaseId ?? ((index % planPhases.value.length) + 1),
+    }))
+
+  await plan.createProgram(selectedPetId.value, program.value.programTitle, program.value.startDate, remaining)
+}
+
+function handleAddPhase(newPhase: { title: string; goals: string[] }) {
+  const nextId = planPhases.value.length + 1
+  planPhases.value.push({
+    id: nextId,
+    label: `Phase ${nextId}`,
+    title: newPhase.title,
+    goals: newPhase.goals,
+  })
+  activePhaseId.value = nextId
+}
+
+function openEditPhaseModal() {
+  selectedPhaseToEdit.value = activePhase.value
+  showEditPhaseModal.value = true
+}
+
+function handleSavePhase(phaseId: number, data: { title: string; goals: string[] }) {
+  const p = planPhases.value.find((phase: PlanPhase) => phase.id === phaseId)
+  if (p) {
+    p.title = data.title
+    p.goals = data.goals
+  }
+}
+
+async function handleSaveNotes(notesText: string) {
+  if (!selectedPetId.value || !program.value) return
+  const currentExercises = program.value.exercises.map((e, index) => ({
+    exerciseId: e.exerciseId,
+    sets: e.sets,
+    repetitions: e.repetitions,
+    frequencyPerDay: e.frequencyPerDay,
+    phaseId: e.phaseId ?? ((index % planPhases.value.length) + 1),
+  }))
+  await plan.createProgram(selectedPetId.value, program.value.programTitle, program.value.startDate, currentExercises)
+  if (program.value) {
+    program.value.notes = notesText
   }
 }
 </script>
@@ -183,45 +244,82 @@ async function addExerciseToPlan() {
       <section class="portal-card overflow-hidden">
         <PlanTabs v-model:active-tab="activeTab" />
 
-        <div v-if="activeTab !== 'overview'" class="empty-state m-4 py-16">
-          <p class="text-sm text-neutral-muted capitalize">{{ activeTab }} view coming soon.</p>
-        </div>
-
-        <div v-else-if="!hasProgram" class="empty-state m-4 py-16">
+        <div v-if="!hasProgram" class="empty-state m-4 py-16">
           <p class="text-sm text-neutral-muted">No treatment plan for this patient yet.</p>
           <BaseButton class="mt-4" size="sm" @click="showCreateModal = true">
             Create Treatment Plan
           </BaseButton>
         </div>
 
-        <div v-else class="grid gap-4 p-4 xl:grid-cols-[220px_minmax(0,1fr)_240px]">
-          <PlanPhasesSidebar
-            :phases="DEFAULT_PHASES"
+        <template v-else>
+          <!-- Overview Tab -->
+          <div v-if="activeTab === 'overview'" class="grid gap-4 p-4 xl:grid-cols-[220px_minmax(0,1fr)_240px]">
+            <PlanPhasesSidebar
+              :phases="planPhases"
+              :active-phase-id="activePhaseId"
+              @update:active-phase-id="activePhaseId = $event"
+              @add-phase="showAddPhaseModal = true"
+            />
+            <PlanPhaseDetail
+              :phase="activePhase"
+              :exercises="phaseExercises"
+              @edit-phase="openEditPhaseModal"
+              @add-exercise="openAddExerciseModal"
+            />
+            <PlanDetailsSidebar
+              :program="program"
+              @add-note="activeTab = 'notes'"
+            />
+          </div>
+
+          <!-- Goals Tab -->
+          <PlanGoalsTab
+            v-else-if="activeTab === 'goals'"
+            :patient="selectedPatient"
+            :phases="planPhases"
             :active-phase-id="activePhaseId"
-            @update:active-phase-id="activePhaseId = $event"
-            @add-phase="showStub('Phase management coming soon.')"
           />
-          <PlanPhaseDetail
-            :phase="activePhase"
-            :exercises="phaseExercises"
-            @edit-phase="showStub('Edit phase coming soon.')"
-            @add-exercise="openAddExerciseModal"
-          />
-          <PlanDetailsSidebar
+
+          <!-- Exercises Tab -->
+          <PlanExercisesTab
+            v-else-if="activeTab === 'exercises'"
             :program="program"
-            @add-note="showStub('Notes editing coming soon.')"
+            :phases="planPhases"
+            @add-exercise="openAddExerciseModal"
+            @remove-exercise="removeExerciseFromPlan"
+            @edit-prescription="openAddExerciseModal"
           />
-        </div>
+
+          <!-- Notes Tab -->
+          <PlanNotesTab
+            v-else-if="activeTab === 'notes'"
+            :patient="selectedPatient"
+            :program="program"
+            @save-notes="handleSaveNotes"
+          />
+
+          <!-- Progress Tab -->
+          <PlanProgressTab
+            v-else-if="activeTab === 'progress'"
+            :patient="selectedPatient"
+          />
+
+          <!-- Documents Tab -->
+          <PlanDocumentsTab
+            v-else-if="activeTab === 'documents'"
+            :patient="selectedPatient"
+          />
+        </template>
       </section>
     </template>
 
     <!-- Create Treatment Plan Modal -->
     <div
       v-if="showCreateModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4 backdrop-blur-sm"
       @click.self="showCreateModal = false"
     >
-      <div class="portal-card w-full max-w-md p-6">
+      <div class="portal-card w-full max-w-md p-6 shadow-xl">
         <h3 class="text-lg font-bold text-navy">Create Treatment Plan</h3>
         <form class="mt-4 space-y-4" @submit.prevent="createPlan">
           <label class="block">
@@ -229,7 +327,7 @@ async function addExerciseToPlan() {
             <input
               v-model="createForm.title"
               required
-              class="mt-1 w-full rounded-lg border border-neutral-grey px-3 py-2 text-sm"
+              class="mt-1 w-full rounded-lg border border-neutral-grey px-3 py-2 text-sm focus:border-sage"
               placeholder="e.g. Post-surgery rehabilitation"
             />
           </label>
@@ -239,10 +337,10 @@ async function addExerciseToPlan() {
               v-model="createForm.startDate"
               type="date"
               required
-              class="mt-1 w-full rounded-lg border border-neutral-grey px-3 py-2 text-sm"
+              class="mt-1 w-full rounded-lg border border-neutral-grey px-3 py-2 text-sm focus:border-sage"
             />
           </label>
-          <div class="flex gap-3">
+          <div class="flex gap-3 pt-2">
             <BaseButton type="button" variant="secondary" class="flex-1" @click="showCreateModal = false">
               Cancel
             </BaseButton>
@@ -252,13 +350,26 @@ async function addExerciseToPlan() {
       </div>
     </div>
 
+    <!-- Phase Modals -->
+    <AddPhaseModal
+      :open="showAddPhaseModal"
+      @close="showAddPhaseModal = false"
+      @add="handleAddPhase"
+    />
+    <EditPhaseModal
+      :open="showEditPhaseModal"
+      :phase="selectedPhaseToEdit"
+      @close="showEditPhaseModal = false"
+      @save="handleSavePhase"
+    />
+
     <!-- Add Exercise Selection Modal -->
     <div
       v-if="showAddExerciseModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4 backdrop-blur-sm"
       @click.self="showAddExerciseModal = false"
     >
-      <div class="portal-card flex max-h-[90vh] w-full max-w-2xl flex-col p-6 overflow-hidden">
+      <div class="portal-card flex max-h-[90vh] w-full max-w-2xl flex-col p-6 overflow-hidden shadow-2xl">
         <div class="flex items-center justify-between border-b border-neutral-grey/60 pb-3">
           <div>
             <h3 class="text-lg font-bold text-navy">Add Exercise to Plan</h3>
@@ -303,8 +414,8 @@ async function addExerciseToPlan() {
             >
               <div class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sage/15 text-sage">
                 <img
-                  v-if="exercise.steps?.find((s) => s.imageUrl)?.imageUrl"
-                  :src="exercise.steps.find((s) => s.imageUrl)!.imageUrl!"
+                  v-if="exercise.steps?.find((s: any) => s.imageUrl)?.imageUrl"
+                  :src="exercise.steps.find((s: any) => s.imageUrl)!.imageUrl!"
                   :alt="exercise.title"
                   class="h-full w-full object-cover"
                 />

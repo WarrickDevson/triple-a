@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { X, Plus, Trash2, CheckCircle, Share2, Import, MessageSquareQuote } from '@lucide/vue'
 import type { CreateSoapNoteRequest, CustomMetricItem, OwnerSubjectiveNote, SoapNote } from '../../types/soap'
-import { fetchOwnerSubjectiveNotes } from '../../api/soapNotes'
+import { fetchOwnerSubjectiveNotes, fetchSoapNotesByPet } from '../../api/soapNotes'
 
 const props = defineProps<{
   petId: number
@@ -38,6 +38,18 @@ async function loadOwnerNotes() {
   }
 }
 
+async function loadPreviousPlan() {
+  if (!props.petId || props.editingNote) return
+  try {
+    const existing = await fetchSoapNotesByPet(props.petId)
+    if (existing && existing.length > 0 && existing[0].plan) {
+      plan.value = existing[0].plan
+    }
+  } catch {
+    // Ignore error
+  }
+}
+
 watch(
   () => props.isOpen,
   (val) => {
@@ -68,6 +80,7 @@ watch(
           { name: 'Thigh Circumference', value: 38, minScale: 10, maxScale: 80, unitOrDescriptor: 'cm' },
         ]
         shareWithOwner.value = true
+        loadPreviousPlan()
       }
     }
   },
@@ -101,6 +114,47 @@ const newMetricMin = ref<number>(0)
 const newMetricMax = ref<number>(100)
 const newMetricUnit = ref('')
 const showAddMetric = ref(false)
+
+// Preset exercises & modalities for quick insertion into Action section
+const PRESET_EXERCISES_MODALITIES = [
+  { name: 'Passive Range of Motion (PROM)', category: 'Mobility', defaultReps: '10 reps x 3 sets' },
+  { name: 'Stifle Flexion & Extension', category: 'Mobility', defaultReps: '10 reps x 2 sets' },
+  { name: 'Myofascial Soft Tissue Release', category: 'Modality', defaultReps: '15 mins' },
+  { name: 'Laser Therapy / Photobiomodulation', category: 'Modality', defaultReps: '4 J/cm²' },
+  { name: 'Underwater Treadmill (UWTM)', category: 'Hydro', defaultReps: '15 mins @ 1.2 mph' },
+  { name: 'Cavaletti Rails Walkover', category: 'Exercise', defaultReps: '5 laps x 10 rails' },
+  { name: 'Airex Balance Disc Standing', category: 'Balance', defaultReps: '30s x 3 sets' },
+  { name: 'Sit-to-Stand Squats', category: 'Strength', defaultReps: '10 reps x 2 sets' },
+  { name: 'Cryotherapy / Cold Pack', category: 'Modality', defaultReps: '10 mins' },
+]
+
+// Preset treatment plans & protocols for quick insertion into Plan section
+const PRESET_TREATMENT_PLANS = [
+  { name: 'Phase 1: Reduce Pain & Inflammation Protocol', frequency: '3x weekly sessions' },
+  { name: 'Phase 2: Restore ROM & Normal Gait Protocol', frequency: '2x weekly sessions' },
+  { name: 'Phase 3: Build Muscle Strength & Core Stability', frequency: '1-2x weekly sessions' },
+  { name: 'Phase 4: Home Maintenance & Prevention', frequency: 'Re-evaluate in 4 weeks' },
+  { name: 'Home Rehab Program: Daily PROM & Balance Disc', frequency: '2x daily at home' },
+  { name: 'Hydrotherapy Schedule: UWTM Sessions', frequency: '2x weekly sessions' },
+]
+
+function insertExerciseToAction(item: { name: string; defaultReps: string }) {
+  const line = `• ${item.name} (${item.defaultReps})`
+  if (!action.value.trim()) {
+    action.value = line
+  } else {
+    action.value += `\n${line}`
+  }
+}
+
+function insertPlanToPlan(item: { name: string; frequency: string }) {
+  const line = `• ${item.name} [Target Frequency: ${item.frequency}]`
+  if (!plan.value.trim()) {
+    plan.value = line
+  } else {
+    plan.value += `\n${line}`
+  }
+}
 
 const updateDiagnosis = ref(false)
 const diagnosisText = ref('')
@@ -447,6 +501,27 @@ async function handleSubmit() {
 
         <!-- A - ACTION & TREATMENT -->
         <div v-show="activeTab === 'A'" class="space-y-4">
+          <!-- Quick Select Exercises & Modalities Library -->
+          <div class="rounded-xl border border-neutral-grey/80 bg-neutral-grey/20 p-3.5 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-navy uppercase tracking-wider">Quick Select Exercises & Modalities</span>
+              <span class="text-[11px] text-neutral-muted">Click any item to append to Action notes</span>
+            </div>
+
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="item in PRESET_EXERCISES_MODALITIES"
+                :key="item.name"
+                type="button"
+                class="inline-flex items-center gap-1 rounded-lg border border-sage/40 bg-surface px-2.5 py-1 text-xs font-medium text-navy hover:bg-sage hover:text-white transition-colors"
+                @click="insertExerciseToAction(item)"
+              >
+                <Plus class="h-3 w-3 text-sage group-hover:text-white" />
+                {{ item.name }}
+              </button>
+            </div>
+          </div>
+
           <div>
             <label class="block text-xs font-semibold text-navy">
               Action (Treatment Modalities & In-Session Exercises)
@@ -465,6 +540,27 @@ async function handleSubmit() {
 
         <!-- P - PLAN & FOLLOW-UP -->
         <div v-show="activeTab === 'P'" class="space-y-4">
+          <!-- Quick Select Treatment Plans & Protocols -->
+          <div class="rounded-xl border border-neutral-grey/80 bg-neutral-grey/20 p-3.5 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-navy uppercase tracking-wider">Quick Select Treatment Plans & Protocols</span>
+              <span class="text-[11px] text-neutral-muted">Click any protocol to append to Plan notes</span>
+            </div>
+
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="item in PRESET_TREATMENT_PLANS"
+                :key="item.name"
+                type="button"
+                class="inline-flex items-center gap-1 rounded-lg border border-sage/40 bg-surface px-2.5 py-1 text-xs font-medium text-navy hover:bg-sage hover:text-white transition-colors"
+                @click="insertPlanToPlan(item)"
+              >
+                <Plus class="h-3 w-3 text-sage group-hover:text-white" />
+                {{ item.name }}
+              </button>
+            </div>
+          </div>
+
           <div>
             <label class="block text-xs font-semibold text-navy">
               Plan (Future Session Focus & Home Program Adjustments)

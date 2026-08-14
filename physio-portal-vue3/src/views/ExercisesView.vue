@@ -120,12 +120,7 @@ function clearFilters() {
       <section class="portal-card min-h-[600px] overflow-hidden">
         <ExerciseTabs v-model:active-tab="activeTab" />
         <div class="p-4 sm:p-5">
-          <div
-            v-if="activeTab === 'templates'"
-            class="empty-state py-16"
-          >
-            <p class="text-sm text-neutral-muted">Exercise templates coming soon.</p>
-          </div>
+          <ExerciseTemplatesTab v-if="activeTab === 'templates'" />
           <ExerciseGrid
             v-else
             :exercises="filteredExercises"

@@ -61,7 +61,7 @@ class PetsNotifier extends StateNotifier<PetsState> {
           'species': species,
           if (breed != null && breed.isNotEmpty) 'breed': breed,
           if (birthDate != null) 'birthDate': _formatDate(birthDate),
-          if (weightKg != null) 'weightKg': weightKg,
+          'weightKg': ?weightKg,
           if (diagnosis != null && diagnosis.isNotEmpty)
             'initialMedicalHistory': {
               'diagnosis': diagnosis,

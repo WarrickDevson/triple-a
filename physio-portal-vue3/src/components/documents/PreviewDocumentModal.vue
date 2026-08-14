@@ -73,7 +73,7 @@ function handleOpenNewTab() {
             </div>
             <div class="content">
               <h3>Clinical Document Record</h3>
-              <p>This is a verified clinical rehabilitation record for <strong>${props.document.petName}</strong> under the care of KPW Veterinary Physiotherapy Clinic.</p>
+              <p>This is a verified clinical rehabilitation record for <strong>${props.document.petName}</strong> under the care of Triple A Veterinary Physiotherapy Clinic.</p>
               <p>Category: <strong>${props.document.category}</strong></p>
               <p>Status: Verified & Confidential</p>
             </div>
@@ -151,7 +151,7 @@ function handleOpenNewTab() {
             <div class="flex items-center justify-between border-b border-neutral-grey/60 pb-4">
               <div>
                 <span class="text-xs font-bold uppercase tracking-wider text-sage">
-                  KPW Veterinary Physiotherapy
+                  Triple A Veterinary Physiotherapy
                 </span>
                 <h3 class="text-xl font-extrabold text-navy mt-1">{{ document.name }}</h3>
               </div>

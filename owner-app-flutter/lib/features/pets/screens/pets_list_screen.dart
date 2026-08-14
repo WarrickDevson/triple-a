@@ -91,7 +91,7 @@ class PetsListScreen extends ConsumerWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
       itemCount: petsState.pets.length + 1,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         if (index == petsState.pets.length) {
           return SectionCard(

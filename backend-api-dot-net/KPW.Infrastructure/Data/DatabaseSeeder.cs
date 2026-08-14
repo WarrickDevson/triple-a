@@ -41,11 +41,11 @@ public static class DatabaseSeeder
             new Clinic
             {
                 ClinicId = 1,
-                ClinicName = "Kruger's Pet Wellness - Demo Clinic",
+                ClinicName = "Triple A Veterinary Physiotherapy - Demo Clinic",
                 VatNumber = "4123456789",
                 PhysicalAddress = "123 Wellness Street, Pretoria, Gauteng",
                 ContactNumber = "+27110000000",
-                InviteCode = "KWPDEMO1",
+                InviteCode = "TRIPLEA1",
                 CreatedDate = SeedDate,
                 ModifiedDate = SeedDate,
                 IsActive = true
@@ -53,7 +53,7 @@ public static class DatabaseSeeder
             new Clinic
             {
                 ClinicId = 2,
-                ClinicName = "KPW North Branch",
+                ClinicName = "Triple A North Branch",
                 VatNumber = "4987654321",
                 PhysicalAddress = "45 Rehabilitation Road, Centurion, Gauteng",
                 ContactNumber = "+27110000099",

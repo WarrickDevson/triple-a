@@ -6,6 +6,7 @@ import TodaysScheduleCard from '../components/dashboard/TodaysScheduleCard.vue'
 import PatientsInCareCard from '../components/dashboard/PatientsInCareCard.vue'
 import ProgressOverviewCard from '../components/dashboard/ProgressOverviewCard.vue'
 import RecentPatientUpdatesCard from '../components/dashboard/RecentPatientUpdatesCard.vue'
+import RecentSoapAssessmentsCard from '../components/dashboard/RecentSoapAssessmentsCard.vue'
 import TasksRemindersCard from '../components/dashboard/TasksRemindersCard.vue'
 import QuickStatsRow from '../components/dashboard/QuickStatsRow.vue'
 
@@ -40,7 +41,8 @@ const appointmentsToday = computed(
     </div>
 
     <div class="grid gap-6 lg:grid-cols-3">
-      <div class="lg:col-span-2">
+      <div class="lg:col-span-2 space-y-6">
+        <RecentSoapAssessmentsCard />
         <RecentPatientUpdatesCard />
       </div>
       <TasksRemindersCard />

@@ -223,7 +223,7 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
             child: Column(
               children: [
                 DropdownButtonFormField<Pet>(
-                  value: petsState.pets.any((p) => p.petId == _selectedPet?.petId)
+                  initialValue: petsState.pets.any((p) => p.petId == _selectedPet?.petId)
                       ? petsState.pets.firstWhere((p) => p.petId == _selectedPet!.petId)
                       : null,
                   decoration: const InputDecoration(labelText: 'Pet'),
@@ -235,7 +235,7 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<RehabProgramExercise>(
-                  value: exercises.any((ex) => ex.exerciseId == _selectedExercise?.exerciseId)
+                  initialValue: exercises.any((ex) => ex.exerciseId == _selectedExercise?.exerciseId)
                       ? exercises.firstWhere((ex) => ex.exerciseId == _selectedExercise!.exerciseId)
                       : null,
                   decoration: const InputDecoration(labelText: 'Exercise'),

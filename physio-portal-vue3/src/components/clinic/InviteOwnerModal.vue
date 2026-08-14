@@ -17,8 +17,8 @@ const errorMessage = ref<string | null>(null)
 const copiedCode = ref(false)
 const copiedLink = ref(false)
 
-const inviteCode = computed(() => auth.user?.clinicInviteCode ?? 'KPW-DEMO-01')
-const clinicName = computed(() => auth.user?.clinicName ?? 'MoveWell Clinic')
+const inviteCode = computed(() => auth.user?.clinicInviteCode ?? 'TRIPLEA-DEMO-01')
+const clinicName = computed(() => auth.user?.clinicName ?? 'Triple A Clinic')
 
 const registerUrl = computed(() => {
   const base = window.location.origin

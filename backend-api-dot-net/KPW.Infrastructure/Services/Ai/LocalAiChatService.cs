@@ -9,7 +9,7 @@ public partial class LocalAiChatService : IAiChatService
 {
     private const string FallbackMessage =
         "I don't have enough approved clinical information to answer that confidently. " +
-        "Please book a consultation with your physiotherapist at Kruger's Pet Wellness for personalised guidance.";
+        "Please book a consultation with your physiotherapist at Triple A Veterinary Physiotherapy for personalised guidance.";
 
     private readonly IReadOnlyList<EducationChunk> _chunks;
     private readonly ILogger<LocalAiChatService> _logger;
@@ -33,7 +33,7 @@ public partial class LocalAiChatService : IAiChatService
             .Select(c => new AiChatSource(c.Title, Truncate(c.Content, 180)))
             .ToList();
 
-        var intro = "Based on Kruger's Pet Wellness educational materials:";
+        var intro = "Based on Triple A Veterinary Physiotherapy educational materials:";
         var body = string.Join(" ", topChunks.Select(c => c.Content));
         return Task.FromResult(new AiChatResult($"{intro} {body}", sources));
     }

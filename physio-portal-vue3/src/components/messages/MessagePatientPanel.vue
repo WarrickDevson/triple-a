@@ -24,8 +24,8 @@ const quickActions = computed(() => {
   return [
     { label: 'Update Plan', icon: ClipboardList, route: petId ? 'treatment-plan-detail' : 'treatment-plans', routeParam: petId },
     { label: 'Schedule Appointment', icon: Calendar, route: 'appointments' },
-    { label: 'Add Note', icon: FileText, action: 'note' },
-    { label: 'Send Exercise Video', icon: Video, action: 'video' },
+    { label: 'Add Clinical Note', icon: FileText, route: petId ? 'patient-detail' : 'patients', routeParam: petId },
+    { label: 'Exercise Library Video', icon: Video, route: 'exercises' },
   ]
 })
 </script>

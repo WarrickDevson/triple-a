@@ -1,6 +1,6 @@
-# MoveWell (KPW Companion)
+# Triple-A Veterinary Physiotherapy
 
-Veterinary physiotherapy and rehabilitation platform for **Kruger’s Pet Wellness** — helping pet owners follow home rehab programmes and giving physiotherapists tools to prescribe, monitor, and support recovery.
+Veterinary physiotherapy and rehabilitation platform for **Triple A** — helping pet owners follow home rehab programmes and giving physiotherapists tools to prescribe, monitor, and support recovery.
 
 > Better compliance. Better outcomes. Stronger bonds.
 
@@ -89,4 +89,4 @@ Ensure the app’s API base URL targets your local or staging API.
 
 ## Licence / ownership
 
-Private project for Kruger’s Pet Wellness (KPW) Veterinary Physiotherapy. Not open source unless explicitly licensed otherwise.
+Private project for Triple A Veterinary Physiotherapy. Not open source unless explicitly licensed otherwise.

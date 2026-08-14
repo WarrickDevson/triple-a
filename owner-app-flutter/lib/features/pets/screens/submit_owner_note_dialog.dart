@@ -15,7 +15,7 @@ class SubmitOwnerNoteDialog extends ConsumerStatefulWidget {
 class _SubmitOwnerNoteDialogState extends ConsumerState<SubmitOwnerNoteDialog> {
   final _notesController = TextEditingController();
   int _painScore = 3;
-  int _energyScore = 4;
+  final int _energyScore = 4;
   bool _submitting = false;
 
   @override

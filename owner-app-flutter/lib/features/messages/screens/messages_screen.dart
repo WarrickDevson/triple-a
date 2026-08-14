@@ -256,7 +256,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                           child: ListView.separated(
                             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                             itemCount: threads.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            separatorBuilder: (_, _) => const SizedBox(height: 8),
                             itemBuilder: (context, index) {
                               final pet = threads[index];
                               final messages = _messagesByPet[pet.petId] ?? [];

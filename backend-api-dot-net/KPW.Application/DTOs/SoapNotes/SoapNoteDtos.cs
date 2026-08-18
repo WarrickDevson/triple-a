@@ -24,7 +24,9 @@ public record SoapNoteDto(
     IReadOnlyList<CustomMetricDto> CustomMetrics,
     bool IsSharedWithOwner,
     DateTime? SharedAtUtc,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    string? AudioUrl = null,
+    string? RawTranscript = null);
 
 public record CreateSoapNoteRequestDto(
     int? AppointmentId,
@@ -38,7 +40,9 @@ public record CreateSoapNoteRequestDto(
     int? LamenessScore,
     List<CustomMetricDto>? CustomMetrics,
     bool ShareWithOwner = false,
-    string? DiagnosisUpdate = null);
+    string? DiagnosisUpdate = null,
+    string? AudioUrl = null,
+    string? RawTranscript = null);
 
 public record UpdateSoapNoteRequestDto(
     DateTime? SessionDate,
@@ -50,7 +54,9 @@ public record UpdateSoapNoteRequestDto(
     int? PainScore,
     int? LamenessScore,
     List<CustomMetricDto>? CustomMetrics,
-    bool ShareWithOwner = false);
+    bool ShareWithOwner = false,
+    string? AudioUrl = null,
+    string? RawTranscript = null);
 
 public record SharedReportDto(
     int SharedReportId,

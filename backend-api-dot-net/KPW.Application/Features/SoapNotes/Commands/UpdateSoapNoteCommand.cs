@@ -47,11 +47,19 @@ public class UpdateSoapNoteCommandHandler : IRequestHandler<UpdateSoapNoteComman
         note.PainScore = req.PainScore;
         note.LamenessScore = req.LamenessScore;
 
-        if (req.CustomMetrics is not null)
+        if (req.CustomMetrics is not null || req.AudioUrl is not null || req.RawTranscript is not null)
         {
-            note.CustomMetricsJson = req.CustomMetrics.Count > 0
-                ? JsonSerializer.Serialize(req.CustomMetrics)
-                : null;
+            var existingDto = SoapNoteMapper.ToDto(note);
+            var updatedMetrics = req.CustomMetrics ?? existingDto.CustomMetrics.ToList();
+            var updatedAudio = req.AudioUrl ?? existingDto.AudioUrl;
+            var updatedTranscript = req.RawTranscript ?? existingDto.RawTranscript;
+
+            note.CustomMetricsJson = JsonSerializer.Serialize(new
+            {
+                metrics = updatedMetrics,
+                audioUrl = updatedAudio,
+                rawTranscript = updatedTranscript
+            });
         }
 
         if (req.ShareWithOwner && !note.IsSharedWithOwner)

@@ -212,6 +212,39 @@ public class SoapNotesController : ControllerBase
         }
     }
 
+    [HttpPost("dictation/process-session-audio")]
+    public async Task<ActionResult<ProcessSessionAudioResponseDto>> ProcessSessionAudio(
+        [FromForm] IFormFile file,
+        [FromForm] string? petName,
+        [FromForm] string? species,
+        [FromForm] int? petId,
+        CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { message = "No audio file was uploaded." });
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await _transcriptionService.ProcessSessionAudioAsync(
+                stream,
+                file.FileName,
+                file.ContentType,
+                petName,
+                species,
+                petId,
+                cancellationToken);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Session audio processing failed.", error = ex.Message });
+        }
+    }
+
     [HttpPost("ai/polish-section")]
     public async Task<ActionResult<PolishSoapSectionResponseDto>> PolishSection(
         [FromBody] PolishSoapSectionRequestDto request,

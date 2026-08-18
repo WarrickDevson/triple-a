@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ArrowLeft } from '@lucide/vue'
 import PatientActionBar from './PatientActionBar.vue'
 import PatientOverviewTab from './PatientOverviewTab.vue'
@@ -11,6 +12,8 @@ import type { Appointment } from '../../types/appointment'
 import type { PatientDemoMeta } from '../../data/patientDemo'
 import type { RehabProgram } from '../../types/exercise'
 import type { Pet } from '../../types/pet'
+
+const route = useRoute()
 
 defineProps<{
   patient: Pet | null
@@ -34,7 +37,17 @@ const tabs = [
   { id: 'documents', label: 'Documents' },
 ] as const
 
-const activeTab = ref<(typeof tabs)[number]['id']>('overview')
+const activeTab = ref<(typeof tabs)[number]['id']>(route.query.openSoap === 'true' || route.query.tab === 'soap' ? 'soap' : 'overview')
+
+watch(
+  () => route.query,
+  (q) => {
+    if (q.openSoap === 'true' || q.tab === 'soap') {
+      activeTab.value = 'soap'
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>

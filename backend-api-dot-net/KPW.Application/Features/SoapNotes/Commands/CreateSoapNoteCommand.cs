@@ -36,9 +36,20 @@ public class CreateSoapNoteCommandHandler : IRequestHandler<CreateSoapNoteComman
         }
 
         var req = command.Request;
-        string? metricsJson = req.CustomMetrics is { Count: > 0 }
-            ? JsonSerializer.Serialize(req.CustomMetrics)
-            : null;
+        bool hasMetrics = req.CustomMetrics is { Count: > 0 };
+        bool hasAudio = !string.IsNullOrWhiteSpace(req.AudioUrl);
+        bool hasTranscript = !string.IsNullOrWhiteSpace(req.RawTranscript);
+
+        string? metricsJson = null;
+        if (hasMetrics || hasAudio || hasTranscript)
+        {
+            metricsJson = JsonSerializer.Serialize(new
+            {
+                metrics = req.CustomMetrics ?? [],
+                audioUrl = req.AudioUrl,
+                rawTranscript = req.RawTranscript
+            });
+        }
 
         var note = new SoapNote
         {

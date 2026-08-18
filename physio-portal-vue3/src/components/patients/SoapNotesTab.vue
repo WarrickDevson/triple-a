@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Plus, Download, ChevronDown, ChevronUp, FileText, CheckCircle2, MessageSquareQuote, Pencil, Trash2 } from '@lucide/vue'
-import type { SoapNote, OwnerSubjectiveNote } from '../../types/soap'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { Plus, Download, ChevronDown, ChevronUp, FileText, CheckCircle2, MessageSquareQuote, Pencil, Trash2, Mic, Volume2, Sparkles } from '@lucide/vue'
+import type { SoapNote, OwnerSubjectiveNote, StructuredSoapNote } from '../../types/soap'
 import { fetchSoapNotesByPet, createSoapNote, updateSoapNote, deleteSoapNote, downloadSoapPdf, fetchOwnerSubjectiveNotes } from '../../api/soapNotes'
 import CreateSoapNoteModal from './CreateSoapNoteModal.vue'
+import VoiceSoapDictationModal from '../soap/VoiceSoapDictationModal.vue'
 
 const props = defineProps<{
   petId: number
@@ -14,6 +15,7 @@ const notes = ref<SoapNote[]>([])
 const ownerNotes = ref<OwnerSubjectiveNote[]>([])
 const loading = ref(true)
 const showCreateModal = ref(false)
+const showVoiceDictationModal = ref(false)
 const editingNote = ref<SoapNote | null>(null)
 
 const expandedNoteId = ref<number | null>(null)
@@ -101,9 +103,19 @@ function formatDate(dateStr: string) {
 function handleDownloadPdf(soapNoteId: number) {
   downloadSoapPdf(soapNoteId)
 }
+function handleSoapNoteEvent(e: any) {
+  if (!e.detail?.petId || e.detail.petId === props.petId) {
+    loadNotes()
+  }
+}
 
 onMounted(() => {
   loadNotes()
+  window.addEventListener('soap-note-created', handleSoapNoteEvent)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('soap-note-created', handleSoapNoteEvent)
 })
 </script>
 
@@ -116,14 +128,26 @@ onMounted(() => {
         <p class="text-xs text-neutral-muted">Subjective, Objective, Action, and Plan session history for {{ petName }}.</p>
       </div>
 
-      <button
-        type="button"
-        class="inline-flex items-center gap-2 rounded-xl bg-sage px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-sage/90"
-        @click="openCreateModal"
-      >
-        <Plus class="h-4 w-4" />
-        New SOAP Note
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-purple-300 bg-purple-50 px-3.5 py-2 text-xs font-bold text-purple-700 hover:bg-purple-100 transition-all hover:scale-105 active:scale-95 shadow-xs"
+          title="Dictate a full consultation session to auto-fill Subjective, Objective, Action, and Plan with AI"
+          @click="showVoiceDictationModal = true"
+        >
+          <Mic class="h-4 w-4 text-purple-600 animate-pulse" />
+          <span>Full SOAP Note</span>
+        </button>
+
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl bg-sage px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-sage/90"
+          @click="openCreateModal"
+        >
+          <Plus class="h-4 w-4" />
+          New SOAP Note
+        </button>
+      </div>
     </div>
 
     <!-- Submitted Owner Observations Panel -->
@@ -316,6 +340,15 @@ onMounted(() => {
       @close="showCreateModal = false"
       @created="handleNoteCreated"
       @updated="handleNoteUpdated"
+    />
+
+    <!-- Standalone Quick Voice Dictation Modal -->
+    <VoiceSoapDictationModal
+      :is-open="showVoiceDictationModal"
+      :pet-id="petId"
+      :pet-name="petName"
+      species="Canine"
+      @close="showVoiceDictationModal = false"
     />
   </div>
 </template>

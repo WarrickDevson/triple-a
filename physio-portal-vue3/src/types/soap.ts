@@ -24,6 +24,8 @@ export interface SoapNote {
   isSharedWithOwner: boolean
   sharedAtUtc?: string | null
   createdAtUtc?: string
+  audioUrl?: string | null
+  rawTranscript?: string | null
 }
 
 export interface CreateSoapNoteRequest {
@@ -39,6 +41,8 @@ export interface CreateSoapNoteRequest {
   customMetrics?: CustomMetricItem[]
   shareWithOwner?: boolean
   diagnosisUpdate?: string
+  audioUrl?: string | null
+  rawTranscript?: string | null
 }
 
 export interface UpdateSoapNoteRequest {
@@ -52,6 +56,8 @@ export interface UpdateSoapNoteRequest {
   lamenessScore?: number | null
   customMetrics?: CustomMetricItem[]
   shareWithOwner?: boolean
+  audioUrl?: string | null
+  rawTranscript?: string | null
 }
 
 export interface SharedReport {
@@ -105,6 +111,14 @@ export interface StructuredSoapNote {
 export interface SoapTranscriptionResult {
   transcript: string
   structuredNote?: StructuredSoapNote | null
+  durationMs: number
+  usedLocalFallback: boolean
+}
+
+export interface ProcessSessionAudioResponse {
+  audioUrl: string
+  rawTranscript: string
+  structuredNote: StructuredSoapNote
   durationMs: number
   usedLocalFallback: boolean
 }

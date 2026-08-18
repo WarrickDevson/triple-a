@@ -27,6 +27,13 @@ public record SoapTranscriptionResultDto(
     long DurationMs,
     bool UsedLocalFallback);
 
+public record ProcessSessionAudioResponseDto(
+    string AudioUrl,
+    string RawTranscript,
+    StructuredSoapNoteDto StructuredNote,
+    long DurationMs,
+    bool UsedLocalFallback);
+
 public record VocabularyCategoryDto(
     string Category,
     IReadOnlyList<string> Terms);

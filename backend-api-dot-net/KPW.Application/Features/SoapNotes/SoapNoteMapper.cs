@@ -18,11 +18,35 @@ public static class SoapNoteMapper
             : "Clinician";
 
         List<CustomMetricDto> metrics = [];
+        string? audioUrl = null;
+        string? rawTranscript = null;
+
         if (!string.IsNullOrWhiteSpace(note.CustomMetricsJson))
         {
             try
             {
-                metrics = JsonSerializer.Deserialize<List<CustomMetricDto>>(note.CustomMetricsJson, JsonOptions) ?? [];
+                var trimmed = note.CustomMetricsJson.Trim();
+                if (trimmed.StartsWith("["))
+                {
+                    metrics = JsonSerializer.Deserialize<List<CustomMetricDto>>(note.CustomMetricsJson, JsonOptions) ?? [];
+                }
+                else if (trimmed.StartsWith("{"))
+                {
+                    using var doc = JsonDocument.Parse(note.CustomMetricsJson);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("metrics", out var metricsEl) && metricsEl.ValueKind == JsonValueKind.Array)
+                    {
+                        metrics = JsonSerializer.Deserialize<List<CustomMetricDto>>(metricsEl.GetRawText(), JsonOptions) ?? [];
+                    }
+                    if (root.TryGetProperty("audioUrl", out var audioEl) && audioEl.ValueKind == JsonValueKind.String)
+                    {
+                        audioUrl = audioEl.GetString();
+                    }
+                    if (root.TryGetProperty("rawTranscript", out var rawEl) && rawEl.ValueKind == JsonValueKind.String)
+                    {
+                        rawTranscript = rawEl.GetString();
+                    }
+                }
             }
             catch
             {
@@ -47,7 +71,9 @@ public static class SoapNoteMapper
             metrics,
             note.IsSharedWithOwner,
             note.SharedAtUtc,
-            note.CreatedDate);
+            note.CreatedDate,
+            audioUrl,
+            rawTranscript);
     }
 
     public static SharedReportDto ToSharedReportDto(SharedReport report)

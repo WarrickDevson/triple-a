@@ -51,6 +51,31 @@ export async function transcribeSoapAudioBlob(
 }
 
 /**
+ * Saves recorded audio session file to server, transcribes speech, and structures into a 4-quadrant SOAP record.
+ */
+export async function processSessionAudioBlob(
+  audioBlob: Blob,
+  petName?: string,
+  species?: string,
+  petId?: number
+): Promise<import('../types/soap').ProcessSessionAudioResponse> {
+  const formData = new FormData()
+  formData.append('file', audioBlob, 'voice-session.webm')
+  if (petName) formData.append('petName', petName)
+  if (species) formData.append('species', species)
+  if (petId) formData.append('petId', petId.toString())
+
+  const { data } = await apiClient.post<import('../types/soap').ProcessSessionAudioResponse>(
+    '/soap-notes/dictation/process-session-audio',
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }
+  )
+  return data
+}
+
+/**
  * Checks the active backend AI configuration status (e.g. Gemini key presence).
  */
 export async function getAiConfigStatus(): Promise<AiConfigStatus> {

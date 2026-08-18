@@ -11,11 +11,16 @@ import {
   RotateCcw,
   Loader2,
   Sparkles,
-  Undo2
+  Undo2,
+  Mic,
+  Volume2,
+  Download,
+  Copy
 } from '@lucide/vue'
 import type { CreateSoapNoteRequest, CustomMetricItem, OwnerSubjectiveNote, SoapNote, StructuredSoapNote } from '../../types/soap'
-import { fetchOwnerSubjectiveNotes, fetchSoapNotesByPet, createSoapNote, updateSoapNote } from '../../api/soapNotes'
+import { fetchOwnerSubjectiveNotes, fetchSoapNotesByPet, createSoapNote, updateSoapNote, parseSoapNarrative } from '../../api/soapNotes'
 import { polishSoapSection, getAiConfigStatus, type AiConfigStatus } from '../../api/soapAi'
+import { useVoiceSessionStore } from '../../store/voiceSession'
 import VoiceDictationButton from '../soap/VoiceDictationButton.vue'
 import VoiceSoapDictationModal from '../soap/VoiceSoapDictationModal.vue'
 
@@ -33,10 +38,16 @@ const emit = defineEmits<{
 }>()
 
 const activeTab = ref<'S' | 'O' | 'A' | 'P'>('S')
+const voiceSessionStore = useVoiceSessionStore()
 
 const currentNoteId = ref<number | null>(null)
 const autoSaveStatus = ref<string>('')
 const isAutoSaving = ref(false)
+const rawTranscript = ref<string>('')
+const audioUrl = ref<string>('')
+const isReSummarizing = ref(false)
+const aiSourceNotice = ref<string>('')
+const copiedNotice = ref(false)
 
 const sessionDate = ref<string>(new Date().toISOString().slice(0, 10))
 const subjective = ref<string>('')
@@ -92,7 +103,39 @@ watch(
     if (val) {
       loadOwnerNotes()
       autoSaveStatus.value = ''
-      if (props.editingNote) {
+      aiSourceNotice.value = ''
+
+      // 1. Check if we have a pending background voice session completed for this pet
+      if (voiceSessionStore.pendingReviewNote && voiceSessionStore.pendingReviewNote.petId === props.petId) {
+        const pending = voiceSessionStore.pendingReviewNote
+        currentNoteId.value = null
+        sessionDate.value = new Date().toISOString().slice(0, 10)
+        subjective.value = pending.structuredNote.subjective || ''
+        objective.value = pending.structuredNote.objective || ''
+        action.value = pending.structuredNote.action || ''
+        plan.value = pending.structuredNote.plan || ''
+        stiffnessScore.value = pending.structuredNote.stiffnessScore ?? 3
+        painScore.value = pending.structuredNote.painScore ?? 2
+        lamenessScore.value = pending.structuredNote.lamenessScore ?? 1
+        if (pending.structuredNote.customMetrics && pending.structuredNote.customMetrics.length > 0) {
+          customMetrics.value = pending.structuredNote.customMetrics.map(cm => ({
+            name: cm.name,
+            value: cm.value,
+            minScale: cm.minScale ?? 0,
+            maxScale: cm.maxScale ?? 180,
+            unitOrDescriptor: cm.unitOrDescriptor
+          }))
+        }
+        if (pending.structuredNote.suggestedDiagnosis) {
+          updateDiagnosis.value = true
+          diagnosisText.value = pending.structuredNote.suggestedDiagnosis
+        }
+        rawTranscript.value = pending.rawTranscript || ''
+        audioUrl.value = pending.audioUrl || ''
+        aiSourceNotice.value = 'Populated automatically from your Voice Session Memo.'
+        activeTab.value = 'S'
+        voiceSessionStore.clearPendingReview()
+      } else if (props.editingNote) {
         currentNoteId.value = props.editingNote.soapNoteId
         sessionDate.value = props.editingNote.sessionDate ? props.editingNote.sessionDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
         subjective.value = props.editingNote.subjective || ''
@@ -104,6 +147,9 @@ watch(
         lamenessScore.value = props.editingNote.lamenessScore ?? null
         customMetrics.value = props.editingNote.customMetrics ? JSON.parse(JSON.stringify(props.editingNote.customMetrics)) : []
         shareWithOwner.value = props.editingNote.isSharedWithOwner ?? true
+        rawTranscript.value = props.editingNote.rawTranscript || ''
+        audioUrl.value = props.editingNote.audioUrl || ''
+        activeTab.value = 'S'
       } else {
         currentNoteId.value = null
         sessionDate.value = new Date().toISOString().slice(0, 10)
@@ -111,6 +157,8 @@ watch(
         objective.value = ''
         action.value = ''
         plan.value = ''
+        rawTranscript.value = ''
+        audioUrl.value = ''
         stiffnessScore.value = 3
         painScore.value = 2
         lamenessScore.value = 1
@@ -119,6 +167,7 @@ watch(
           { name: 'Thigh Circumference', value: 38, minScale: 10, maxScale: 80, unitOrDescriptor: 'cm' },
         ]
         shareWithOwner.value = true
+        activeTab.value = 'S'
         loadPreviousPlan()
       }
     }
@@ -352,6 +401,58 @@ function handleApplyStructuredNote(note: StructuredSoapNote, mode: 'replace' | '
   autoSaveNote()
 }
 
+function switchTab(tab: 'S' | 'O' | 'A' | 'P' | 'RAW') {
+  if (props.petId && (subjective.value.trim() || objective.value.trim() || action.value.trim() || plan.value.trim() || rawTranscript.value.trim())) {
+    autoSaveNote()
+  }
+  activeTab.value = tab
+}
+
+async function handleReSummarizeFromRaw() {
+  if (!rawTranscript.value.trim()) return
+  isReSummarizing.value = true
+  try {
+    const res = await parseSoapNarrative({
+      transcript: rawTranscript.value.trim(),
+      petId: props.petId,
+      petName: props.petName,
+      species: 'Canine'
+    })
+    if (res) {
+      if (res.subjective) subjective.value = res.subjective
+      if (res.objective) objective.value = res.objective
+      if (res.action) action.value = res.action
+      if (res.plan) plan.value = res.plan
+      if (res.painScore !== null && res.painScore !== undefined) painScore.value = res.painScore
+      if (res.stiffnessScore !== null && res.stiffnessScore !== undefined) stiffnessScore.value = res.stiffnessScore
+      if (res.lamenessScore !== null && res.lamenessScore !== undefined) lamenessScore.value = res.lamenessScore
+      if (res.customMetrics && res.customMetrics.length > 0) {
+        customMetrics.value = res.customMetrics.map(cm => ({
+          name: cm.name,
+          value: cm.value,
+          minScale: cm.minScale ?? 0,
+          maxScale: cm.maxScale ?? 180,
+          unitOrDescriptor: cm.unitOrDescriptor
+        }))
+      }
+      aiSourceNotice.value = 'SOAP Note re-summarized with AI from your raw transcript.'
+      activeTab.value = 'S'
+      autoSaveNote()
+    }
+  } catch (err) {
+    console.warn('Re-summarize failed:', err)
+  } finally {
+    isReSummarizing.value = false
+  }
+}
+
+function copyRawTranscript() {
+  if (!rawTranscript.value) return
+  navigator.clipboard.writeText(rawTranscript.value)
+  copiedNotice.value = true
+  setTimeout(() => { copiedNotice.value = false }, 2500)
+}
+
 function handleInsertRawTranscript(rawText: string, targetSection: 'Subjective' | 'Objective' | 'Action' | 'Plan' | 'All') {
   if (!rawText.trim()) return
 
@@ -375,13 +476,6 @@ function handleInsertRawTranscript(rawText: string, targetSection: 'Subjective' 
   autoSaveNote()
 }
 
-function switchTab(tab: 'S' | 'O' | 'A' | 'P') {
-  if (activeTab.value !== tab) {
-    autoSaveNote()
-  }
-  activeTab.value = tab
-}
-
 async function autoSaveNote() {
   if (!props.petId) return
   // Don't auto-save if everything is completely empty
@@ -403,6 +497,8 @@ async function autoSaveNote() {
       customMetrics: customMetrics.value,
       shareWithOwner: shareWithOwner.value,
       diagnosisUpdate: updateDiagnosis.value && diagnosisText.value.trim() ? diagnosisText.value.trim() : undefined,
+      audioUrl: audioUrl.value || undefined,
+      rawTranscript: rawTranscript.value || undefined,
     }
 
     if (currentNoteId.value) {
@@ -425,8 +521,8 @@ async function autoSaveNote() {
 }
 
 async function handleSubmit() {
-  if (!subjective.value.trim() && !objective.value.trim() && !action.value.trim() && !plan.value.trim()) {
-    errorMessage.value = 'Please complete at least one section of the SOAP note.'
+  if (!subjective.value.trim() && !objective.value.trim() && !action.value.trim() && !plan.value.trim() && !rawTranscript.value.trim()) {
+    errorMessage.value = 'Please complete at least one section of the SOAP note or record a transcript.'
     return
   }
 
@@ -445,6 +541,8 @@ async function handleSubmit() {
     customMetrics: customMetrics.value,
     shareWithOwner: shareWithOwner.value,
     diagnosisUpdate: updateDiagnosis.value && diagnosisText.value.trim() ? diagnosisText.value.trim() : undefined,
+    audioUrl: audioUrl.value || undefined,
+    rawTranscript: rawTranscript.value || undefined,
   }
 
   try {
@@ -589,12 +687,33 @@ async function handleSubmit() {
         <!-- Full Session AI Dictation Master Button -->
         <button
           type="button"
-          class="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700 hover:bg-purple-100 shadow-xs transition-all hover:scale-105 active:scale-95"
-          title="Record or paste a full consultation session to auto-categorize into Subjective, Objective, Action, Plan, and Scores with Gemini AI"
+          class="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-purple-300 bg-purple-50 px-3.5 py-1.5 text-xs font-bold text-purple-700 hover:bg-purple-100 shadow-xs transition-all hover:scale-105 active:scale-95"
+          title="Dictate a full consultation session to auto-fill Subjective, Objective, Action, Plan, and Scores with AI"
           @click="showVoiceDictationModal = true"
         >
-          <Sparkles class="h-3.5 w-3.5 text-purple-600 animate-pulse" />
-          <span>🎙️ Full Session AI Dictate</span>
+          <Mic class="h-3.5 w-3.5 text-purple-600 animate-pulse" />
+          <span>Full SOAP Note</span>
+        </button>
+      </div>
+
+      <!-- AI Source / Audio Attached Notice Banner -->
+      <div
+        v-if="aiSourceNotice || audioUrl || rawTranscript"
+        class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-purple-200 bg-purple-50/70 p-3 text-xs text-purple-900"
+      >
+        <div class="flex items-center gap-2">
+          <Sparkles class="h-4 w-4 shrink-0 text-purple-600" />
+          <span>
+            <strong v-if="aiSourceNotice">{{ aiSourceNotice }}</strong>
+            <span v-else>Voice Session memo attached to this assessment.</span>
+          </span>
+        </div>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 font-bold text-purple-700 hover:underline text-[11px]"
+          @click="activeTab === 'RAW' ? switchTab('S') : switchTab('RAW')"
+        >
+          {{ activeTab === 'RAW' ? '← View Structured SOAP Note' : 'View Raw Speech & Audio Memo →' }}
         </button>
       </div>
 

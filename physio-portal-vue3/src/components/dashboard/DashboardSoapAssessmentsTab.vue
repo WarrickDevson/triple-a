@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   FileText,
   Plus,
@@ -7,12 +7,15 @@ import {
   Search,
   ChevronRight,
   PawPrint,
-  Share2
+  Share2,
+  Mic,
+  Sparkles
 } from '@lucide/vue'
 import type { SoapNote } from '../../types/soap'
 import { fetchSoapNotesByPet, downloadSoapPdf } from '../../api/soapNotes'
 import { usePatientsStore } from '../../store/patients'
 import CreateSoapNoteModal from '../patients/CreateSoapNoteModal.vue'
+import VoiceSoapDictationModal from '../soap/VoiceSoapDictationModal.vue'
 
 const patientsStore = usePatientsStore()
 
@@ -29,44 +32,56 @@ const loading = ref(true)
 const searchQuery = ref('')
 const selectedSpeciesFilter = ref<string>('ALL')
 
-// Note creation modal state
+// Note creation & dictation modal state
 const showCreateModal = ref(false)
-const selectedPetForNewNote = ref<{ petId: number; petName: string } | null>(null)
+const showVoiceDictationModal = ref(false)
+const selectPetMode = ref<'form' | 'voice'>('form')
+const selectedPetForNewNote = ref<{ petId: number; petName: string; species?: string } | null>(null)
 const showSelectPetModal = ref(false)
+
+function handleSoapNoteEvent() {
+  loadAllNotes()
+}
 
 onMounted(async () => {
   await loadAllNotes()
+  window.addEventListener('soap-note-created', handleSoapNoteEvent)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('soap-note-created', handleSoapNoteEvent)
 })
 
 async function loadAllNotes() {
   loading.value = true
   try {
     if (patientsStore.patients.length === 0) {
-      await patientsStore.fetchClinicPatients()
+      await patientsStore.fetchClinicPatients().catch(() => [])
     }
-    const notesAccumulator: EnrichedSoapNote[] = []
-
-    for (const pet of patientsStore.patients) {
-      try {
-        const notes = await fetchSoapNotesByPet(pet.petId)
-        for (const n of notes) {
-          notesAccumulator.push({
+    
+    const results = await Promise.all(
+      patientsStore.patients.map(async (pet) => {
+        try {
+          const notes = await fetchSoapNotesByPet(pet.petId)
+          return notes.map((n) => ({
             note: n,
             petId: pet.petId,
             petName: pet.petName,
             species: pet.species || 'Canine',
             breed: pet.breed || 'Companion'
-          })
+          }))
+        } catch (e) {
+          console.warn(`Failed to load SOAP notes for pet ${pet.petId}`, e)
+          return []
         }
-      } catch (e) {
-        console.warn(`Failed to load SOAP notes for pet ${pet.petId}`, e)
-      }
-    }
+      })
+    )
 
-    notesAccumulator.sort(
+    const flat = results.flat()
+    flat.sort(
       (a, b) => new Date(b.note.sessionDate).getTime() - new Date(a.note.sessionDate).getTime()
     )
-    allNotes.value = notesAccumulator
+    allNotes.value = flat
   } finally {
     loading.value = false
   }
@@ -104,14 +119,24 @@ function handleDownload(soapNoteId: number) {
   downloadSoapPdf(soapNoteId)
 }
 
-function handleStartNewNote(pet: { petId: number; petName: string }) {
+function openPetSelector(mode: 'form' | 'voice') {
+  selectPetMode.value = mode
+  showSelectPetModal.value = true
+}
+
+function handleStartNewNote(pet: { petId: number; petName: string; species?: string }) {
   selectedPetForNewNote.value = pet
   showSelectPetModal.value = false
-  showCreateModal.value = true
+  if (selectPetMode.value === 'voice') {
+    showVoiceDictationModal.value = true
+  } else {
+    showCreateModal.value = true
+  }
 }
 
 function handleNoteSaved() {
   showCreateModal.value = false
+  showVoiceDictationModal.value = false
   loadAllNotes()
 }
 </script>
@@ -133,8 +158,18 @@ function handleNoteSaved() {
       <div class="flex items-center gap-3">
         <button
           type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-purple-300 bg-purple-50 px-4 py-2.5 text-xs font-bold text-purple-700 hover:bg-purple-100 transition-all hover:scale-105 active:scale-95 shadow-xs"
+          title="Dictate a full consultation session with AI voice recognition"
+          @click="openPetSelector('voice')"
+        >
+          <Mic class="h-4 w-4 text-purple-600 animate-pulse" />
+          <span>Full SOAP Note</span>
+        </button>
+
+        <button
+          type="button"
           class="inline-flex items-center gap-2 rounded-xl bg-sage px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-sage/90 transition-all hover:scale-105 active:scale-95"
-          @click="showSelectPetModal = true"
+          @click="openPetSelector('form')"
         >
           <Plus class="h-4 w-4" />
           New SOAP Assessment
@@ -368,7 +403,7 @@ function handleNoteSaved() {
             v-for="pet in patientsStore.patients"
             :key="pet.petId"
             class="flex items-center justify-between py-2.5 px-2 hover:bg-neutral-grey/30 rounded-xl cursor-pointer transition-colors"
-            @click="handleStartNewNote({ petId: pet.petId, petName: pet.petName })"
+            @click="handleStartNewNote({ petId: pet.petId, petName: pet.petName, species: pet.species })"
           >
             <div class="flex items-center gap-2.5">
               <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-sage-muted text-sage font-bold text-xs">
@@ -393,6 +428,18 @@ function handleNoteSaved() {
       :pet-name="selectedPetForNewNote.petName"
       @close="showCreateModal = false"
       @created="handleNoteSaved"
+      @updated="handleNoteSaved"
+    />
+
+    <!-- Voice Dictation Modal from Dashboard -->
+    <VoiceSoapDictationModal
+      v-if="selectedPetForNewNote"
+      :is-open="showVoiceDictationModal"
+      :pet-id="selectedPetForNewNote.petId"
+      :pet-name="selectedPetForNewNote.petName"
+      :species="selectedPetForNewNote.species || 'Canine'"
+      @close="showVoiceDictationModal = false"
+      @apply-structured-note="handleNoteSaved"
     />
   </div>
 </template>

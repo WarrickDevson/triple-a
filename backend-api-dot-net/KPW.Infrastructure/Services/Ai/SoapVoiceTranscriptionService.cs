@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -6,6 +7,7 @@ using Google.Cloud.AIPlatform.V1;
 using Google.Protobuf.WellKnownTypes;
 using KPW.Application.DTOs.SoapNotes;
 using KPW.Application.Interfaces;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -17,6 +19,7 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
     private readonly PredictionServiceClient? _predictionClient;
     private readonly AiOptions _options;
     private readonly ILogger<SoapVoiceTranscriptionService> _logger;
+    private readonly IHostEnvironment? _environment;
 
     private static readonly Dictionary<string, string> VeterinaryLexiconCorrections = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -100,11 +103,13 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
     public SoapVoiceTranscriptionService(
         HttpClient httpClient,
         IOptions<AiOptions> options,
-        ILogger<SoapVoiceTranscriptionService> logger)
+        ILogger<SoapVoiceTranscriptionService> logger,
+        IHostEnvironment? environment = null)
     {
         _httpClient = httpClient;
         _options = options.Value;
         _logger = logger;
+        _environment = environment;
 
         if (_options.Provider.Equals("Vertex", StringComparison.OrdinalIgnoreCase) &&
             !string.IsNullOrWhiteSpace(_options.ProjectId) &&
@@ -326,6 +331,81 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
         );
     }
 
+    public async Task<ProcessSessionAudioResponseDto> ProcessSessionAudioAsync(
+        Stream audioStream,
+        string fileName,
+        string contentType,
+        string? petName,
+        string? species,
+        int? petId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var sw = Stopwatch.StartNew();
+
+        // 1. Save audio to persistent voice-notes storage
+        using var ms = new MemoryStream();
+        await audioStream.CopyToAsync(ms, cancellationToken);
+        var audioBytes = ms.ToArray();
+
+        string ext = Path.GetExtension(fileName);
+        if (string.IsNullOrWhiteSpace(ext)) ext = ".webm";
+        string storedName = $"{Guid.NewGuid():N}{ext}";
+
+        string baseDir = _environment?.ContentRootPath ?? AppContext.BaseDirectory;
+        string uploadsDir = Path.Combine(baseDir, "wwwroot", "uploads", "voice-notes");
+        Directory.CreateDirectory(uploadsDir);
+
+        string filePath = Path.Combine(uploadsDir, storedName);
+        await File.WriteAllBytesAsync(filePath, audioBytes, cancellationToken);
+
+        string publicAudioUrl = $"/uploads/voice-notes/{storedName}";
+        _logger.LogInformation("Saved persistent voice note to {FilePath} ({Length} bytes)", filePath, audioBytes.Length);
+
+        // 2. Transcribe Audio
+        string transcript = string.Empty;
+        bool usedCloud = false;
+
+        var config = GetAiConfigStatus();
+        if (config.HasApiKey && audioBytes.Length > 0)
+        {
+            try
+            {
+                var cloudTranscript = await TranscribeAudioWithGeminiAsync(audioBytes, contentType, petName, species, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(cloudTranscript))
+                {
+                    transcript = ApplyLexiconCorrections(cloudTranscript);
+                    usedCloud = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Gemini Audio transcription failed in ProcessSessionAudio. Falling back to local transcript template.");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(transcript))
+        {
+            transcript = $"Clinical session voice memo recorded for {petName ?? "Patient"}. Audio preserved.";
+        }
+
+        // 3. Summarize / Parse into 4-quadrant structured note
+        var structured = await ParseNarrativeAsync(new ParseSoapNarrativeRequestDto(
+            transcript,
+            PetId: petId,
+            PetName: petName,
+            Species: species
+        ), cancellationToken);
+
+        sw.Stop();
+        return new ProcessSessionAudioResponseDto(
+            AudioUrl: publicAudioUrl,
+            RawTranscript: transcript,
+            StructuredNote: structured,
+            DurationMs: sw.ElapsedMilliseconds,
+            UsedLocalFallback: !usedCloud
+        );
+    }
+
     public SoapVocabularyDto GetDomainVocabulary()
     {
         var allTerms = Categories.SelectMany(c => c.Terms).Distinct().OrderBy(t => t).ToList();
@@ -362,7 +442,8 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
     {
         var apiKey = GetEffectiveApiKey();
         var candidateModels = new[] {
-            string.IsNullOrWhiteSpace(_options.Model) ? "gemini-3.6-flash" : _options.Model,
+            string.IsNullOrWhiteSpace(_options.Model) ? "gemini-3.5-flash-lite" : _options.Model,
+            "gemini-3.5-flash-lite",
             "gemini-3.6-flash",
             "gemini-3.5-flash",
             "gemini-3.7-flash",
@@ -468,7 +549,8 @@ Your task is to take draft/dictated clinical text for a specific section of a SO
     {
         var apiKey = GetEffectiveApiKey();
         var candidateModels = new[] {
-            string.IsNullOrWhiteSpace(_options.Model) ? "gemini-3.6-flash" : _options.Model,
+            string.IsNullOrWhiteSpace(_options.Model) ? "gemini-3.5-flash-lite" : _options.Model,
+            "gemini-3.5-flash-lite",
             "gemini-3.6-flash",
             "gemini-3.5-flash",
             "gemini-3.7-flash",
@@ -547,7 +629,8 @@ Your task is to take draft/dictated clinical text for a specific section of a SO
     {
         var apiKey = GetEffectiveApiKey();
         var candidateModels = new[] {
-            string.IsNullOrWhiteSpace(_options.Model) ? "gemini-3.6-flash" : _options.Model,
+            string.IsNullOrWhiteSpace(_options.Model) ? "gemini-3.5-flash-lite" : _options.Model,
+            "gemini-3.5-flash-lite",
             "gemini-3.6-flash",
             "gemini-3.5-flash",
             "gemini-3.7-flash",

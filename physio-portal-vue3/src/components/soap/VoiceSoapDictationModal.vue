@@ -19,6 +19,7 @@ import { useAudioRecorder } from '../../composables/useAudioRecorder'
 import AudioWaveformVisualizer from './AudioWaveformVisualizer.vue'
 import { parseSoapNarrative } from '../../api/soapNotes'
 import { transcribeSoapAudioBlob } from '../../api/soapAi'
+import { useVoiceSessionStore } from '../../store/voiceSession'
 import { CLINICAL_SAMPLE_CONSULTATIONS, type ClinicalAudioSample } from '../../utils/veterinaryLexicon'
 
 const props = defineProps<{
@@ -41,6 +42,7 @@ const {
   waveformFrequencies,
   liveTranscript,
   fullTranscript,
+  audioBlob,
   audioUrl,
   errorMessage: recorderError,
   startRecording,
@@ -52,7 +54,9 @@ const {
 } = useAudioRecorder()
 
 const transcriptionEngine = ref<'browser' | 'cloud'>('browser')
+const voiceSessionStore = useVoiceSessionStore()
 const isParsingAi = ref(false)
+const isBackgroundProcessing = ref(false)
 const structuringError = ref('')
 const structuredResult = ref<StructuredSoapNote | null>(null)
 const rawInsertSection = ref<'Subjective' | 'Objective' | 'Action' | 'Plan' | 'All'>('Subjective')
@@ -127,6 +131,54 @@ async function handleStopRecordingOnly() {
       }
     }
   }
+}
+
+async function handleDoneAndProcessInBackground() {
+  isBackgroundProcessing.value = true
+  let blobToProcess: Blob | null = null
+
+  if (recordingState.value === 'recording' || recordingState.value === 'paused') {
+    const recResult = await stopRecording()
+    blobToProcess = recResult.blob && recResult.blob.size > 0 ? recResult.blob : null
+  } else if (audioBlob.value && audioBlob.value.size > 0) {
+    blobToProcess = audioBlob.value
+  } else if (audioUrl.value) {
+    try {
+      blobToProcess = await fetch(audioUrl.value).then(r => r.blob())
+    } catch {
+      blobToProcess = null
+    }
+  }
+
+  if (blobToProcess) {
+    voiceSessionStore.processVoiceSession(
+      blobToProcess,
+      props.petId,
+      props.petName,
+      props.species || 'Canine'
+    )
+  } else if (liveTranscript.value.trim()) {
+    // If text transcript exists without audio blob, structure and trigger notification
+    parseSoapNarrative({
+      transcript: liveTranscript.value.trim(),
+      petId: props.petId,
+      petName: props.petName,
+      species: props.species || 'Canine'
+    }).then(structured => {
+      voiceSessionStore.activeNotification = {
+        id: `job_${Date.now()}`,
+        petId: props.petId,
+        petName: props.petName,
+        audioUrl: '',
+        rawTranscript: liveTranscript.value.trim(),
+        structuredNote: structured,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    }).catch(err => console.warn('Background narrative parse failed:', err))
+  }
+
+  isBackgroundProcessing.value = false
+  emit('close')
 }
 
 async function handleGenerateAiSummary() {
@@ -231,18 +283,18 @@ const hasTranscript = computed(() => !!liveTranscript.value.trim())
       <!-- Modal Header -->
       <div class="flex items-center justify-between border-b border-neutral-grey/80 pb-4 shrink-0">
         <div class="flex items-center gap-3">
-          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-sage text-white shadow-md shadow-sage/30">
+          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-purple-600 text-white shadow-md shadow-purple-600/30">
             <Mic class="h-6 w-6" />
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h2 class="text-lg font-bold text-navy">Voice Dictation & Consultation Recording</h2>
-              <span class="inline-flex items-center gap-1 rounded-full bg-sage-muted px-2.5 py-0.5 text-[11px] font-bold text-sage">
-                Live Speech-to-Text
+              <h2 class="text-lg font-bold text-navy">Full SOAP Voice Dictation</h2>
+              <span class="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-bold text-purple-700">
+                AI Structured
               </span>
             </div>
             <p class="text-xs text-neutral-muted">
-              Patient: <strong class="text-navy">{{ petName }}</strong> · Speak freely to record raw dictation, then insert directly or summarize with AI.
+              Patient: <strong class="text-navy">{{ petName }}</strong> · Speak your consultation observations to auto-fill Subjective, Objective, Action, and Plan.
             </p>
           </div>
         </div>
@@ -325,6 +377,18 @@ const hasTranscript = computed(() => !!liveTranscript.value.trim())
             >
               <Square class="h-5 w-5 fill-white" />
               Stop Recording
+            </button>
+
+            <!-- 1-Tap On-the-Go Background Processing Button (Available during recording OR after stopping!) -->
+            <button
+              v-if="recordingState === 'recording' || recordingState === 'paused' || audioUrl || hasTranscript"
+              type="button"
+              class="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-purple-600/30 hover:bg-purple-700 transition-all hover:scale-105"
+              title="Save audio memo to server and process SOAP in background while you move to your next patient"
+              @click="handleDoneAndProcessInBackground"
+            >
+              <Sparkles class="h-5 w-5 animate-pulse" />
+              🚗 Save & Process in Background
             </button>
           </div>
 

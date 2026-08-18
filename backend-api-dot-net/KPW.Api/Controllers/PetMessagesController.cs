@@ -11,6 +11,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("pets/{petId:int}/messages")]
+[Route("api/pets/{petId:int}/messages")]
 [Authorize]
 public class PetMessagesController : ControllerBase
 {

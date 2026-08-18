@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import {
   Mic,
   Square,
@@ -7,19 +7,19 @@ import {
   X,
   RotateCcw,
   Volume2,
-  Wand2,
   Save,
   Check,
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  FileText,
+  ArrowRight
 } from '@lucide/vue'
-import type { StructuredSoapNote } from '../../types/soap'
+import type { StructuredSoapNote, CustomMetricItem } from '../../types/soap'
 import { useAudioRecorder } from '../../composables/useAudioRecorder'
 import AudioWaveformVisualizer from './AudioWaveformVisualizer.vue'
-import {
-  CLINICAL_SAMPLE_CONSULTATIONS,
-  type ClinicalAudioSample
-} from '../../utils/veterinaryLexicon'
 import { parseSoapNarrative } from '../../api/soapNotes'
+import { transcribeSoapAudioBlob } from '../../api/soapAi'
+import { CLINICAL_SAMPLE_CONSULTATIONS, type ClinicalAudioSample } from '../../utils/veterinaryLexicon'
 
 const props = defineProps<{
   isOpen: boolean
@@ -31,6 +31,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   applyStructuredNote: [note: StructuredSoapNote, mode: 'replace' | 'append']
+  insertRawTranscript: [rawText: string, targetSection: 'Subjective' | 'Objective' | 'Action' | 'Plan' | 'All']
 }>()
 
 const {
@@ -47,14 +48,14 @@ const {
   pauseRecording,
   resumeRecording,
   resetRecording,
-  loadClinicalSample,
   saveToOfflineQueue
 } = useAudioRecorder()
 
+const transcriptionEngine = ref<'browser' | 'cloud'>('browser')
 const isParsingAi = ref(false)
 const structuringError = ref('')
 const structuredResult = ref<StructuredSoapNote | null>(null)
-const selectedSampleId = ref<string>('')
+const rawInsertSection = ref<'Subjective' | 'Objective' | 'Action' | 'Plan' | 'All'>('Subjective')
 
 // Editable fields for the AI preview card
 const editableSubjective = ref('')
@@ -64,6 +65,20 @@ const editablePlan = ref('')
 const editablePain = ref<number | null>(null)
 const editableStiffness = ref<number | null>(null)
 const editableLameness = ref<number | null>(null)
+const editableDiagnosis = ref('')
+const editableCustomMetrics = ref<CustomMetricItem[]>([])
+
+onMounted(() => {
+  const saved = localStorage.getItem('movewell_dictation_engine')
+  if (saved === 'cloud' || saved === 'browser') {
+    transcriptionEngine.value = saved
+  }
+})
+
+function setEngine(engine: 'browser' | 'cloud') {
+  transcriptionEngine.value = engine
+  localStorage.setItem('movewell_dictation_engine', engine)
+}
 
 watch(
   () => props.isOpen,
@@ -72,17 +87,53 @@ watch(
       resetRecording()
       structuredResult.value = null
       structuringError.value = ''
-      selectedSampleId.value = ''
     }
   }
 )
 
-async function handleStopAndParse() {
-  const result = await stopRecording()
-  const transcriptToParse = result.transcript.trim()
+// When speech recognition produces text, ensure liveTranscript has it (browser mode only)
+watch(
+  () => fullTranscript.value,
+  (val) => {
+    if (val && recordingState.value === 'recording' && transcriptionEngine.value === 'browser') {
+      liveTranscript.value = val
+    }
+  }
+)
+
+function handleStartRecording() {
+  startRecording(transcriptionEngine.value === 'browser')
+}
+
+async function handleStopRecordingOnly() {
+  if (recordingState.value === 'recording' || recordingState.value === 'paused') {
+    const recResult = await stopRecording()
+    if (transcriptionEngine.value === 'browser' && recResult.transcript.trim()) {
+      liveTranscript.value = recResult.transcript.trim()
+    }
+
+    // If in Cloud AI Audio mode, run cloud transcription on recorded audio blob
+    if (transcriptionEngine.value === 'cloud' && recResult.blob && recResult.blob.size > 0) {
+      isParsingAi.value = true
+      try {
+        const cloudStt = await transcribeSoapAudioBlob(recResult.blob, props.petName, props.species || 'Canine')
+        if (cloudStt && cloudStt.transcript) {
+          liveTranscript.value = cloudStt.transcript.trim()
+        }
+      } catch (sttErr) {
+        console.warn('Cloud audio STT error:', sttErr)
+      } finally {
+        isParsingAi.value = false
+      }
+    }
+  }
+}
+
+async function handleGenerateAiSummary() {
+  const transcriptToParse = liveTranscript.value.trim()
 
   if (!transcriptToParse) {
-    structuringError.value = 'No speech or consultation notes detected. Please dictate or select a clinical voice sample.'
+    structuringError.value = 'No speech or narrative text to summarize. Please record dictation or type your consultation notes.'
     return
   }
 
@@ -98,28 +149,37 @@ async function handleStopAndParse() {
     })
 
     structuredResult.value = structured
-    editableSubjective.value = structured.subjective
-    editableObjective.value = structured.objective
-    editableAction.value = structured.action
-    editablePlan.value = structured.plan
+    editableSubjective.value = structured.subjective || ''
+    editableObjective.value = structured.objective || ''
+    editableAction.value = structured.action || ''
+    editablePlan.value = structured.plan || ''
     editablePain.value = structured.painScore ?? null
     editableStiffness.value = structured.stiffnessScore ?? null
     editableLameness.value = structured.lamenessScore ?? null
+    editableDiagnosis.value = structured.suggestedDiagnosis || ''
+    editableCustomMetrics.value = (structured.customMetrics || []).map((m: any) => ({
+      name: m.name,
+      value: m.value,
+      minScale: m.minScale ?? 0,
+      maxScale: m.maxScale ?? 100,
+      unitOrDescriptor: m.unitOrDescriptor
+    }))
   } catch (err: any) {
     console.error('Failed to parse narrative:', err)
-    structuringError.value = 'Failed to connect to AI structuring service. Offline parser was utilized.'
+    structuringError.value = 'Failed to summarize notes with AI. Please check your internet connection or Gemini API key.'
   } finally {
     isParsingAi.value = false
   }
 }
 
-function handleSelectSample(sample: ClinicalAudioSample) {
-  selectedSampleId.value = sample.id
-  loadClinicalSample(sample)
-  handleStopAndParse()
+function handleApplyRawToNote() {
+  const text = liveTranscript.value.trim()
+  if (!text) return
+  emit('insertRawTranscript', text, rawInsertSection.value)
+  emit('close')
 }
 
-function handleApply(mode: 'replace' | 'append') {
+function handleApplyStructuredNote(mode: 'replace' | 'append') {
   if (!structuredResult.value) return
 
   const finalPayload: StructuredSoapNote = {
@@ -130,26 +190,36 @@ function handleApply(mode: 'replace' | 'append') {
     plan: editablePlan.value,
     painScore: editablePain.value,
     stiffnessScore: editableStiffness.value,
-    lamenessScore: editableLameness.value
+    lamenessScore: editableLameness.value,
+    suggestedDiagnosis: editableDiagnosis.value.trim() ? editableDiagnosis.value.trim() : null,
+    customMetrics: editableCustomMetrics.value
   }
 
   emit('applyStructuredNote', finalPayload, mode)
   emit('close')
 }
 
+function handleSelectSample(sample: ClinicalAudioSample) {
+  loadClinicalSample(sample)
+  liveTranscript.value = sample.transcript
+  structuredResult.value = null
+  structuringError.value = ''
+}
+
 function handleSaveOffline() {
-  if (!fullTranscript.value.trim()) return
+  const text = liveTranscript.value.trim() || fullTranscript.value.trim()
+  if (!text) return
   saveToOfflineQueue({
     petId: props.petId,
     petName: props.petName,
     targetSection: 'FULL',
-    transcript: fullTranscript.value.trim(),
+    transcript: text,
     audioBlobUrl: audioUrl.value ?? undefined
   })
-  alert('Consultation dictation saved to local offline drafts. You can sync or apply it at any time.')
+  alert('Consultation dictation saved to local offline drafts.')
 }
 
-const hasTranscribedText = computed(() => !!fullTranscript.value.trim())
+const hasTranscript = computed(() => !!liveTranscript.value.trim())
 </script>
 
 <template>
@@ -161,160 +231,219 @@ const hasTranscribedText = computed(() => !!fullTranscript.value.trim())
       <!-- Modal Header -->
       <div class="flex items-center justify-between border-b border-neutral-grey/80 pb-4 shrink-0">
         <div class="flex items-center gap-3">
-          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-sage text-white shadow-md shadow-sage/20">
+          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-sage text-white shadow-md shadow-sage/30">
             <Mic class="h-6 w-6" />
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h2 class="text-lg font-bold text-navy">Hands-Free SOAP Voice Dictation</h2>
+              <h2 class="text-lg font-bold text-navy">Voice Dictation & Consultation Recording</h2>
               <span class="inline-flex items-center gap-1 rounded-full bg-sage-muted px-2.5 py-0.5 text-[11px] font-bold text-sage">
-                <Sparkles class="h-3 w-3" />
-                AI Smart Structuring
+                Live Speech-to-Text
               </span>
             </div>
             <p class="text-xs text-neutral-muted">
-              Patient: <strong class="text-navy">{{ petName }}</strong> · Speak freely; your consultation will be automatically organized into S, O, A, P.
+              Patient: <strong class="text-navy">{{ petName }}</strong> · Speak freely to record raw dictation, then insert directly or summarize with AI.
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          class="rounded-xl p-2 text-neutral-muted hover:bg-neutral-grey/50 hover:text-navy"
-          @click="emit('close')"
-        >
-          <X class="h-5 w-5" />
-        </button>
+        <div class="flex items-center gap-3">
+          <!-- Engine Selector -->
+          <div class="flex items-center gap-1 rounded-xl border border-neutral-grey/80 bg-neutral-grey/20 p-0.5 text-[11px]">
+            <button
+              type="button"
+              class="rounded-lg px-2.5 py-1 font-bold transition-all"
+              :class="transcriptionEngine === 'browser' ? 'bg-surface text-navy shadow-xs' : 'text-neutral-muted hover:text-navy'"
+              title="Instant streaming in-browser Speech-to-Text ($0 Cost)"
+              @click="setEngine('browser')"
+            >
+              ⚡ Browser STT
+            </button>
+            <button
+              type="button"
+              class="rounded-lg px-2.5 py-1 font-bold transition-all"
+              :class="transcriptionEngine === 'cloud' ? 'bg-surface text-navy shadow-xs' : 'text-neutral-muted hover:text-navy'"
+              title="High-precision Cloud AI Audio transcription with Gemini"
+              @click="setEngine('cloud')"
+            >
+              ☁️ Cloud AI Audio
+            </button>
+          </div>
+
+          <button
+            type="button"
+            class="rounded-xl p-2 text-neutral-muted hover:bg-neutral-grey/50 hover:text-navy"
+            @click="emit('close')"
+          >
+            <X class="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       <!-- Modal Body (Scrollable) -->
       <div class="mt-4 space-y-5 overflow-y-auto pr-1 flex-1">
         <!-- Error Alerts -->
         <div
-          v-if="structuringError"
+          v-if="structuringError || recorderError"
           class="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800"
         >
           <AlertCircle class="h-4 w-4 shrink-0 text-amber-600" />
-          <span>{{ structuringError }}</span>
+          <span>{{ structuringError || recorderError }}</span>
         </div>
 
-        <!-- 1. Live Waveform & Visualizer -->
+        <!-- 1. Waveform Visualizer -->
         <AudioWaveformVisualizer
           :recording-state="recordingState"
           :formatted-time="formattedTime"
           :audio-level="audioLevel"
           :frequencies="waveformFrequencies"
           :error-message="recorderError"
-          @start="startRecording"
+          @start="handleStartRecording"
           @pause="pauseRecording"
           @resume="resumeRecording"
-          @stop="handleStopAndParse"
+          @stop="handleStopRecordingOnly"
         />
 
-        <!-- One-Tap Master Control Button -->
+        <!-- Recording Controls -->
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-neutral-grey/25 p-4">
           <div class="flex items-center gap-3">
             <button
               v-if="recordingState === 'idle' || recordingState === 'completed'"
               type="button"
               class="inline-flex items-center gap-2 rounded-2xl bg-sage px-6 py-3 text-sm font-bold text-white shadow-lg shadow-sage/30 hover:bg-sage/90 transition-all hover:scale-105 active:scale-95"
-              @click="startRecording"
+              @click="handleStartRecording"
             >
               <Mic class="h-5 w-5 animate-pulse" />
-              {{ recordingState === 'completed' ? 'Re-Record Dictation' : 'Start Voice Dictation' }}
+              {{ recordingState === 'completed' ? 'Re-Record Dictation' : 'Start Recording Dictation' }}
             </button>
 
             <button
               v-else-if="recordingState === 'recording' || recordingState === 'paused'"
               type="button"
               class="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-rose-600/30 hover:bg-rose-700 transition-all animate-pulse"
-              @click="handleStopAndParse"
+              @click="handleStopRecordingOnly"
             >
               <Square class="h-5 w-5 fill-white" />
-              Finish & Structure SOAP (AI)
-            </button>
-
-            <button
-              v-if="hasTranscribedText && recordingState !== 'recording'"
-              type="button"
-              :disabled="isParsingAi"
-              class="inline-flex items-center gap-2 rounded-2xl border border-sage/40 bg-surface px-4 py-3 text-xs font-bold text-sage hover:bg-sage-muted shadow-xs transition-all disabled:opacity-50"
-              @click="handleStopAndParse"
-            >
-              <Wand2 class="h-4 w-4 text-sage" :class="{ 'animate-spin': isParsingAi }" />
-              {{ isParsingAi ? 'AI Structuring...' : 'Re-Parse with AI' }}
+              Stop Recording
             </button>
           </div>
 
-          <!-- Clinical Audio Samples Dropdown for Quick Testing -->
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-neutral-muted">Sample Voice Consultations:</span>
-            <div class="flex gap-1.5">
-              <button
-                v-for="sample in CLINICAL_SAMPLE_CONSULTATIONS"
-                :key="sample.id"
-                type="button"
-                class="rounded-xl border px-3 py-1.5 text-xs font-medium transition-all"
-                :class="
-                  selectedSampleId === sample.id
-                    ? 'border-sage bg-sage text-white shadow-xs'
-                    : 'border-neutral-grey/80 bg-surface text-navy hover:border-sage/60'
-                "
-                @click="handleSelectSample(sample)"
-              >
-                {{ sample.title }}
-              </button>
-            </div>
+          <div v-if="recordingState === 'recording'" class="flex items-center gap-2 text-xs font-semibold text-rose-600 animate-pulse">
+            <span class="h-2 w-2 rounded-full bg-rose-600"></span>
+            Listening & Transcribing Live...
           </div>
         </div>
 
-        <!-- 2. Audio Playback bar (if recorded) -->
+        <!-- 2. Audio Playback (if recorded) -->
         <div v-if="audioUrl" class="flex items-center gap-3 rounded-xl border border-neutral-grey/80 bg-surface p-3 text-xs">
           <Volume2 class="h-4 w-4 text-sage shrink-0" />
           <span class="font-semibold text-navy">Audio Playback:</span>
           <audio :src="audioUrl" controls class="h-8 flex-1" />
         </div>
 
-        <!-- 3. Live Speech Transcript Textarea -->
-        <div>
+        <!-- Clinical Demo Samples Row for Quick Testing -->
+        <div class="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-neutral-grey/15 p-3 border border-neutral-grey/60">
+          <div class="flex items-center gap-1.5 shrink-0">
+            <Sparkles class="h-3.5 w-3.5 text-sage" />
+            <span class="text-xs font-bold text-navy">Clinical Test Samples:</span>
+          </div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button
+              v-for="sample in CLINICAL_SAMPLE_CONSULTATIONS"
+              :key="sample.id"
+              type="button"
+              class="inline-flex items-center gap-1 rounded-xl border border-neutral-grey/80 bg-surface px-2.5 py-1 text-[11px] font-semibold text-navy hover:border-sage hover:bg-sage-muted hover:text-sage transition-all shadow-xs active:scale-95"
+              :title="sample.transcript"
+              @click="handleSelectSample(sample)"
+            >
+              <span>{{ sample.title }}</span>
+              <span class="text-[10px] text-neutral-muted">({{ sample.duration }})</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. RAW SPOKEN TRANSCRIPT (Primary View) -->
+        <div class="rounded-2xl border border-neutral-grey/80 bg-surface p-4 space-y-3">
           <div class="flex items-center justify-between">
-            <label class="block text-xs font-bold uppercase tracking-wider text-navy">
-              Dictated Speech Transcript
-            </label>
-            <span v-if="recordingState === 'recording'" class="text-[11px] font-semibold text-rose-600 animate-pulse">
-              ● Transcribing speech in real-time...
-            </span>
+            <div class="flex items-center gap-2">
+              <FileText class="h-4 w-4 text-sage" />
+              <label class="block text-xs font-bold uppercase tracking-wider text-navy">
+                Spoken Dictation Transcript (Exact Words)
+              </label>
+            </div>
+            <span class="text-[11px] text-neutral-muted">Editable below before inserting</span>
           </div>
 
           <textarea
             v-model="liveTranscript"
-            rows="3"
-            class="mt-1.5 w-full rounded-2xl border border-neutral-grey/80 bg-surface p-3.5 text-sm text-navy shadow-inner focus:border-sage focus:outline-none"
-            placeholder="Your spoken consultation notes will appear here as you speak. You can also edit this text manually before structuring..."
+            rows="4"
+            class="w-full rounded-xl border border-neutral-grey/80 bg-neutral-grey/15 p-3 text-sm text-navy focus:border-sage focus:outline-none leading-relaxed"
+            placeholder="Your spoken words will appear here live as you speak. You can also paste or edit your notes here directly..."
           />
+
+          <!-- Action Bar for Transcript: Choice A vs Choice B -->
+          <div v-if="hasTranscript" class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-neutral-grey/60">
+            <!-- Choice A: Insert Raw Transcript Directly -->
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-navy">Insert directly into:</span>
+              <select
+                v-model="rawInsertSection"
+                class="rounded-lg border border-neutral-grey/80 bg-surface px-2.5 py-1.5 text-xs text-navy font-semibold focus:border-sage focus:outline-none"
+              >
+                <option value="Subjective">Subjective (S)</option>
+                <option value="Objective">Objective (O)</option>
+                <option value="Action">Action (A)</option>
+                <option value="Plan">Plan (P)</option>
+                <option value="All">Full Note (All Tabs)</option>
+              </select>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-xl border border-sage/60 bg-sage-muted px-3.5 py-1.5 text-xs font-bold text-sage hover:bg-sage hover:text-white transition-all shadow-xs"
+                @click="handleApplyRawToNote"
+              >
+                <span>📋 Insert Raw Text</span>
+                <ArrowRight class="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <!-- Choice B: Summarise with Gemini AI -->
+            <button
+              type="button"
+              :disabled="isParsingAi"
+              class="inline-flex items-center gap-1.5 rounded-xl border border-purple-300 bg-purple-50 px-4 py-1.5 text-xs font-bold text-purple-700 hover:bg-purple-100 shadow-xs transition-all disabled:opacity-50"
+              @click="handleGenerateAiSummary"
+            >
+              <Loader2 v-if="isParsingAi" class="h-3.5 w-3.5 animate-spin text-purple-600" />
+              <Sparkles v-else class="h-3.5 w-3.5 text-purple-600" />
+              <span>{{ isParsingAi ? 'Summarising with AI...' : '✨ Summarise into SOAP with AI' }}</span>
+            </button>
+          </div>
         </div>
 
-        <!-- 4. AI Structured Preview Card -->
-        <div v-if="isParsingAi" class="rounded-2xl border border-sage/40 bg-sage-muted/30 p-8 text-center">
-          <Wand2 class="mx-auto h-8 w-8 text-sage animate-spin" />
-          <p class="mt-2 text-sm font-bold text-navy">Structuring Clinical Narrative with AI...</p>
-          <p class="text-xs text-neutral-muted">Extracting Subjective, Objective, Action, Plan, and Pain/Stiffness scores.</p>
+        <!-- 4. AI Structured Summary Card (Only shown when explicitly generated) -->
+        <div v-if="isParsingAi" class="rounded-2xl border border-purple-200 bg-purple-50/50 p-8 text-center">
+          <Loader2 class="mx-auto h-8 w-8 text-purple-600 animate-spin" />
+          <p class="mt-2 text-sm font-bold text-navy">Gemini AI is categorizing your transcript into SOAP...</p>
+          <p class="text-xs text-neutral-muted">Extracting Subjective, Objective, Action, Plan, scores, and diagnosis.</p>
         </div>
 
-        <div v-else-if="structuredResult" class="rounded-3xl border border-sage/40 bg-surface p-5 shadow-lg space-y-4">
+        <div v-else-if="structuredResult" class="rounded-3xl border border-purple-300 bg-surface p-5 shadow-lg space-y-4">
           <!-- Structured Card Header -->
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-grey/60 pb-3">
             <div class="flex items-center gap-2">
-              <Sparkles class="h-5 w-5 text-sage" />
-              <h3 class="text-sm font-bold text-navy">Extracted SOAP Structure & Findings</h3>
-              <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                Confidence {{ Math.round((structuredResult.confidenceScore || 0.95) * 100) }}%
-              </span>
+              <Sparkles class="h-5 w-5 text-purple-600" />
+              <h3 class="text-sm font-bold text-navy">✨ AI Structured Summary (Categorized from your words)</h3>
             </div>
 
-            <!-- Extracted Diagnosis Tag if any -->
-            <div v-if="structuredResult.suggestedDiagnosis" class="rounded-lg bg-sage-muted px-2.5 py-1 text-xs font-semibold text-sage">
-              Suggested Diagnosis: <strong>{{ structuredResult.suggestedDiagnosis }}</strong>
+            <!-- Diagnosis Tag -->
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-neutral-muted">Diagnosis:</span>
+              <input
+                type="text"
+                v-model="editableDiagnosis"
+                placeholder="Suggested diagnosis..."
+                class="rounded-lg border border-neutral-grey/80 bg-surface px-2.5 py-1 text-xs text-navy font-semibold focus:border-purple-500 focus:outline-none"
+              />
             </div>
           </div>
 
@@ -328,7 +457,7 @@ const hasTranscribedText = computed(() => !!fullTranscript.value.trim())
                   v-model.number="editablePain"
                   min="0"
                   max="10"
-                  class="w-12 text-center font-bold text-sage border border-neutral-grey/80 rounded"
+                  class="w-12 text-center font-bold text-purple-700 border border-neutral-grey/80 rounded"
                 />
                 <span class="font-bold text-navy">/ 10</span>
               </div>
@@ -342,7 +471,7 @@ const hasTranscribedText = computed(() => !!fullTranscript.value.trim())
                   v-model.number="editableStiffness"
                   min="0"
                   max="10"
-                  class="w-12 text-center font-bold text-sage border border-neutral-grey/80 rounded"
+                  class="w-12 text-center font-bold text-purple-700 border border-neutral-grey/80 rounded"
                 />
                 <span class="font-bold text-navy">/ 10</span>
               </div>
@@ -356,25 +485,25 @@ const hasTranscribedText = computed(() => !!fullTranscript.value.trim())
                   v-model.number="editableLameness"
                   min="0"
                   max="5"
-                  class="w-12 text-center font-bold text-sage border border-neutral-grey/80 rounded"
+                  class="w-12 text-center font-bold text-purple-700 border border-neutral-grey/80 rounded"
                 />
                 <span class="font-bold text-navy">/ 5</span>
               </div>
             </div>
           </div>
 
-          <!-- Section Review Fields -->
+          <!-- Section Review Fields (Editable) -->
           <div class="grid gap-3 sm:grid-cols-2">
             <!-- S - Subjective -->
             <div class="rounded-2xl border border-neutral-grey/80 bg-neutral-grey/15 p-3 space-y-1.5">
               <div class="flex items-center justify-between">
                 <span class="rounded bg-navy px-2 py-0.5 text-[10px] font-bold text-white">S · SUBJECTIVE</span>
-                <span class="text-[10px] text-neutral-muted">Owner Observations & Compliance</span>
+                <span class="text-[10px] text-purple-700 font-semibold">✨ AI Extracted</span>
               </div>
               <textarea
                 v-model="editableSubjective"
-                rows="3"
-                class="w-full rounded-xl border border-neutral-grey/80 bg-surface p-2.5 text-xs text-navy focus:border-sage focus:outline-none"
+                rows="4"
+                class="w-full rounded-xl border border-neutral-grey/80 bg-surface p-2.5 text-xs text-navy focus:border-purple-500 focus:outline-none"
               />
             </div>
 
@@ -382,12 +511,12 @@ const hasTranscribedText = computed(() => !!fullTranscript.value.trim())
             <div class="rounded-2xl border border-neutral-grey/80 bg-neutral-grey/15 p-3 space-y-1.5">
               <div class="flex items-center justify-between">
                 <span class="rounded bg-navy px-2 py-0.5 text-[10px] font-bold text-white">O · OBJECTIVE</span>
-                <span class="text-[10px] text-neutral-muted">Gait, ROM, Palpation & Findings</span>
+                <span class="text-[10px] text-purple-700 font-semibold">✨ AI Extracted</span>
               </div>
               <textarea
                 v-model="editableObjective"
-                rows="3"
-                class="w-full rounded-xl border border-neutral-grey/80 bg-surface p-2.5 text-xs text-navy focus:border-sage focus:outline-none"
+                rows="4"
+                class="w-full rounded-xl border border-neutral-grey/80 bg-surface p-2.5 text-xs text-navy focus:border-purple-500 focus:outline-none"
               />
             </div>
 
@@ -395,12 +524,12 @@ const hasTranscribedText = computed(() => !!fullTranscript.value.trim())
             <div class="rounded-2xl border border-neutral-grey/80 bg-neutral-grey/15 p-3 space-y-1.5">
               <div class="flex items-center justify-between">
                 <span class="rounded bg-navy px-2 py-0.5 text-[10px] font-bold text-white">A · ACTION</span>
-                <span class="text-[10px] text-neutral-muted">In-Session Treatments & Modalities</span>
+                <span class="text-[10px] text-purple-700 font-semibold">✨ AI Extracted</span>
               </div>
               <textarea
                 v-model="editableAction"
-                rows="3"
-                class="w-full rounded-xl border border-neutral-grey/80 bg-surface p-2.5 text-xs text-navy focus:border-sage focus:outline-none"
+                rows="4"
+                class="w-full rounded-xl border border-neutral-grey/80 bg-surface p-2.5 text-xs text-navy focus:border-purple-500 focus:outline-none"
               />
             </div>
 
@@ -408,26 +537,34 @@ const hasTranscribedText = computed(() => !!fullTranscript.value.trim())
             <div class="rounded-2xl border border-neutral-grey/80 bg-neutral-grey/15 p-3 space-y-1.5">
               <div class="flex items-center justify-between">
                 <span class="rounded bg-navy px-2 py-0.5 text-[10px] font-bold text-white">P · PLAN</span>
-                <span class="text-[10px] text-neutral-muted">Home Exercises & Next Appointment</span>
+                <span class="text-[10px] text-purple-700 font-semibold">✨ AI Extracted</span>
               </div>
               <textarea
                 v-model="editablePlan"
-                rows="3"
-                class="w-full rounded-xl border border-neutral-grey/80 bg-surface p-2.5 text-xs text-navy focus:border-sage focus:outline-none"
+                rows="4"
+                class="w-full rounded-xl border border-neutral-grey/80 bg-surface p-2.5 text-xs text-navy focus:border-purple-500 focus:outline-none"
               />
             </div>
           </div>
 
-          <!-- Extracted Keywords Pills -->
-          <div v-if="structuredResult.extractedTerms && structuredResult.extractedTerms.length > 0" class="flex flex-wrap items-center gap-1.5 pt-1">
-            <span class="text-[11px] font-semibold text-neutral-muted">Identified Clinical Terms:</span>
-            <span
-              v-for="term in structuredResult.extractedTerms"
-              :key="term"
-              class="rounded-md bg-sage-muted px-2 py-0.5 text-[10px] font-bold text-sage"
+          <!-- Populate Buttons -->
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-neutral-grey/60">
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-xl border border-purple-300 bg-purple-50 px-4 py-2 text-xs font-bold text-purple-700 hover:bg-purple-100"
+              @click="handleApplyStructuredNote('append')"
             >
-              {{ term }}
-            </span>
+              Append AI Summary to Note
+            </button>
+
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-2xl bg-purple-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-purple-600/30 hover:bg-purple-700 transition-all hover:scale-105"
+              @click="handleApplyStructuredNote('replace')"
+            >
+              <Check class="h-4 w-4" />
+              Populate Note with AI Summary
+            </button>
           </div>
         </div>
       </div>
@@ -454,34 +591,13 @@ const hasTranscribedText = computed(() => !!fullTranscript.value.trim())
           </button>
         </div>
 
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            class="rounded-xl px-4 py-2 text-xs font-semibold text-neutral-muted hover:text-navy"
-            @click="emit('close')"
-          >
-            Cancel
-          </button>
-
-          <button
-            v-if="structuredResult"
-            type="button"
-            class="inline-flex items-center gap-2 rounded-xl border border-sage px-4 py-2 text-xs font-bold text-sage hover:bg-sage-muted"
-            @click="handleApply('append')"
-          >
-            Append to Note
-          </button>
-
-          <button
-            v-if="structuredResult"
-            type="button"
-            class="inline-flex items-center gap-2 rounded-2xl bg-sage px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-sage/30 hover:bg-sage/90 transition-all hover:scale-105"
-            @click="handleApply('replace')"
-          >
-            <Check class="h-4 w-4" />
-            Apply to SOAP Note
-          </button>
-        </div>
+        <button
+          type="button"
+          class="rounded-xl px-4 py-2 text-xs font-semibold text-neutral-muted hover:text-navy"
+          @click="emit('close')"
+        >
+          Close
+        </button>
       </div>
     </div>
   </div>

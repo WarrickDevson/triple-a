@@ -35,3 +35,23 @@ public record SoapVocabularyDto(
     IReadOnlyList<string> Terms,
     IReadOnlyList<VocabularyCategoryDto> Categories,
     IReadOnlyDictionary<string, string> AutoCorrections);
+
+public record PolishSoapSectionRequestDto(
+    string SectionName,
+    string RawText,
+    string? PetName = null,
+    string? Species = null,
+    string? Condition = null);
+
+public record PolishSoapSectionResponseDto(
+    string SectionName,
+    string PolishedText,
+    IReadOnlyList<string> CorrectionsMade,
+    string? ClinicalSummary,
+    bool UsedCloudAi);
+
+public record AiConfigStatusDto(
+    bool IsCloudAiEnabled,
+    string Provider,
+    string ModelName,
+    bool HasApiKey);

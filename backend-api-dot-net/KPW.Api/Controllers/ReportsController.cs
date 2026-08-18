@@ -7,6 +7,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("reports")]
+[Route("api/reports")]
 [Authorize]
 public class ReportsController : ControllerBase
 {

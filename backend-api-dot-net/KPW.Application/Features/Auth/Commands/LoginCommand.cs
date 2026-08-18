@@ -35,12 +35,19 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
         var request = command.Request;
         var email = request.Email.Trim().ToLowerInvariant();
         var user = await _dbContext.Set<User>()
-            .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == email, cancellationToken);
 
         if (user is null)
         {
             _logger.LogWarning("Login attempt failed: User not found for email {Email}", email);
             throw new UnauthorizedAccessException("Invalid email or password.");
+        }
+
+        if (!user.IsActive)
+        {
+            _logger.LogWarning("Login attempt blocked: Inactive account for user {Email}", email);
+            throw new UnauthorizedAccessException("ACCOUNT_INACTIVE: This account is currently inactive. Please contact support.");
         }
 
         if (!_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))

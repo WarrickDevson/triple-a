@@ -9,6 +9,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("pets/{petId:int}/videos")]
+[Route("api/pets/{petId:int}/videos")]
 [Authorize]
 public class PetVideosController : ControllerBase
 {

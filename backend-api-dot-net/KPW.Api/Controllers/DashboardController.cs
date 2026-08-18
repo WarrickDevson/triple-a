@@ -8,6 +8,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("dashboard")]
+[Route("api/dashboard")]
 [Authorize]
 public class DashboardController : ControllerBase
 {

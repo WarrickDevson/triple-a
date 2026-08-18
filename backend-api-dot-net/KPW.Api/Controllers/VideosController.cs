@@ -11,6 +11,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("videos")]
+[Route("api/videos")]
 [Authorize]
 public class VideosController : ControllerBase
 {

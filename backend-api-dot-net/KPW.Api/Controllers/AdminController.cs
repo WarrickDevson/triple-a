@@ -13,6 +13,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("admin")]
+[Route("api/admin")]
 [Authorize]
 public class AdminController : ControllerBase
 {

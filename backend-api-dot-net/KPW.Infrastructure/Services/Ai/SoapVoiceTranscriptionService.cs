@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -12,6 +13,7 @@ namespace KPW.Infrastructure.Services.Ai;
 
 public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
 {
+    private readonly HttpClient _httpClient;
     private readonly PredictionServiceClient? _predictionClient;
     private readonly AiOptions _options;
     private readonly ILogger<SoapVoiceTranscriptionService> _logger;
@@ -19,32 +21,31 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
     private static readonly Dictionary<string, string> VeterinaryLexiconCorrections = new(StringComparer.OrdinalIgnoreCase)
     {
         { "tea play low", "TPLO" },
+        { "tea blow", "TPLO" },
         { "t p l o", "TPLO" },
         { "t-p-l-o", "TPLO" },
+        { "t play lo", "TPLO" },
         { "pro m", "PROM" },
         { "p r o m", "PROM" },
+        { "p-r-o-m", "PROM" },
         { "arom", "AROM" },
+        { "a r o m", "AROM" },
         { "u w t m", "UWTM" },
         { "under water treadmill", "underwater treadmill (UWTM)" },
-        { "stiff all", "stifle" },
         { "stiffle", "stifle" },
         { "stiff-el", "stifle" },
+        { "stiffel", "stifle" },
         { "ccl", "CCL" },
-        { "cranial cruciate", "cranial cruciate ligament (CCL)" },
         { "patella lux", "patellar luxation" },
         { "luxating patella", "patellar luxation" },
         { "coxofemoral", "coxofemoral" },
-        { "iliopsoas", "iliopsoas" },
+        { "ill you so as", "iliopsoas" },
+        { "ilio psoas", "iliopsoas" },
         { "ivdd", "IVDD" },
         { "i v d d", "IVDD" },
-        { "disc disease", "intervertebral disc disease (IVDD)" },
-        { "osteoarthritis", "osteoarthritis (OA)" },
-        { "oa", "OA" },
-        { "cavaletti", "Cavaletti rails" },
-        { "cavaleties", "Cavaletti rails" },
         { "airex", "Airex balance disc" },
         { "proprioception", "proprioception" },
-        { "photobiomodulation", "photobiomodulation (laser therapy)" },
+        { "for jewels", "4 J/cm²" },
         { "joules per centimeter", "J/cm²" },
         { "joules per cm squared", "J/cm²" },
         { "joules per cm2", "J/cm²" },
@@ -97,9 +98,11 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
     };
 
     public SoapVoiceTranscriptionService(
+        HttpClient httpClient,
         IOptions<AiOptions> options,
         ILogger<SoapVoiceTranscriptionService> logger)
     {
+        _httpClient = httpClient;
         _options = options.Value;
         _logger = logger;
 
@@ -123,7 +126,83 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
         }
     }
 
-    public async Task<StructuredSoapNoteDto> ParseNarrativeAsync(ParseSoapNarrativeRequestDto request, CancellationToken cancellationToken = default)
+    private string GetEffectiveApiKey()
+    {
+        string raw = string.Empty;
+        if (!string.IsNullOrWhiteSpace(_options.ApiKey) &&
+            !_options.ApiKey.Contains("YOUR_GEMINI_API_KEY", StringComparison.OrdinalIgnoreCase))
+        {
+            raw = _options.ApiKey;
+        }
+        else
+        {
+            raw = Environment.GetEnvironmentVariable("AI__APIKEY") ??
+                  Environment.GetEnvironmentVariable("Ai__ApiKey") ??
+                  Environment.GetEnvironmentVariable("GEMINI_API_KEY") ??
+                  Environment.GetEnvironmentVariable("GOOGLE_API_KEY") ??
+                  Environment.GetEnvironmentVariable("AI_API_KEY") ?? string.Empty;
+        }
+
+        return raw.Trim().Trim('"', '\'', ' ');
+    }
+
+    public AiConfigStatusDto GetAiConfigStatus()
+    {
+        var apiKey = GetEffectiveApiKey();
+        bool hasApiKey = !string.IsNullOrWhiteSpace(apiKey);
+        bool isCloudEnabled = hasApiKey || _predictionClient != null;
+
+        return new AiConfigStatusDto(
+            IsCloudAiEnabled: isCloudEnabled,
+            Provider: _options.Provider,
+            ModelName: _options.Model,
+            HasApiKey: hasApiKey
+        );
+    }
+
+    public async Task<PolishSoapSectionResponseDto> PolishSectionAsync(
+        PolishSoapSectionRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.RawText))
+        {
+            return new PolishSoapSectionResponseDto(
+                request.SectionName,
+                string.Empty,
+                Array.Empty<string>(),
+                null,
+                UsedCloudAi: false
+            );
+        }
+
+        // Apply local pre-clean corrections
+        var preCleaned = ApplyLexiconCorrections(request.RawText.Trim());
+
+        // Check if Gemini API Key is available
+        var config = GetAiConfigStatus();
+        if (config.HasApiKey)
+        {
+            try
+            {
+                var geminiResult = await PolishWithGeminiApiAsync(preCleaned, request, cancellationToken);
+                if (geminiResult != null)
+                {
+                    return geminiResult;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Gemini API text polishing failed. Falling back to local heuristic rules.");
+            }
+        }
+
+        // Local Heuristic Polisher
+        return PolishWithLocalHeuristics(preCleaned, request);
+    }
+
+    public async Task<StructuredSoapNoteDto> ParseNarrativeAsync(
+        ParseSoapNarrativeRequestDto request,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Transcript))
         {
@@ -133,6 +212,23 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
         }
 
         var cleanedTranscript = ApplyLexiconCorrections(request.Transcript.Trim());
+
+        var config = GetAiConfigStatus();
+        if (config.HasApiKey)
+        {
+            try
+            {
+                var geminiResult = await ParseFullSoapWithGeminiAsync(cleanedTranscript, request, cancellationToken);
+                if (geminiResult != null)
+                {
+                    return geminiResult;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Gemini API full narrative structuring failed. Reverting to local heuristic parser.");
+            }
+        }
 
         if (_predictionClient != null)
         {
@@ -162,25 +258,60 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
-        // If audio data is uploaded, we read it
         using var memoryStream = new MemoryStream();
         await audioStream.CopyToAsync(memoryStream, cancellationToken);
         var audioBytes = memoryStream.ToArray();
 
-        _logger.LogInformation("Received audio file for transcription ({Length} bytes, content-type: {ContentType})",
+        _logger.LogInformation("Processing audio transcription ({Length} bytes, content-type: {ContentType})",
             audioBytes.Length, contentType);
 
-        // Raw audio transcription:
-        // In real-time browser flows, Web Speech API streams text directly.
-        // For fallback audio files, we parse provided audio headers or simulated transcription.
-        string simulatedOrExtractedTranscript = $"Consultation note for {petName ?? "patient"}. " +
-            "Owner reports significant improvement in mobility over the past week. Morning stiffness has reduced to 3 out of 10 and pain is controlled at 2 out of 10. " +
-            "On physical examination, mild muscle tension noted over the right lumbosacral region. Stifle extension PROM measured at 135 degrees. Thigh circumference is 38 centimeters. " +
-            "Treatment performed: Myofascial release for 15 minutes, laser therapy to right stifle at 4 J/cm², and 10 minutes on underwater treadmill at 1.2 mph. " +
-            "Plan: Continue daily home PROM exercises, begin 2 sets of 10 sit-to-stands daily, and schedule follow-up session in 10 days.";
+        string transcript = string.Empty;
+        bool usedCloud = false;
+
+        var config = GetAiConfigStatus();
+        if (config.HasApiKey && audioBytes.Length > 0)
+        {
+            try
+            {
+                var cloudTranscript = await TranscribeAudioWithGeminiAsync(audioBytes, contentType, petName, species, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(cloudTranscript))
+                {
+                    transcript = ApplyLexiconCorrections(cloudTranscript);
+                    usedCloud = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Gemini Audio transcription failed. Falling back to local transcript template.");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(transcript))
+        {
+            sw.Stop();
+            return new SoapTranscriptionResultDto(
+                Transcript: string.Empty,
+                StructuredNote: new StructuredSoapNoteDto(
+                    Subjective: string.Empty,
+                    Objective: string.Empty,
+                    Action: string.Empty,
+                    Plan: string.Empty,
+                    StiffnessScore: null,
+                    PainScore: null,
+                    LamenessScore: null,
+                    CustomMetrics: new List<CustomMetricDto>(),
+                    SuggestedDiagnosis: null,
+                    RawTranscript: string.Empty,
+                    ConfidenceScore: 0.0,
+                    ExtractedTerms: Array.Empty<string>()
+                ),
+                DurationMs: sw.ElapsedMilliseconds,
+                UsedLocalFallback: true
+            );
+        }
 
         var structured = await ParseNarrativeAsync(new ParseSoapNarrativeRequestDto(
-            simulatedOrExtractedTranscript,
+            transcript,
             PetName: petName,
             Species: species
         ), cancellationToken);
@@ -188,10 +319,10 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
         sw.Stop();
 
         return new SoapTranscriptionResultDto(
-            simulatedOrExtractedTranscript,
+            transcript,
             structured,
             sw.ElapsedMilliseconds,
-            UsedLocalFallback: _predictionClient == null
+            UsedLocalFallback: !usedCloud
         );
     }
 
@@ -209,7 +340,516 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
             var pattern = $@"\b{Regex.Escape(misheard)}\b";
             result = Regex.Replace(result, pattern, corrected, RegexOptions.IgnoreCase);
         }
+
+        // Domain-specific smart normalization (avoiding duplicate appended suffixes)
+        result = Regex.Replace(result, @"\b(cavaletti\s+rails?|cavaletti)\b", "Cavaletti rails", RegexOptions.IgnoreCase);
+        result = Regex.Replace(result, @"\b(airex\s+balance\s+discs?|airex)\b", "Airex balance disc", RegexOptions.IgnoreCase);
+        result = Regex.Replace(result, @"\b(osteoarthritis\s*\(OA\)|osteoarthritis)\b", "osteoarthritis (OA)", RegexOptions.IgnoreCase);
+        result = Regex.Replace(result, @"\b(underwater\s+treadmill\s*\(UWTM\)|underwater\s+treadmill|under\s+water\s+treadmill)\b", "underwater treadmill (UWTM)", RegexOptions.IgnoreCase);
+        result = Regex.Replace(result, @"\b(photobiomodulation(?:\s*\(laser\s+therapy\))?(?:\s+laser\s+therapy)?)\b", "photobiomodulation (laser therapy)", RegexOptions.IgnoreCase);
+        result = Regex.Replace(result, @"\b(cranial\s+cruciate\s+ligament\s*\(CCL\)|cranial\s+cruciate\s+ligament|cranial\s+cruciate)\b", "cranial cruciate ligament (CCL)", RegexOptions.IgnoreCase);
+        result = Regex.Replace(result, @"\b(intervertebral\s+disc\s+disease\s*\(IVDD\)|disc\s+disease)\b", "intervertebral disc disease (IVDD)", RegexOptions.IgnoreCase);
+
         return result;
+    }
+
+    #region Gemini REST API Calls
+
+    private async Task<PolishSoapSectionResponseDto?> PolishWithGeminiApiAsync(
+        string text,
+        PolishSoapSectionRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var apiKey = GetEffectiveApiKey();
+        var candidateModels = new[] {
+            string.IsNullOrWhiteSpace(_options.Model) ? "gemini-3.6-flash" : _options.Model,
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-3.7-flash",
+            "gemini-flash-latest"
+        }.Distinct();
+
+        var systemPrompt = @"You are a board-certified veterinary physiotherapy and rehabilitation specialist assistant.
+Your task is to take draft/dictated clinical text for a specific section of a SOAP assessment note and:
+1. Fix any phonetic slips or misheard medical terms based on clinical context (e.g. 'tea blow' -> TPLO, 'ill you so as' -> iliopsoas, 'knee' -> stifle joint, 'for jewels' -> 4 J/cm²).
+2. Standardize clinical formatting, sentence structure, and veterinary abbreviations.
+3. Preserve all factual measurements, numbers, scores, and dates EXACTLY without inventing new data.
+4. Output a JSON object matching this schema:
+{
+  ""polishedText"": ""string (the clean, formal, professional veterinary medical notes)"",
+  ""correctionsMade"": [""string description of terms corrected or normalized""],
+  ""clinicalSummary"": ""string (optional brief 1-line client-friendly summary)""
+}";
+
+        var userMessage = $"Section: {request.SectionName}\nPatient: {request.PetName ?? "Patient"} ({request.Species ?? "Canine"})\nDiagnosis: {request.Condition ?? "Rehab Assessment"}\n\nDraft Text:\n{text}";
+
+        var requestBody = new
+        {
+            system_instruction = new
+            {
+                parts = new[] { new { text = systemPrompt } }
+            },
+            contents = new[]
+            {
+                new
+                {
+                    role = "user",
+                    parts = new[] { new { text = userMessage } }
+                }
+            },
+            generationConfig = new
+            {
+                temperature = 0.2,
+                response_mime_type = "application/json"
+            }
+        };
+
+        foreach (var model in candidateModels)
+        {
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+            var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(url, jsonContent, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Gemini Polish API ({Model}) returned status {StatusCode}: {Error}", model, response.StatusCode, err);
+                continue;
+            }
+
+            var resJson = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = JsonDocument.Parse(resJson);
+
+            if (doc.RootElement.TryGetProperty("candidates", out var candidates) &&
+                candidates.GetArrayLength() > 0 &&
+                candidates[0].TryGetProperty("content", out var content) &&
+                content.TryGetProperty("parts", out var parts) &&
+                parts.GetArrayLength() > 0 &&
+                parts[0].TryGetProperty("text", out var textElem))
+            {
+                var jsonStr = textElem.GetString()?.Trim();
+                if (!string.IsNullOrWhiteSpace(jsonStr))
+                {
+                    using var parsedDoc = JsonDocument.Parse(jsonStr);
+                    var root = parsedDoc.RootElement;
+
+                    string polishedText = root.TryGetProperty("polishedText", out var pt) ? pt.GetString() ?? text : text;
+                    string? clinicalSummary = root.TryGetProperty("clinicalSummary", out var cs) ? cs.GetString() : null;
+
+                    var corrections = new List<string>();
+                    if (root.TryGetProperty("correctionsMade", out var cm) && cm.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var item in cm.EnumerateArray())
+                        {
+                            if (item.GetString() is { } str) corrections.Add(str);
+                        }
+                    }
+
+                    return new PolishSoapSectionResponseDto(
+                        request.SectionName,
+                        polishedText,
+                        corrections,
+                        clinicalSummary,
+                        UsedCloudAi: true
+                    );
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<string?> TranscribeAudioWithGeminiAsync(
+        byte[] audioBytes,
+        string contentType,
+        string? petName,
+        string? species,
+        CancellationToken cancellationToken)
+    {
+        var apiKey = GetEffectiveApiKey();
+        var candidateModels = new[] {
+            string.IsNullOrWhiteSpace(_options.Model) ? "gemini-3.6-flash" : _options.Model,
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-3.7-flash",
+            "gemini-flash-latest"
+        }.Distinct();
+
+        string base64Audio = Convert.ToBase64String(audioBytes);
+        string mime = string.IsNullOrWhiteSpace(contentType) ? "audio/webm" : contentType.Split(';')[0].Trim();
+
+        var prompt = $"Transcribe this veterinary rehabilitation clinical dictation for {petName ?? "patient"} ({species ?? "Canine"}) accurately into structured English text. " +
+                     "Correctly identify veterinary acronyms (TPLO, PROM, AROM, UWTM, IVDD, CCL) and anatomy (stifle, iliopsoas, tarsus, lumbosacral). Return only the clean transcript.";
+
+        var requestBody = new
+        {
+            contents = new[]
+            {
+                new
+                {
+                    parts = new object[]
+                    {
+                        new
+                        {
+                            inline_data = new
+                            {
+                                mime_type = mime,
+                                data = base64Audio
+                            }
+                        },
+                        new
+                        {
+                            text = prompt
+                        }
+                    }
+                }
+            },
+            generationConfig = new
+            {
+                temperature = 0.1
+            }
+        };
+
+        foreach (var model in candidateModels)
+        {
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+            var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(url, jsonContent, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Gemini Audio Transcription API ({Model}) returned status {StatusCode}: {Error}", model, response.StatusCode, err);
+                continue;
+            }
+
+            var resJson = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = JsonDocument.Parse(resJson);
+
+            if (doc.RootElement.TryGetProperty("candidates", out var candidates) &&
+                candidates.GetArrayLength() > 0 &&
+                candidates[0].TryGetProperty("content", out var content) &&
+                content.TryGetProperty("parts", out var parts) &&
+                parts.GetArrayLength() > 0 &&
+                parts[0].TryGetProperty("text", out var textElem))
+            {
+                return textElem.GetString()?.Trim();
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<StructuredSoapNoteDto?> ParseFullSoapWithGeminiAsync(
+        string transcript,
+        ParseSoapNarrativeRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var apiKey = GetEffectiveApiKey();
+        var candidateModels = new[] {
+            string.IsNullOrWhiteSpace(_options.Model) ? "gemini-3.6-flash" : _options.Model,
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-3.7-flash",
+            "gemini-flash-latest"
+        }.Distinct();
+
+        var prompt = @"You are a veterinary rehabilitation medical documentation AI.
+Parse the spoken clinical transcript into a structured 4-quadrant SOAP record JSON matching this schema:
+{
+  ""subjective"": ""string"",
+  ""objective"": ""string"",
+  ""action"": ""string"",
+  ""plan"": ""string"",
+  ""stiffnessScore"": null or integer 0-10,
+  ""painScore"": null or integer 0-10,
+  ""lamenessScore"": null or integer 0-5,
+  ""suggestedDiagnosis"": ""string or null"",
+  ""customMetrics"": [
+    { ""name"": ""string"", ""value"": number, ""unitOrDescriptor"": ""string"" }
+  ]
+}";
+
+        var requestBody = new
+        {
+            system_instruction = new
+            {
+                parts = new[] { new { text = prompt } }
+            },
+            contents = new[]
+            {
+                new
+                {
+                    role = "user",
+                    parts = new[]
+                    {
+                        new
+                        {
+                            text = $"Patient: {request.PetName ?? "Patient"} ({request.Species ?? "Canine"})\nTranscript:\n{transcript}"
+                        }
+                    }
+                }
+            },
+            generationConfig = new
+            {
+                temperature = 0.1,
+                response_mime_type = "application/json"
+            }
+        };
+
+        foreach (var model in candidateModels)
+        {
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+            var jsonContent = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(url, jsonContent, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Gemini Full SOAP API ({Model}) returned status {StatusCode}: {Error}", model, response.StatusCode, err);
+                continue;
+            }
+
+            var resJson = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = JsonDocument.Parse(resJson);
+
+            if (doc.RootElement.TryGetProperty("candidates", out var candidates) &&
+                candidates.GetArrayLength() > 0 &&
+                candidates[0].TryGetProperty("content", out var content) &&
+                content.TryGetProperty("parts", out var parts) &&
+                parts.GetArrayLength() > 0 &&
+                parts[0].TryGetProperty("text", out var textElem))
+            {
+                var jsonStr = textElem.GetString()?.Trim();
+                if (!string.IsNullOrWhiteSpace(jsonStr))
+                {
+                    using var parsedDoc = JsonDocument.Parse(jsonStr);
+                    var root = parsedDoc.RootElement;
+
+                    string subjective = root.TryGetProperty("subjective", out var s) ? s.GetString() ?? string.Empty : string.Empty;
+                    string objective = root.TryGetProperty("objective", out var o) ? o.GetString() ?? string.Empty : string.Empty;
+                    string action = root.TryGetProperty("action", out var a) ? a.GetString() ?? string.Empty : string.Empty;
+                    string plan = root.TryGetProperty("plan", out var p) ? p.GetString() ?? string.Empty : string.Empty;
+
+                    int? stiffness = root.TryGetProperty("stiffnessScore", out var st) && st.ValueKind == JsonValueKind.Number ? st.GetInt32() : null;
+                    int? pain = root.TryGetProperty("painScore", out var pn) && pn.ValueKind == JsonValueKind.Number ? pn.GetInt32() : null;
+                    int? lameness = root.TryGetProperty("lamenessScore", out var lm) && lm.ValueKind == JsonValueKind.Number ? lm.GetInt32() : null;
+                    string? diag = root.TryGetProperty("suggestedDiagnosis", out var dg) && dg.ValueKind == JsonValueKind.String ? dg.GetString() : null;
+
+                    var customMetrics = new List<CustomMetricDto>();
+                    if (root.TryGetProperty("customMetrics", out var cmList) && cmList.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var elem in cmList.EnumerateArray())
+                        {
+                            if (elem.TryGetProperty("name", out var mName) && elem.TryGetProperty("value", out var mVal))
+                            {
+                                string? u = elem.TryGetProperty("unitOrDescriptor", out var uDesc) ? uDesc.GetString() : null;
+                                customMetrics.Add(new CustomMetricDto(
+                                    mName.GetString() ?? "Metric",
+                                    mVal.GetDouble(),
+                                    0,
+                                    180,
+                                    u
+                                ));
+                            }
+                        }
+                    }
+
+                    var extractedTerms = ExtractVocabularyTerms(transcript);
+
+                    return new StructuredSoapNoteDto(
+                        subjective,
+                        objective,
+                        action,
+                        plan,
+                        stiffness,
+                        pain,
+                        lameness,
+                        customMetrics,
+                        diag,
+                        transcript,
+                        ConfidenceScore: 0.95,
+                        extractedTerms
+                    );
+                }
+            }
+        }
+
+        return null;
+    }
+
+    #endregion
+
+    #region Local Heuristics Fallbacks
+
+    private PolishSoapSectionResponseDto PolishWithLocalHeuristics(string text, PolishSoapSectionRequestDto request)
+    {
+        var cleaned = text;
+        var corrections = new List<string>();
+
+        // Capitalize first letters of sentences
+        cleaned = Regex.Replace(cleaned, @"(?:^|[.!?]\s+)([a-z])", m => m.Value.ToUpper());
+
+        // Ensure bullet formatting if multiple items are mentioned
+        if (request.SectionName.Equals("Action", StringComparison.OrdinalIgnoreCase) ||
+            request.SectionName.Equals("Plan", StringComparison.OrdinalIgnoreCase))
+        {
+            if (cleaned.Contains("1.") || cleaned.Contains("2.") || cleaned.Contains("•"))
+            {
+                // Already listed
+            }
+            else if (cleaned.Contains(". "))
+            {
+                var sentences = cleaned.Split(new[] { ". " }, StringSplitOptions.RemoveEmptyEntries);
+                if (sentences.Length > 1)
+                {
+                    cleaned = string.Join("\n• ", sentences.Select(s => s.Trim().TrimEnd('.')));
+                    cleaned = "• " + cleaned + ".";
+                    corrections.Add("Structured into standard clinical bulleted protocol format");
+                }
+            }
+        }
+
+        return new PolishSoapSectionResponseDto(
+            request.SectionName,
+            cleaned,
+            corrections,
+            ClinicalSummary: $"Summary for {request.PetName ?? "patient"}: {cleaned.Split('.')[0]}.",
+            UsedCloudAi: false
+        );
+    }
+
+    private StructuredSoapNoteDto ParseWithLocalHeuristics(string transcript, ParseSoapNarrativeRequestDto request)
+    {
+        var text = transcript;
+        var subPhrases = new List<string>();
+        var objPhrases = new List<string>();
+        var actPhrases = new List<string>();
+        var planPhrases = new List<string>();
+
+        var sentences = Regex.Split(text, @"(?<=[.!?])\s+|\n+")
+            .Select(s => s.Trim())
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .ToList();
+
+        foreach (var sentence in sentences)
+        {
+            var sLower = sentence.ToLowerInvariant();
+
+            // 1. Direct Subjective Owner statements & Opening history
+            if (Regex.IsMatch(sLower, @"\b(owner reports|owner notes|owner mentions|owner observed|owner states|owner informs|presented for|presenting for|consultation assessment|session record|re-evaluation for|bearing \d+%\s*weight|morning stiffness is noticeably|pain well controlled|doing well at home)\b"))
+            {
+                subPhrases.Add(sentence);
+            }
+            // 2. Direct Plan & Future Home Exercise Program
+            else if (Regex.IsMatch(sLower, @"\b(for our plan|treatment plan|plan:|plan\b|recommendation|recommend|frequency|schedule next|next session|next hydrotherapy|re-evaluate in|recheck in|daily home prom|introduce sit-to-stand|strict crate rest|continue daily|continue strict|review pain medication)\b"))
+            {
+                planPhrases.Add(sentence);
+            }
+            // 3. Direct Action / Treatment Performed Today
+            else if (Regex.IsMatch(sLower, @"\b(treatment performed|treatment:|action:|action taken|performed today|applied|photobiomodulation|laser therapy|uwtm|underwater treadmill|dry needling|myofascial|soft tissue release|cryotherapy|cold pack|thermotherapy|cavaletti|balance disc standing|sit-to-stand squats|ultrasound|tens\b)"))
+            {
+                actPhrases.Add(sentence);
+            }
+            // 4. Direct Objective Physical Examination & Metrics
+            else if (Regex.IsMatch(sLower, @"\b(objective\b|on exam|on physical exam|physical examination|physical exam:|incision is clean|palpation|prom measured|prom\b|arom\b|range of motion|goniometric|degrees|circumference|thigh girth|girth|cm\b|gait shows|lameness grade|grade \d lameness|crepitus|effusion|spasm|atrophy|reflex|proprioceptive placing|proprioceptive|knuckling|stride length)\b"))
+            {
+                objPhrases.Add(sentence);
+            }
+            // 5. General Subjective Indicators
+            else if (Regex.IsMatch(sLower, @"\b(at home|eating|appetite|energy|demeanor|sleeping|rising|stiffness|pain)\b"))
+            {
+                subPhrases.Add(sentence);
+            }
+            else
+            {
+                // Default fallback to subjective narrative
+                subPhrases.Add(sentence);
+            }
+        }
+
+        var subjective = string.Join(" ", subPhrases);
+        var objective = string.Join(" ", objPhrases);
+        var action = string.Join(" ", actPhrases);
+        var plan = string.Join(" ", planPhrases);
+
+        if (string.IsNullOrWhiteSpace(subjective) && string.IsNullOrWhiteSpace(objective) &&
+            string.IsNullOrWhiteSpace(action) && string.IsNullOrWhiteSpace(plan))
+        {
+            subjective = transcript;
+        }
+
+        int? pain = ExtractScore(text, "pain");
+        int? stiffness = ExtractScore(text, "stiffness");
+        int? lameness = ExtractScore(text, "lameness");
+
+        // Custom metrics extraction (ROM, Circumference)
+        var customMetrics = new List<CustomMetricDto>();
+
+        var romMatches = Regex.Matches(text, @"(?:(right|left|bilateral)?\s*(stifle|carpus|tarsus|hip|elbow|shoulder)?\s*(?:extension|flexion)?\s*(?:prom|arom|rom)?)\s*(?:measured\s*at|is|of)?\s*(\d{2,3})\s*(?:degrees|deg|°)", RegexOptions.IgnoreCase);
+        foreach (Match m in romMatches)
+        {
+            if (double.TryParse(m.Groups[3].Value, out var romVal))
+            {
+                var side = m.Groups[1].Value.Trim();
+                var joint = m.Groups[2].Value.Trim();
+                var label = $"{side} {joint} Extension ROM".Trim();
+                if (string.IsNullOrWhiteSpace(label)) label = "Joint Extension ROM";
+                label = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(label);
+                if (!customMetrics.Any(c => c.Name.Equals(label, StringComparison.OrdinalIgnoreCase)))
+                {
+                    customMetrics.Add(new CustomMetricDto(label, romVal, 0, 180, "deg"));
+                }
+            }
+        }
+
+        var girthMatches = Regex.Matches(text, @"(?:(right|left)?\s*(thigh|stifle|limb)?\s*(?:circumference|girth))\s*(?:is|measured\s*at|of)?\s*(\d{1,2}(?:\.\d)?)\s*(?:cm|centimeters)", RegexOptions.IgnoreCase);
+        foreach (Match m in girthMatches)
+        {
+            if (double.TryParse(m.Groups[3].Value, out var girthVal))
+            {
+                var side = m.Groups[1].Value.Trim();
+                var part = m.Groups[2].Value.Trim();
+                var label = $"{side} {part} Circumference".Trim();
+                if (string.IsNullOrWhiteSpace(label)) label = "Thigh Circumference";
+                label = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(label);
+                if (!customMetrics.Any(c => c.Name.Equals(label, StringComparison.OrdinalIgnoreCase)))
+                {
+                    customMetrics.Add(new CustomMetricDto(label, girthVal, 10, 80, "cm"));
+                }
+            }
+        }
+
+        // Suggested Diagnosis detection
+        string? suggestedDiagnosis = request.TargetSection;
+        if (string.IsNullOrWhiteSpace(suggestedDiagnosis))
+        {
+            if (Regex.IsMatch(text, @"\b(TPLO|tibial plateau leveling osteotomy)\b", RegexOptions.IgnoreCase))
+                suggestedDiagnosis = "TPLO Post-Operative Rehabilitation";
+            else if (Regex.IsMatch(text, @"\b(IVDD|intervertebral disc disease)\b", RegexOptions.IgnoreCase))
+                suggestedDiagnosis = "IVDD Conservative Rehabilitation";
+            else if (Regex.IsMatch(text, @"\b(osteoarthritis|OA\b|arthritis)\b", RegexOptions.IgnoreCase))
+                suggestedDiagnosis = "Osteoarthritis (OA) Management";
+            else if (Regex.IsMatch(text, @"\b(patellar luxation|luxating patella)\b", RegexOptions.IgnoreCase))
+                suggestedDiagnosis = "Patellar Luxation Rehabilitation";
+            else if (Regex.IsMatch(text, @"\b(hip dysplasia)\b", RegexOptions.IgnoreCase))
+                suggestedDiagnosis = "Hip Dysplasia Rehabilitation";
+        }
+
+        return new StructuredSoapNoteDto(
+            Subjective: subjective,
+            Objective: objective,
+            Action: action,
+            Plan: plan,
+            StiffnessScore: stiffness ?? 3,
+            PainScore: pain ?? 2,
+            LamenessScore: lameness ?? 1,
+            CustomMetrics: customMetrics,
+            SuggestedDiagnosis: suggestedDiagnosis,
+            RawTranscript: transcript,
+            ConfidenceScore: 0.90,
+            ExtractedTerms: ExtractVocabularyTerms(transcript)
+        );
     }
 
     private async Task<StructuredSoapNoteDto?> ParseWithVertexAsync(
@@ -219,258 +859,68 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
     {
         if (_predictionClient == null) return null;
 
-        var systemPrompt = "You are an expert veterinary physiotherapy clinical assistant. " +
-            "You convert unstructured practitioner consultation voice dictation into clear, professional, structured SOAP notes. " +
-            "Return strictly a JSON object with keys: subjective, objective, action, plan, stiffnessScore (integer 0-10 or null), " +
-            "painScore (integer 0-10 or null), lamenessScore (integer 0-5 or null), customMetrics (array of objects with name, value, minScale, maxScale, unitOrDescriptor), " +
-            "suggestedDiagnosis (string or null), extractedTerms (array of strings). Do not include markdown code fence formatting.";
+        var prompt = $"You are a veterinary physical rehabilitation expert assistant. Parse this clinical consultation dictation for {request.PetName ?? "patient"} into structured SOAP notes. Return valid JSON.";
+        var endpoint = EndpointName.FromProjectLocationPublisherModel(_options.ProjectId, _options.Location, "google", _options.Model);
 
-        var prompt = $"Patient: {request.PetName ?? "Unknown"} ({request.Species ?? "Canine"})\n" +
-                     $"Consultation Dictation Transcript:\n\"\"\"{transcript}\"\"\"\n\n" +
-                     "Analyze and extract structured SOAP note JSON:";
-
-        var generateContentRequest = new GenerateContentRequest
+        var instance = new Google.Protobuf.WellKnownTypes.Value
         {
-            Model = $"projects/{_options.ProjectId}/locations/{_options.Location}/publishers/google/models/{_options.Model}",
-            SystemInstruction = new Content
+            StructValue = new Google.Protobuf.WellKnownTypes.Struct
             {
-                Parts = { new Part { Text = systemPrompt } }
-            },
-            Contents =
-            {
-                new Content
+                Fields =
                 {
-                    Role = "user",
-                    Parts = { new Part { Text = prompt } }
+                    ["prompt"] = Google.Protobuf.WellKnownTypes.Value.ForString($"{prompt}\n\nTranscript:\n{transcript}")
                 }
-            },
-            GenerationConfig = new GenerationConfig
-            {
-                Temperature = 0.1f,
-                MaxOutputTokens = 1500,
-                ResponseMimeType = "application/json"
             }
         };
 
-        var response = await _predictionClient.GenerateContentAsync(generateContentRequest, cancellationToken);
-        var textResponse = response.Candidates.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
-
-        if (string.IsNullOrWhiteSpace(textResponse)) return null;
-
-        try
+        var predictRequest = new PredictRequest
         {
-            var cleanJson = textResponse.Trim();
-            if (cleanJson.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
-            {
-                cleanJson = cleanJson[7..];
-            }
-            if (cleanJson.StartsWith("```", StringComparison.OrdinalIgnoreCase))
-            {
-                cleanJson = cleanJson[3..];
-            }
-            if (cleanJson.EndsWith("```", StringComparison.OrdinalIgnoreCase))
-            {
-                cleanJson = cleanJson[..^3];
-            }
+            EndpointAsEndpointName = endpoint,
+            Instances = { instance }
+        };
 
-            using var doc = JsonDocument.Parse(cleanJson.Trim());
-            var root = doc.RootElement;
+        var response = await _predictionClient.PredictAsync(predictRequest, cancellationToken);
+        var prediction = response.Predictions.FirstOrDefault();
+        if (prediction == null) return null;
 
-            var subjective = root.TryGetProperty("subjective", out var s) ? s.GetString() ?? "" : "";
-            var objective = root.TryGetProperty("objective", out var o) ? o.GetString() ?? "" : "";
-            var action = root.TryGetProperty("action", out var a) ? a.GetString() ?? "" : "";
-            var plan = root.TryGetProperty("plan", out var p) ? p.GetString() ?? "" : "";
-            
-            int? stiffness = root.TryGetProperty("stiffnessScore", out var st) && st.ValueKind == JsonValueKind.Number ? st.GetInt32() : null;
-            int? pain = root.TryGetProperty("painScore", out var ps) && ps.ValueKind == JsonValueKind.Number ? ps.GetInt32() : null;
-            int? lameness = root.TryGetProperty("lamenessScore", out var ls) && ls.ValueKind == JsonValueKind.Number ? ls.GetInt32() : null;
-            string? diagnosis = root.TryGetProperty("suggestedDiagnosis", out var dg) && dg.ValueKind == JsonValueKind.String ? dg.GetString() : null;
-
-            var metricsList = new List<CustomMetricDto>();
-            if (root.TryGetProperty("customMetrics", out var cm) && cm.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var item in cm.EnumerateArray())
-                {
-                    var mName = item.TryGetProperty("name", out var n) ? n.GetString() ?? "Metric" : "Metric";
-                    var mVal = item.TryGetProperty("value", out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : 0.0;
-                    var mMin = item.TryGetProperty("minScale", out var mn) && mn.ValueKind == JsonValueKind.Number ? mn.GetDouble() : 0.0;
-                    var mMax = item.TryGetProperty("maxScale", out var mx) && mx.ValueKind == JsonValueKind.Number ? mx.GetDouble() : 180.0;
-                    var mUnit = item.TryGetProperty("unitOrDescriptor", out var u) ? u.GetString() : null;
-                    metricsList.Add(new CustomMetricDto(mName, mVal, mMin, mMax, mUnit));
-                }
-            }
-
-            var terms = new List<string>();
-            if (root.TryGetProperty("extractedTerms", out var et) && et.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var term in et.EnumerateArray())
-                {
-                    if (term.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(term.GetString()))
-                    {
-                        terms.Add(term.GetString()!);
-                    }
-                }
-            }
-
-            return new StructuredSoapNoteDto(
-                subjective, objective, action, plan,
-                stiffness, pain, lameness, metricsList, diagnosis,
-                transcript, 0.95, terms);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to deserialize Vertex AI JSON output: {Json}", textResponse);
-            return null;
-        }
+        return ParseWithLocalHeuristics(transcript, request);
     }
 
-    private StructuredSoapNoteDto ParseWithLocalHeuristics(string transcript, ParseSoapNarrativeRequestDto request)
+    private static int? ExtractScore(string text, string scoreType)
     {
-        var sentences = Regex.Split(transcript, @"(?<=[.!?])\s+").Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-
-        var subjectiveBuilder = new StringBuilder();
-        var objectiveBuilder = new StringBuilder();
-        var actionBuilder = new StringBuilder();
-        var planBuilder = new StringBuilder();
-
-        int? stiffnessScore = null;
-        int? painScore = null;
-        int? lamenessScore = null;
-        var customMetrics = new List<CustomMetricDto>();
-        var detectedTerms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        // Regex patterns for scores & measurements
-        var stiffnessMatch = Regex.Match(transcript, @"stiffness\s*(?:is|was|score|at|reduced to|around)?\s*(\d{1,2})\s*(?:out of|\/|\s*\/)\s*10|\bstiffness[:\s]+(\d{1,2})\b", RegexOptions.IgnoreCase);
-        if (stiffnessMatch.Success)
+        if (scoreType.Equals("lameness", StringComparison.OrdinalIgnoreCase))
         {
-            var valStr = string.IsNullOrEmpty(stiffnessMatch.Groups[1].Value) ? stiffnessMatch.Groups[2].Value : stiffnessMatch.Groups[1].Value;
-            if (int.TryParse(valStr, out var val) && val <= 10) stiffnessScore = val;
-        }
-
-        var painMatch = Regex.Match(transcript, @"pain\s*(?:score|is|was|at|level|controlled at)?\s*(\d{1,2})\s*(?:out of|\/|\s*\/)\s*10|\bpain[:\s]+(\d{1,2})\b", RegexOptions.IgnoreCase);
-        if (painMatch.Success)
-        {
-            var valStr = string.IsNullOrEmpty(painMatch.Groups[1].Value) ? painMatch.Groups[2].Value : painMatch.Groups[1].Value;
-            if (int.TryParse(valStr, out var val) && val <= 10) painScore = val;
-        }
-
-        var lamenessMatch = Regex.Match(transcript, @"lameness\s*(?:grade|score|is|was|at)?\s*(\d{1,2})\s*(?:out of|\/|\s*\/)\s*5|\blameness[:\s]+(\d{1,2})\b", RegexOptions.IgnoreCase);
-        if (lamenessMatch.Success)
-        {
-            var valStr = string.IsNullOrEmpty(lamenessMatch.Groups[1].Value) ? lamenessMatch.Groups[2].Value : lamenessMatch.Groups[1].Value;
-            if (int.TryParse(valStr, out var val) && val <= 5) lamenessScore = val;
-        }
-
-        // Custom metrics: ROM
-        var romMatch = Regex.Match(transcript, @"(?:rom|extension|flexion|stifle|carpus|hip)\s*(?:extension|flexion|rom|measured at|at)?\s*(\d{2,3})\s*(?:deg|degrees|°)", RegexOptions.IgnoreCase);
-        if (romMatch.Success && double.TryParse(romMatch.Groups[1].Value, out var romVal))
-        {
-            customMetrics.Add(new CustomMetricDto("Stifle Extension ROM", romVal, 0, 180, "deg"));
-        }
-
-        // Custom metrics: Thigh Circumference
-        var circMatch = Regex.Match(transcript, @"(?:thigh|circumference|girth)\s*(?:is|was|measured at|at)?\s*(\d{1,3}(?:\.\d)?)\s*(?:cm|centimeters|centimetres)", RegexOptions.IgnoreCase);
-        if (circMatch.Success && double.TryParse(circMatch.Groups[1].Value, out var circVal))
-        {
-            customMetrics.Add(new CustomMetricDto("Thigh Circumference", circVal, 10, 80, "cm"));
-        }
-
-        // Match domain terms
-        foreach (var cat in Categories)
-        {
-            foreach (var term in cat.Terms)
+            var matchGrade = Regex.Match(text, @"(?:grade\s*(\d{1})|lameness\s*(?:grade|score|is|of)?\s*(\d{1}))", RegexOptions.IgnoreCase);
+            if (matchGrade.Success)
             {
-                if (transcript.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    (term.Contains('(') && transcript.Contains(term.Split('(')[0].Trim(), StringComparison.OrdinalIgnoreCase)))
-                {
-                    detectedTerms.Add(term);
-                }
+                var numStr = !string.IsNullOrEmpty(matchGrade.Groups[1].Value) ? matchGrade.Groups[1].Value : matchGrade.Groups[2].Value;
+                if (int.TryParse(numStr, out var gVal)) return Math.Clamp(gVal, 0, 5);
             }
         }
 
-        // Categorize sentences into SOAP sections based on keyword markers
-        foreach (var sentence in sentences)
+        var match = Regex.Match(text, $@"{scoreType}[^.]*?\b(\d{{1,2}})(?:\s*(?:out of|\/)\s*10)?", RegexOptions.IgnoreCase);
+        if (match.Success && int.TryParse(match.Groups[1].Value, out var val))
         {
-            var trimmed = sentence.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed)) continue;
-
-            if (Regex.IsMatch(trimmed, @"\b(owner reports|owner states|owner noticed|owner observed|at home|compliance|appetite|energy level|behavior|history)\b", RegexOptions.IgnoreCase))
-            {
-                subjectiveBuilder.AppendLine(trimmed);
-            }
-            else if (Regex.IsMatch(trimmed, @"\b(examination|on exam|palpation|gait|range of motion|rom|stiffness score|pain score|lameness grade|atrophy|tension|swelling|effusion|reflex|weight bearing|stance|symmetry)\b", RegexOptions.IgnoreCase))
-            {
-                objectiveBuilder.AppendLine(trimmed);
-            }
-            else if (Regex.IsMatch(trimmed, @"\b(treatment|treated|performed|applied|laser|uwtm|underwater treadmill|prom|massage|myofascial|cavaletti|balance disc|in-session|cryotherapy|heat pack|mobilization)\b", RegexOptions.IgnoreCase))
-            {
-                actionBuilder.AppendLine(trimmed);
-            }
-            else if (Regex.IsMatch(trimmed, @"\b(plan|recommend|continue|home program|re-evaluate|follow-up|next session|schedule|frequency|progress to|advise owner)\b", RegexOptions.IgnoreCase))
-            {
-                planBuilder.AppendLine(trimmed);
-            }
-            else
-            {
-                // General fallback: if targeted section was specified, put it there, otherwise append to Subjective or Objective
-                if (!string.IsNullOrWhiteSpace(request.TargetSection))
-                {
-                    switch (request.TargetSection.ToUpperInvariant())
-                    {
-                        case "S": subjectiveBuilder.AppendLine(trimmed); break;
-                        case "O": objectiveBuilder.AppendLine(trimmed); break;
-                        case "A": actionBuilder.AppendLine(trimmed); break;
-                        case "P": planBuilder.AppendLine(trimmed); break;
-                        default: objectiveBuilder.AppendLine(trimmed); break;
-                    }
-                }
-                else
-                {
-                    objectiveBuilder.AppendLine(trimmed);
-                }
-            }
+            return Math.Clamp(val, 0, 10);
         }
-
-        // If any section is empty, provide formatted summary of transcript if needed
-        var subj = subjectiveBuilder.ToString().Trim();
-        var obj = objectiveBuilder.ToString().Trim();
-        var act = actionBuilder.ToString().Trim();
-        var pln = planBuilder.ToString().Trim();
-
-        if (string.IsNullOrWhiteSpace(subj) && string.IsNullOrWhiteSpace(obj) && string.IsNullOrWhiteSpace(act) && string.IsNullOrWhiteSpace(pln))
-        {
-            obj = transcript;
-        }
-
-        string? suggestedDiagnosis = null;
-        if (transcript.Contains("TPLO", StringComparison.OrdinalIgnoreCase))
-            suggestedDiagnosis = "Post-operative TPLO Rehabilitation";
-        else if (transcript.Contains("cruciate", StringComparison.OrdinalIgnoreCase) || transcript.Contains("CCL", StringComparison.OrdinalIgnoreCase))
-            suggestedDiagnosis = "Cranial Cruciate Ligament (CCL) Disease";
-        else if (transcript.Contains("patellar", StringComparison.OrdinalIgnoreCase) || transcript.Contains("patella", StringComparison.OrdinalIgnoreCase))
-            suggestedDiagnosis = "Patellar Luxation Management";
-        else if (transcript.Contains("osteoarthritis", StringComparison.OrdinalIgnoreCase) || transcript.Contains("OA", StringComparison.OrdinalIgnoreCase))
-            suggestedDiagnosis = "Canine Osteoarthritis & Mobility Management";
-        else if (transcript.Contains("IVDD", StringComparison.OrdinalIgnoreCase) || transcript.Contains("disc", StringComparison.OrdinalIgnoreCase))
-            suggestedDiagnosis = "Intervertebral Disc Disease (IVDD) Conservative Rehab";
-
-        return new StructuredSoapNoteDto(
-            subj,
-            obj,
-            act,
-            pln,
-            stiffnessScore ?? 3,
-            painScore ?? 2,
-            lamenessScore ?? 1,
-            customMetrics.Count > 0 ? customMetrics : new List<CustomMetricDto>
-            {
-                new("Stifle Extension ROM", 130, 0, 180, "deg"),
-                new("Thigh Circumference", 38, 10, 80, "cm")
-            },
-            suggestedDiagnosis,
-            transcript,
-            0.88,
-            detectedTerms.ToList()
-        );
+        return null;
     }
+
+    private static IReadOnlyList<string> ExtractVocabularyTerms(string transcript)
+    {
+        var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var category in Categories)
+        {
+            foreach (var term in category.Terms)
+            {
+                if (Regex.IsMatch(transcript, $@"\b{Regex.Escape(term)}\b", RegexOptions.IgnoreCase))
+                {
+                    found.Add(term);
+                }
+            }
+        }
+        return found.ToList();
+    }
+
+    #endregion
 }

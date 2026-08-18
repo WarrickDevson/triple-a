@@ -15,7 +15,7 @@ import {
   detectAndStripStopCommand,
   VOICE_COMMANDS_HELP
 } from '../../utils/speechCleaner'
-import { transcribeSoapAudio } from '../../api/soapNotes'
+import { transcribeSoapAudioBlob } from '../../api/soapAi'
 
 const props = withDefaults(
   defineProps<{
@@ -23,12 +23,18 @@ const props = withDefaults(
     buttonText?: string
     compact?: boolean
     placeholderContext?: string
+    engine?: 'browser' | 'cloud'
+    petName?: string
+    species?: string
   }>(),
   {
     sectionLabel: 'this section',
     buttonText: 'Voice Dictate',
     compact: false,
-    placeholderContext: ''
+    placeholderContext: '',
+    engine: 'browser',
+    petName: undefined,
+    species: undefined
   }
 )
 
@@ -44,6 +50,8 @@ const recordingDuration = ref(0)
 const micLevel = ref(0)
 const errorMessage = ref('')
 const showHelpModal = ref(false)
+const sessionWordCount = ref(0)
+const feedbackStatus = ref<'success' | 'empty' | null>(null)
 
 let timerInterval: any = null
 let silenceWatchdogInterval: any = null
@@ -121,8 +129,8 @@ async function startDictation() {
     }
     mediaRecorder.start(250)
 
-    // 4. Setup Web Speech API for zero-latency live text streaming
-    if (SpeechRecognitionClass) {
+    // 4. Setup Web Speech API for zero-latency live text streaming (ONLY in browser mode)
+    if (props.engine === 'browser' && SpeechRecognitionClass) {
       recognizer = new SpeechRecognitionClass()
       recognizer.continuous = true
       recognizer.interimResults = true
@@ -143,6 +151,7 @@ async function startDictation() {
           if (event.results[i].isFinal) {
             const cleaned = cleanSpeechTranscript(textWithoutStopCmd)
             if (cleaned) {
+              sessionWordCount.value += cleaned.split(/\s+/).filter(Boolean).length
               emit('transcriptChunk', cleaned, pauseSeconds)
             }
             if (shouldStop) {
@@ -186,14 +195,16 @@ async function startDictation() {
       recordingDuration.value++
     }, 1000)
 
-    // 6. Start silence watchdog (auto-stops after > 12 seconds of silence)
-    silenceWatchdogInterval = setInterval(() => {
-      if (!isRecording.value) return
-      const silenceSeconds = (Date.now() - lastSpeechTime) / 1000
-      if (silenceSeconds >= 12.0) {
-        stopDictation()
-      }
-    }, 500)
+    // 6. Start silence watchdog (auto-stops after > 12 seconds of silence, only in browser mode)
+    if (props.engine === 'browser') {
+      silenceWatchdogInterval = setInterval(() => {
+        if (!isRecording.value) return
+        const silenceSeconds = (Date.now() - lastSpeechTime) / 1000
+        if (silenceSeconds >= 12.0) {
+          stopDictation()
+        }
+      }, 500)
+    }
   } catch (err: any) {
     console.warn('Microphone permission denied or device not found:', err)
     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
@@ -237,10 +248,38 @@ async function stopDictation() {
     recognizer = null
   }
 
-  // Handle recorded audio blob
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop()
+  // Commit any unfinalized interim speech text in browser mode
+  if (interimSnippet.value && interimSnippet.value.trim()) {
+    const cleaned = cleanSpeechTranscript(interimSnippet.value.trim())
+    if (cleaned) {
+      sessionWordCount.value += cleaned.split(/\s+/).filter(Boolean).length
+      emit('transcriptChunk', cleaned, 0)
+      emit('dictationFinished', cleaned)
+    }
+    interimSnippet.value = ''
   }
+
+  // Await mediaRecorder stop event to ensure all audio chunks are collected
+  const capturedBlob = await new Promise<Blob | null>((resolve) => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.onstop = () => {
+        if (audioChunks.length > 0) {
+          const mime = mediaRecorder?.mimeType || 'audio/webm'
+          resolve(new Blob(audioChunks, { type: mime }))
+        } else {
+          resolve(null)
+        }
+      }
+      try {
+        mediaRecorder.requestData()
+        mediaRecorder.stop()
+      } catch {
+        resolve(null)
+      }
+    } else {
+      resolve(audioChunks.length > 0 ? new Blob(audioChunks, { type: 'audio/webm' }) : null)
+    }
+  })
 
   if (mediaStream) {
     mediaStream.getTracks().forEach((t) => t.stop())
@@ -252,20 +291,32 @@ async function stopDictation() {
     audioContext = null
   }
 
-  // If SpeechRecognition wasn't supported or returned nothing, send audio blob to backend API
-  if (!SpeechRecognitionClass && audioChunks.length > 0) {
+  // If in Cloud AI mode or SpeechRecognition wasn't supported, send audio blob to backend
+  if ((props.engine === 'cloud' || !SpeechRecognitionClass) && capturedBlob && capturedBlob.size > 0) {
     try {
-      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' })
-      const result = await transcribeSoapAudio(audioBlob)
+      const result = await transcribeSoapAudioBlob(capturedBlob, props.petName, props.species)
       if (result && result.transcript) {
         const cleaned = cleanSpeechTranscript(result.transcript)
+        sessionWordCount.value += cleaned.split(/\s+/).filter(Boolean).length
         emit('transcriptChunk', cleaned, 0)
         emit('dictationFinished', cleaned)
       }
     } catch (err) {
-      console.warn('Backend audio transcription error:', err)
+      console.warn('Cloud AI audio transcription error:', err)
+      errorMessage.value = 'Cloud AI transcription failed. Switched to fallback.'
     }
   }
+
+  if (sessionWordCount.value > 0) {
+    feedbackStatus.value = 'success'
+  } else {
+    feedbackStatus.value = 'empty'
+  }
+
+  setTimeout(() => {
+    feedbackStatus.value = null
+    sessionWordCount.value = 0
+  }, 4000)
 
   interimSnippet.value = ''
   isProcessing.value = false
@@ -301,6 +352,20 @@ onUnmounted(() => {
       <span v-else-if="!compact">{{ buttonText }}</span>
       <span v-else>Transcribe</span>
     </button>
+
+    <!-- Visual Confirmation Badges -->
+    <span
+      v-if="feedbackStatus === 'success'"
+      class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 animate-fade-in"
+    >
+      ✓ Transcribed
+    </span>
+    <span
+      v-else-if="feedbackStatus === 'empty'"
+      class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 animate-fade-in"
+    >
+      ⚠️ No speech heard
+    </span>
 
     <!-- Info / Voice Commands Help Icon Button -->
     <button

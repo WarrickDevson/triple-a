@@ -12,6 +12,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("soap-notes")]
+[Route("api/soap-notes")]
 [Authorize]
 public class SoapNotesController : ControllerBase
 {
@@ -209,6 +210,29 @@ public class SoapNotesController : ControllerBase
         {
             return StatusCode(500, new { message = "Audio transcription failed.", error = ex.Message });
         }
+    }
+
+    [HttpPost("ai/polish-section")]
+    public async Task<ActionResult<PolishSoapSectionResponseDto>> PolishSection(
+        [FromBody] PolishSoapSectionRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _transcriptionService.PolishSectionAsync(request, cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Failed to polish clinical section.", error = ex.Message });
+        }
+    }
+
+    [HttpGet("ai/config-status")]
+    public ActionResult<AiConfigStatusDto> GetAiConfigStatus()
+    {
+        var status = _transcriptionService.GetAiConfigStatus();
+        return Ok(status);
     }
 
     [HttpGet("dictation/vocabulary")]

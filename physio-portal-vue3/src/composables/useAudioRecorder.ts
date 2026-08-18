@@ -30,6 +30,7 @@ export function useAudioRecorder() {
   // Web Audio Context & Analyser
   let mediaStream: MediaStream | null = null
   let mediaRecorder: MediaRecorder | null = null
+  let audioChunks: Blob[] = []
   let audioContext: AudioContext | null = null
   let analyserNode: AnalyserNode | null = null
   let animationFrameId: number | null = null
@@ -164,7 +165,7 @@ export function useAudioRecorder() {
     updateSimulated()
   }
 
-  async function startRecording() {
+  async function startRecording(enableLiveSpeech: boolean = true) {
     errorMessage.value = ''
     permissionDenied.value = false
     durationSeconds.value = 0
@@ -183,7 +184,7 @@ export function useAudioRecorder() {
       isMicrophoneAvailable.value = true
 
       // 2. MediaRecorder setup
-      const audioChunks: Blob[] = []
+      audioChunks = []
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/mp4')
@@ -198,6 +199,7 @@ export function useAudioRecorder() {
       }
       mediaRecorder.onstop = () => {
         audioBlob.value = new Blob(audioChunks, { type: mimeType })
+        if (audioUrl.value) URL.revokeObjectURL(audioUrl.value)
         audioUrl.value = URL.createObjectURL(audioBlob.value)
       }
 
@@ -207,13 +209,15 @@ export function useAudioRecorder() {
       // 3. Audio Visualizer
       startWaveformAnalyser(mediaStream)
 
-      // 4. Speech Recognition
-      setupSpeechRecognition()
-      if (speechRecognizer) {
-        try {
-          speechRecognizer.start()
-        } catch {
-          // Ignore
+      // 4. Speech Recognition (Only if browser live speech is enabled)
+      if (enableLiveSpeech) {
+        setupSpeechRecognition()
+        if (speechRecognizer) {
+          try {
+            speechRecognizer.start()
+          } catch {
+            // Ignore
+          }
         }
       }
 
@@ -268,9 +272,38 @@ export function useAudioRecorder() {
       }
     }
 
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop()
+    // Commit any remaining interim speech transcript
+    if (interimTranscript.value && interimTranscript.value.trim()) {
+      finalTranscript.value += (finalTranscript.value ? ' ' : '') + interimTranscript.value.trim()
+      interimTranscript.value = ''
+      liveTranscript.value = fullTranscript.value
     }
+
+    // Await mediaRecorder stop event to ensure all audio chunks are collected
+    const capturedBlob = await new Promise<Blob | null>((resolve) => {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.onstop = () => {
+          if (audioChunks.length > 0) {
+            const mime = mediaRecorder?.mimeType || 'audio/webm'
+            const b = new Blob(audioChunks, { type: mime })
+            audioBlob.value = b
+            if (audioUrl.value) URL.revokeObjectURL(audioUrl.value)
+            audioUrl.value = URL.createObjectURL(b)
+            resolve(b)
+          } else {
+            resolve(null)
+          }
+        }
+        try {
+          mediaRecorder.requestData()
+          mediaRecorder.stop()
+        } catch {
+          resolve(null)
+        }
+      } else {
+        resolve(audioBlob.value)
+      }
+    })
 
     if (mediaStream) {
       mediaStream.getTracks().forEach((t) => t.stop())
@@ -289,7 +322,7 @@ export function useAudioRecorder() {
     const finalResult = fullTranscript.value
     return {
       transcript: finalResult,
-      blob: audioBlob.value,
+      blob: capturedBlob || audioBlob.value,
       url: audioUrl.value
     }
   }

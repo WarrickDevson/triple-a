@@ -1,9 +1,23 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { X, Plus, Trash2, CheckCircle, Share2, Import, MessageSquareQuote, RotateCcw, Loader2 } from '@lucide/vue'
-import type { CreateSoapNoteRequest, CustomMetricItem, OwnerSubjectiveNote, SoapNote } from '../../types/soap'
+import { ref, watch, onMounted } from 'vue'
+import {
+  X,
+  Plus,
+  Trash2,
+  CheckCircle,
+  Share2,
+  Import,
+  MessageSquareQuote,
+  RotateCcw,
+  Loader2,
+  Sparkles,
+  Undo2
+} from '@lucide/vue'
+import type { CreateSoapNoteRequest, CustomMetricItem, OwnerSubjectiveNote, SoapNote, StructuredSoapNote } from '../../types/soap'
 import { fetchOwnerSubjectiveNotes, fetchSoapNotesByPet, createSoapNote, updateSoapNote } from '../../api/soapNotes'
+import { polishSoapSection, getAiConfigStatus, type AiConfigStatus } from '../../api/soapAi'
 import VoiceDictationButton from '../soap/VoiceDictationButton.vue'
+import VoiceSoapDictationModal from '../soap/VoiceSoapDictationModal.vue'
 
 const props = defineProps<{
   petId: number
@@ -20,11 +34,32 @@ const emit = defineEmits<{
 
 const activeTab = ref<'S' | 'O' | 'A' | 'P'>('S')
 
+const currentNoteId = ref<number | null>(null)
+const autoSaveStatus = ref<string>('')
+const isAutoSaving = ref(false)
+
 const sessionDate = ref<string>(new Date().toISOString().slice(0, 10))
 const subjective = ref<string>('')
 const objective = ref<string>('')
 const action = ref<string>('')
 const plan = ref<string>('')
+
+// Built-in editable scores
+const stiffnessScore = ref<number | null>(3)
+const painScore = ref<number | null>(2)
+const lamenessScore = ref<number | null>(1)
+
+// Dynamic extensible custom metrics
+const customMetrics = ref<CustomMetricItem[]>([
+  { name: 'Stifle Extension ROM', value: 130, minScale: 0, maxScale: 180, unitOrDescriptor: 'deg' },
+  { name: 'Thigh Circumference', value: 38, minScale: 10, maxScale: 80, unitOrDescriptor: 'cm' },
+])
+
+const shareWithOwner = ref(true)
+const updateDiagnosis = ref(false)
+const diagnosisText = ref('')
+const submitting = ref(false)
+const errorMessage = ref('')
 
 const ownerNotes = ref<OwnerSubjectiveNote[]>([])
 const loadingOwnerNotes = ref(false)
@@ -101,35 +136,6 @@ function importOwnerNote(note: OwnerSubjectiveNote) {
   }
 }
 
-import { formatPausePunctuation } from '../../utils/speechCleaner'
-
-function handleSubjectiveDictationChunk(chunk: string, pauseSeconds: number = 0) {
-  subjective.value = formatPausePunctuation(subjective.value, chunk, pauseSeconds)
-}
-
-function handleObjectiveDictationChunk(chunk: string, pauseSeconds: number = 0) {
-  objective.value = formatPausePunctuation(objective.value, chunk, pauseSeconds)
-}
-
-function handleActionDictationChunk(chunk: string, pauseSeconds: number = 0) {
-  action.value = formatPausePunctuation(action.value, chunk, pauseSeconds)
-}
-
-function handlePlanDictationChunk(chunk: string, pauseSeconds: number = 0) {
-  plan.value = formatPausePunctuation(plan.value, chunk, pauseSeconds)
-}
-
-// Built-in editable scores
-const stiffnessScore = ref<number | null>(3)
-const painScore = ref<number | null>(2)
-const lamenessScore = ref<number | null>(1)
-
-// Dynamic extensible custom metrics
-const customMetrics = ref<CustomMetricItem[]>([
-  { name: 'Stifle Extension ROM', value: 130, minScale: 0, maxScale: 180, unitOrDescriptor: 'deg' },
-  { name: 'Thigh Circumference', value: 38, minScale: 10, maxScale: 80, unitOrDescriptor: 'cm' },
-])
-
 const newMetricName = ref('')
 const newMetricValue = ref<number>(0)
 const newMetricMin = ref<number>(0)
@@ -178,13 +184,6 @@ function insertPlanToPlan(item: { name: string; frequency: string }) {
   }
 }
 
-const updateDiagnosis = ref(false)
-const diagnosisText = ref('')
-const shareWithOwner = ref(true)
-
-const submitting = ref(false)
-const errorMessage = ref('')
-
 function addCustomMetric() {
   if (!newMetricName.value.trim()) return
   customMetrics.value.push({
@@ -204,9 +203,177 @@ function removeCustomMetric(index: number) {
   customMetrics.value.splice(index, 1)
 }
 
-const currentNoteId = ref<number | null>(null)
-const isAutoSaving = ref(false)
-const autoSaveStatus = ref('')
+function formatPausePunctuation(existing: string, chunk: string, pauseSeconds: number = 0): string {
+  const trimmed = chunk.trim()
+  if (!trimmed) return existing
+  if (!existing.trim()) {
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+  }
+  if (pauseSeconds >= 2.0 && !/[.!?]$/.test(existing.trim())) {
+    return `${existing.trim()}. ${trimmed.charAt(0).toUpperCase() + trimmed.slice(1)}`
+  }
+  return `${existing.trim()} ${trimmed}`
+}
+
+function handleSubjectiveDictationChunk(chunk: string, pauseSeconds: number = 0) {
+  subjective.value = formatPausePunctuation(subjective.value, chunk, pauseSeconds)
+  autoSaveNote()
+}
+
+function handleObjectiveDictationChunk(chunk: string, pauseSeconds: number = 0) {
+  objective.value = formatPausePunctuation(objective.value, chunk, pauseSeconds)
+  autoSaveNote()
+}
+
+function handleActionDictationChunk(chunk: string, pauseSeconds: number = 0) {
+  action.value = formatPausePunctuation(action.value, chunk, pauseSeconds)
+  autoSaveNote()
+}
+
+function handlePlanDictationChunk(chunk: string, pauseSeconds: number = 0) {
+  plan.value = formatPausePunctuation(plan.value, chunk, pauseSeconds)
+  autoSaveNote()
+}
+
+const transcriptionEngine = ref<'browser' | 'cloud'>('browser')
+const aiConfig = ref<AiConfigStatus | null>(null)
+const polishingSection = ref<string | null>(null)
+const sectionHistory = ref<Record<string, string>>({})
+const lastCorrections = ref<Record<string, string[]>>({})
+
+async function checkAiConfig() {
+  aiConfig.value = await getAiConfigStatus()
+}
+
+onMounted(() => {
+  checkAiConfig()
+  const savedEngine = localStorage.getItem('movewell_dictation_engine')
+  if (savedEngine === 'cloud' || savedEngine === 'browser') {
+    transcriptionEngine.value = savedEngine
+  }
+})
+
+function setTranscriptionEngine(engine: 'browser' | 'cloud') {
+  transcriptionEngine.value = engine
+  localStorage.setItem('movewell_dictation_engine', engine)
+}
+
+async function handlePolishSection(sectionKey: 'Subjective' | 'Objective' | 'Action' | 'Plan' | 'Diagnosis') {
+  let targetRef = subjective
+  if (sectionKey === 'Objective') targetRef = objective
+  else if (sectionKey === 'Action') targetRef = action
+  else if (sectionKey === 'Plan') targetRef = plan
+  else if (sectionKey === 'Diagnosis') targetRef = diagnosisText
+
+  const currentVal = targetRef.value.trim()
+  if (!currentVal) return
+
+  // Save current text for 1-click undo/revert
+  sectionHistory.value[sectionKey] = currentVal
+  polishingSection.value = sectionKey
+
+  try {
+    const res = await polishSoapSection({
+      sectionName: sectionKey,
+      rawText: currentVal,
+      petName: props.petName,
+      species: 'Canine',
+      condition: diagnosisText.value || 'Rehab Assessment'
+    })
+
+    if (res && res.polishedText) {
+      targetRef.value = res.polishedText
+      if (res.correctionsMade && res.correctionsMade.length > 0) {
+        lastCorrections.value[sectionKey] = res.correctionsMade
+      }
+      autoSaveNote()
+    }
+  } catch (err) {
+    console.warn('AI Polish failed:', err)
+  } finally {
+    polishingSection.value = null
+  }
+}
+
+function revertPolishedSection(sectionKey: string) {
+  if (sectionHistory.value[sectionKey]) {
+    if (sectionKey === 'Subjective') subjective.value = sectionHistory.value[sectionKey]
+    else if (sectionKey === 'Objective') objective.value = sectionHistory.value[sectionKey]
+    else if (sectionKey === 'Action') action.value = sectionHistory.value[sectionKey]
+    else if (sectionKey === 'Plan') plan.value = sectionHistory.value[sectionKey]
+    else if (sectionKey === 'Diagnosis') diagnosisText.value = sectionHistory.value[sectionKey]
+
+    delete sectionHistory.value[sectionKey]
+    delete lastCorrections.value[sectionKey]
+    autoSaveNote()
+  }
+}
+
+const showVoiceDictationModal = ref(false)
+
+function handleApplyStructuredNote(note: StructuredSoapNote, mode: 'replace' | 'append') {
+  if (mode === 'replace') {
+    if (note.subjective) subjective.value = note.subjective
+    if (note.objective) objective.value = note.objective
+    if (note.action) action.value = note.action
+    if (note.plan) plan.value = note.plan
+    if (note.painScore !== null && note.painScore !== undefined) painScore.value = note.painScore
+    if (note.stiffnessScore !== null && note.stiffnessScore !== undefined) stiffnessScore.value = note.stiffnessScore
+    if (note.lamenessScore !== null && note.lamenessScore !== undefined) lamenessScore.value = note.lamenessScore
+    if (note.suggestedDiagnosis) {
+      updateDiagnosis.value = true
+      diagnosisText.value = note.suggestedDiagnosis
+    }
+    if (note.customMetrics && note.customMetrics.length > 0) {
+      customMetrics.value = note.customMetrics.map(cm => ({
+        name: cm.name,
+        value: cm.value,
+        minScale: cm.minScale ?? 0,
+        maxScale: cm.maxScale ?? 180,
+        unitOrDescriptor: cm.unitOrDescriptor
+      }))
+    }
+  } else {
+    // Append mode
+    if (note.subjective) subjective.value = (subjective.value ? subjective.value + '\n\n' : '') + note.subjective
+    if (note.objective) objective.value = (objective.value ? objective.value + '\n\n' : '') + note.objective
+    if (note.action) action.value = (action.value ? action.value + '\n\n' : '') + note.action
+    if (note.plan) plan.value = (plan.value ? plan.value + '\n\n' : '') + note.plan
+    if (note.painScore !== null && note.painScore !== undefined) painScore.value = note.painScore
+    if (note.stiffnessScore !== null && note.stiffnessScore !== undefined) stiffnessScore.value = note.stiffnessScore
+    if (note.lamenessScore !== null && note.lamenessScore !== undefined) lamenessScore.value = note.lamenessScore
+    if (note.suggestedDiagnosis) {
+      updateDiagnosis.value = true
+      diagnosisText.value = note.suggestedDiagnosis
+    }
+  }
+
+  // Trigger auto-save immediately to persist generated structure
+  autoSaveNote()
+}
+
+function handleInsertRawTranscript(rawText: string, targetSection: 'Subjective' | 'Objective' | 'Action' | 'Plan' | 'All') {
+  if (!rawText.trim()) return
+
+  if (targetSection === 'Subjective') {
+    subjective.value = (subjective.value ? subjective.value + '\n\n' : '') + rawText
+    switchTab('S')
+  } else if (targetSection === 'Objective') {
+    objective.value = (objective.value ? objective.value + '\n\n' : '') + rawText
+    switchTab('O')
+  } else if (targetSection === 'Action') {
+    action.value = (action.value ? action.value + '\n\n' : '') + rawText
+    switchTab('A')
+  } else if (targetSection === 'Plan') {
+    plan.value = (plan.value ? plan.value + '\n\n' : '') + rawText
+    switchTab('P')
+  } else if (targetSection === 'All') {
+    subjective.value = (subjective.value ? subjective.value + '\n\n' : '') + rawText
+    switchTab('S')
+  }
+
+  autoSaveNote()
+}
 
 function switchTab(tab: 'S' | 'O' | 'A' | 'P') {
   if (activeTab.value !== tab) {
@@ -327,13 +494,38 @@ async function handleSubmit() {
           </div>
           <p class="text-xs text-neutral-muted">Patient: {{ petName }} · Date: {{ sessionDate }}</p>
         </div>
-        <button
-          type="button"
-          class="rounded-lg p-1.5 text-neutral-muted hover:bg-neutral-grey/50 hover:text-navy"
-          @click="emit('close')"
-        >
-          <X class="h-5 w-5" />
-        </button>
+
+        <div class="flex items-center gap-3">
+          <!-- Transcription Engine Mode Toggle -->
+          <div class="flex items-center gap-1 rounded-xl border border-neutral-grey/80 bg-neutral-grey/20 p-0.5 text-[11px]">
+            <button
+              type="button"
+              class="rounded-lg px-2.5 py-1 font-bold transition-all"
+              :class="transcriptionEngine === 'browser' ? 'bg-surface text-navy shadow-xs' : 'text-neutral-muted hover:text-navy'"
+              title="Instant zero-latency in-browser speech recognition ($0 Cost)"
+              @click="setTranscriptionEngine('browser')"
+            >
+              ⚡ Browser STT
+            </button>
+            <button
+              type="button"
+              class="rounded-lg px-2.5 py-1 font-bold transition-all"
+              :class="transcriptionEngine === 'cloud' ? 'bg-surface text-navy shadow-xs' : 'text-neutral-muted hover:text-navy'"
+              title="High-precision Cloud AI Audio transcription (Gemini)"
+              @click="setTranscriptionEngine('cloud')"
+            >
+              ☁️ Cloud AI Audio
+            </button>
+          </div>
+
+          <button
+            type="button"
+            class="rounded-lg p-1.5 text-neutral-muted hover:bg-neutral-grey/50 hover:text-navy"
+            @click="emit('close')"
+          >
+            <X class="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       <!-- SOAP Tabs -->
@@ -393,6 +585,17 @@ async function handleSubmit() {
           <span class="rounded bg-white/20 px-1.5 py-0.5 text-[10px]">P</span>
           Plan & Follow-up
         </button>
+
+        <!-- Full Session AI Dictation Master Button -->
+        <button
+          type="button"
+          class="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700 hover:bg-purple-100 shadow-xs transition-all hover:scale-105 active:scale-95"
+          title="Record or paste a full consultation session to auto-categorize into Subjective, Objective, Action, Plan, and Scores with Gemini AI"
+          @click="showVoiceDictationModal = true"
+        >
+          <Sparkles class="h-3.5 w-3.5 text-purple-600 animate-pulse" />
+          <span>🎙️ Full Session AI Dictate</span>
+        </button>
       </div>
 
       <!-- Tab Contents -->
@@ -447,6 +650,28 @@ async function handleSubmit() {
               </label>
               <div class="flex items-center gap-1.5">
                 <button
+                  v-if="subjective.trim()"
+                  type="button"
+                  :disabled="polishingSection === 'Subjective'"
+                  class="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2 py-1 text-xs font-bold text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all disabled:opacity-50"
+                  title="Contextually correct medical terms and polish notes with AI"
+                  @click="handlePolishSection('Subjective')"
+                >
+                  <Loader2 v-if="polishingSection === 'Subjective'" class="h-3 w-3 animate-spin text-purple-600" />
+                  <Sparkles v-else class="h-3 w-3 text-purple-600" />
+                  {{ polishingSection === 'Subjective' ? 'Polishing...' : 'AI Polish' }}
+                </button>
+                <button
+                  v-if="sectionHistory['Subjective']"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-1.5 py-1 text-[11px] font-semibold text-neutral-muted hover:text-navy"
+                  title="Revert back to pre-polished text"
+                  @click="revertPolishedSection('Subjective')"
+                >
+                  <Undo2 class="h-3 w-3" />
+                  Revert
+                </button>
+                <button
                   v-if="subjective"
                   type="button"
                   class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-2 py-1 text-xs text-neutral-muted hover:border-danger-red/40 hover:bg-danger-red/10 hover:text-danger-red transition-all"
@@ -459,6 +684,9 @@ async function handleSubmit() {
                 <VoiceDictationButton
                   section-label="Subjective"
                   button-text="Dictate Subjective"
+                  :engine="transcriptionEngine"
+                  :pet-name="petName"
+                  species="Canine"
                   @transcript-chunk="handleSubjectiveDictationChunk"
                   @dictation-finished="autoSaveNote"
                 />
@@ -467,6 +695,15 @@ async function handleSubmit() {
             <p class="mt-0.5 text-[11px] text-neutral-muted">
               Record changes reported by the owner, home exercise compliance, energy/appetite levels, and any concerns.
             </p>
+            <div v-if="lastCorrections['Subjective']" class="mt-1 flex flex-wrap gap-1">
+              <span
+                v-for="corr in lastCorrections['Subjective']"
+                :key="corr"
+                class="inline-flex items-center gap-1 rounded-md bg-purple-100/70 px-1.5 py-0.5 text-[10px] font-semibold text-purple-800"
+              >
+                ✨ {{ corr }}
+              </span>
+            </div>
             <textarea
               v-model="subjective"
               rows="5"
@@ -492,6 +729,28 @@ async function handleSubmit() {
               <label class="block text-xs font-semibold text-navy">Objective Examination Notes</label>
               <div class="flex items-center gap-1.5">
                 <button
+                  v-if="objective.trim()"
+                  type="button"
+                  :disabled="polishingSection === 'Objective'"
+                  class="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2 py-1 text-xs font-bold text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all disabled:opacity-50"
+                  title="Contextually correct medical terms and polish notes with AI"
+                  @click="handlePolishSection('Objective')"
+                >
+                  <Loader2 v-if="polishingSection === 'Objective'" class="h-3 w-3 animate-spin text-purple-600" />
+                  <Sparkles v-else class="h-3 w-3 text-purple-600" />
+                  {{ polishingSection === 'Objective' ? 'Polishing...' : 'AI Polish' }}
+                </button>
+                <button
+                  v-if="sectionHistory['Objective']"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-1.5 py-1 text-[11px] font-semibold text-neutral-muted hover:text-navy"
+                  title="Revert back to pre-polished text"
+                  @click="revertPolishedSection('Objective')"
+                >
+                  <Undo2 class="h-3 w-3" />
+                  Revert
+                </button>
+                <button
                   v-if="objective"
                   type="button"
                   class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-2 py-1 text-xs text-neutral-muted hover:border-danger-red/40 hover:bg-danger-red/10 hover:text-danger-red transition-all"
@@ -504,10 +763,22 @@ async function handleSubmit() {
                 <VoiceDictationButton
                   section-label="Objective"
                   button-text="Dictate Objective"
+                  :engine="transcriptionEngine"
+                  :pet-name="petName"
+                  species="Canine"
                   @transcript-chunk="handleObjectiveDictationChunk"
                   @dictation-finished="autoSaveNote"
                 />
               </div>
+            </div>
+            <div v-if="lastCorrections['Objective']" class="mt-1 flex flex-wrap gap-1">
+              <span
+                v-for="corr in lastCorrections['Objective']"
+                :key="corr"
+                class="inline-flex items-center gap-1 rounded-md bg-purple-100/70 px-1.5 py-0.5 text-[10px] font-semibold text-purple-800"
+              >
+                ✨ {{ corr }}
+              </span>
             </div>
             <textarea
               v-model="objective"
@@ -681,6 +952,28 @@ async function handleSubmit() {
               </label>
               <div class="flex items-center gap-1.5">
                 <button
+                  v-if="action.trim()"
+                  type="button"
+                  :disabled="polishingSection === 'Action'"
+                  class="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2 py-1 text-xs font-bold text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all disabled:opacity-50"
+                  title="Contextually correct medical terms and polish notes with AI"
+                  @click="handlePolishSection('Action')"
+                >
+                  <Loader2 v-if="polishingSection === 'Action'" class="h-3 w-3 animate-spin text-purple-600" />
+                  <Sparkles v-else class="h-3 w-3 text-purple-600" />
+                  {{ polishingSection === 'Action' ? 'Polishing...' : 'AI Polish' }}
+                </button>
+                <button
+                  v-if="sectionHistory['Action']"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-1.5 py-1 text-[11px] font-semibold text-neutral-muted hover:text-navy"
+                  title="Revert back to pre-polished text"
+                  @click="revertPolishedSection('Action')"
+                >
+                  <Undo2 class="h-3 w-3" />
+                  Revert
+                </button>
+                <button
                   v-if="action"
                   type="button"
                   class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-2 py-1 text-xs text-neutral-muted hover:border-danger-red/40 hover:bg-danger-red/10 hover:text-danger-red transition-all"
@@ -693,6 +986,9 @@ async function handleSubmit() {
                 <VoiceDictationButton
                   section-label="Action"
                   button-text="Dictate Action"
+                  :engine="transcriptionEngine"
+                  :pet-name="petName"
+                  species="Canine"
                   @transcript-chunk="handleActionDictationChunk"
                   @dictation-finished="autoSaveNote"
                 />
@@ -701,6 +997,15 @@ async function handleSubmit() {
             <p class="mt-0.5 text-[11px] text-neutral-muted">
               Document manual therapies, laser/hydro treatments, specific areas treated, and in-session exercise reps.
             </p>
+            <div v-if="lastCorrections['Action']" class="mt-1 flex flex-wrap gap-1">
+              <span
+                v-for="corr in lastCorrections['Action']"
+                :key="corr"
+                class="inline-flex items-center gap-1 rounded-md bg-purple-100/70 px-1.5 py-0.5 text-[10px] font-semibold text-purple-800"
+              >
+                ✨ {{ corr }}
+              </span>
+            </div>
             <textarea
               v-model="action"
               rows="5"
@@ -740,6 +1045,28 @@ async function handleSubmit() {
               </label>
               <div class="flex items-center gap-1.5">
                 <button
+                  v-if="plan.trim()"
+                  type="button"
+                  :disabled="polishingSection === 'Plan'"
+                  class="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2 py-1 text-xs font-bold text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all disabled:opacity-50"
+                  title="Contextually correct medical terms and polish notes with AI"
+                  @click="handlePolishSection('Plan')"
+                >
+                  <Loader2 v-if="polishingSection === 'Plan'" class="h-3 w-3 animate-spin text-purple-600" />
+                  <Sparkles v-else class="h-3 w-3 text-purple-600" />
+                  {{ polishingSection === 'Plan' ? 'Polishing...' : 'AI Polish' }}
+                </button>
+                <button
+                  v-if="sectionHistory['Plan']"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-1.5 py-1 text-[11px] font-semibold text-neutral-muted hover:text-navy"
+                  title="Revert back to pre-polished text"
+                  @click="revertPolishedSection('Plan')"
+                >
+                  <Undo2 class="h-3 w-3" />
+                  Revert
+                </button>
+                <button
                   v-if="plan"
                   type="button"
                   class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-2 py-1 text-xs text-neutral-muted hover:border-danger-red/40 hover:bg-danger-red/10 hover:text-danger-red transition-all"
@@ -752,10 +1079,22 @@ async function handleSubmit() {
                 <VoiceDictationButton
                   section-label="Plan"
                   button-text="Dictate Plan"
+                  :engine="transcriptionEngine"
+                  :pet-name="petName"
+                  species="Canine"
                   @transcript-chunk="handlePlanDictationChunk"
                   @dictation-finished="autoSaveNote"
                 />
               </div>
+            </div>
+            <div v-if="lastCorrections['Plan']" class="mt-1 flex flex-wrap gap-1">
+              <span
+                v-for="corr in lastCorrections['Plan']"
+                :key="corr"
+                class="inline-flex items-center gap-1 rounded-md bg-purple-100/70 px-1.5 py-0.5 text-[10px] font-semibold text-purple-800"
+              >
+                ✨ {{ corr }}
+              </span>
             </div>
             <textarea
               v-model="plan"
@@ -774,6 +1113,18 @@ async function handleSubmit() {
               </label>
               <div class="flex items-center gap-1.5">
                 <button
+                  v-if="updateDiagnosis && diagnosisText.trim()"
+                  type="button"
+                  :disabled="polishingSection === 'Diagnosis'"
+                  class="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2 py-1 text-xs font-bold text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-all disabled:opacity-50"
+                  title="Contextually correct medical terms and polish diagnosis with AI"
+                  @click="handlePolishSection('Diagnosis')"
+                >
+                  <Loader2 v-if="polishingSection === 'Diagnosis'" class="h-3 w-3 animate-spin text-purple-600" />
+                  <Sparkles v-else class="h-3 w-3 text-purple-600" />
+                  AI Polish
+                </button>
+                <button
                   v-if="updateDiagnosis && diagnosisText"
                   type="button"
                   class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-surface px-2 py-1 text-xs text-neutral-muted hover:border-danger-red/40 hover:bg-danger-red/10 hover:text-danger-red transition-all"
@@ -788,6 +1139,9 @@ async function handleSubmit() {
                   section-label="Diagnosis"
                   button-text="Dictate Diagnosis"
                   :compact="true"
+                  :engine="transcriptionEngine"
+                  :pet-name="petName"
+                  species="Canine"
                   @transcript-chunk="(chunk, pause) => diagnosisText = formatPausePunctuation(diagnosisText, chunk, pause)"
                   @dictation-finished="autoSaveNote"
                 />
@@ -855,6 +1209,17 @@ async function handleSubmit() {
           </div>
         </div>
       </form>
+
+      <!-- Full Session AI Dictation Modal -->
+      <VoiceSoapDictationModal
+        :is-open="showVoiceDictationModal"
+        :pet-id="petId"
+        :pet-name="petName"
+        species="Canine"
+        @close="showVoiceDictationModal = false"
+        @apply-structured-note="handleApplyStructuredNote"
+        @insert-raw-transcript="handleInsertRawTranscript"
+      />
     </div>
   </div>
 </template>

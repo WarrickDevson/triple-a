@@ -11,6 +11,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("messages")]
+[Route("api/messages")]
 [Authorize]
 public class MessagesController : ControllerBase
 {

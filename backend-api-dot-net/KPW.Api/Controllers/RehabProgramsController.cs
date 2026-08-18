@@ -11,6 +11,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("rehab-programs")]
+[Route("api/rehab-programs")]
 [Authorize]
 public class RehabProgramsController : ControllerBase
 {

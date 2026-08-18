@@ -5,6 +5,7 @@ export const VETERINARY_AUTO_CORRECTIONS: Record<string, string> = {
   't p l o': 'TPLO',
   't-p-l-o': 'TPLO',
   't play lo': 'TPLO',
+  'tea blow': 'TPLO',
   'pro m': 'PROM',
   'p r o m': 'PROM',
   'p-r-o-m': 'PROM',
@@ -12,27 +13,21 @@ export const VETERINARY_AUTO_CORRECTIONS: Record<string, string> = {
   'a r o m': 'AROM',
   'u w t m': 'UWTM',
   'under water treadmill': 'underwater treadmill (UWTM)',
-  'stiff all': 'stifle',
   'stiffle': 'stifle',
   'stiff-el': 'stifle',
+  'stiffel': 'stifle',
   'ccl': 'CCL',
   'c-c-l': 'CCL',
-  'cranial cruciate': 'cranial cruciate ligament (CCL)',
   'patella lux': 'patellar luxation',
   'luxating patella': 'patellar luxation',
   'coxofemoral': 'coxofemoral',
-  'iliopsoas': 'iliopsoas',
+  'ill you so as': 'iliopsoas',
   'ilio psoas': 'iliopsoas',
   'ivdd': 'IVDD',
   'i v d d': 'IVDD',
-  'disc disease': 'intervertebral disc disease (IVDD)',
-  'osteoarthritis': 'osteoarthritis (OA)',
-  'oa': 'OA',
-  'cavaletti': 'Cavaletti rails',
-  'cavaleties': 'Cavaletti rails',
   'airex': 'Airex balance disc',
   'proprioception': 'proprioception',
-  'photobiomodulation': 'photobiomodulation (laser therapy)',
+  'for jewels': '4 J/cm²',
   'joules per centimeter': 'J/cm²',
   'joules per cm squared': 'J/cm²',
   'joules per cm2': 'J/cm²',
@@ -99,6 +94,15 @@ export function correctVeterinaryTranscript(text: string): string {
     const regex = new RegExp(`\\b${misheard.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi')
     result = result.replace(regex, corrected)
   }
+
+  // Domain-specific smart normalization (avoiding duplicate appended suffixes)
+  result = result.replace(/\b(cavaletti\s+rails?|cavaletti)\b/gi, 'Cavaletti rails')
+  result = result.replace(/\b(osteoarthritis\s*\(OA\)|osteoarthritis)\b/gi, 'osteoarthritis (OA)')
+  result = result.replace(/\b(underwater\s+treadmill\s*\(UWTM\)|underwater\s+treadmill|under\s+water\s+treadmill)\b/gi, 'underwater treadmill (UWTM)')
+  result = result.replace(/\b(photobiomodulation\s*\(laser\s+therapy\)|photobiomodulation)\b/gi, 'photobiomodulation (laser therapy)')
+  result = result.replace(/\b(cranial\s+cruciate\s+ligament\s*\(CCL\)|cranial\s+cruciate\s+ligament|cranial\s+cruciate)\b/gi, 'cranial cruciate ligament (CCL)')
+  result = result.replace(/\b(intervertebral\s+disc\s+disease\s*\(IVDD\)|disc\s+disease)\b/gi, 'intervertebral disc disease (IVDD)')
+
   return result
 }
 

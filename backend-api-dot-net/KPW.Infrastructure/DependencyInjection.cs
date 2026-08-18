@@ -41,7 +41,17 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
+            options.UseSqlServer(
+                configuration.GetConnectionString("DefaultConnection"),
+                sqlOptions =>
+                {
+                    sqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorNumbersToAdd: null);
+                    sqlOptions.CommandTimeout(60);
+                });
+            options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
             options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 
@@ -84,16 +94,17 @@ public static class DependencyInjection
             services.AddSingleton<IAiChatService, LocalAiChatService>();
         }
 
-        services.AddSingleton<ISoapVoiceTranscriptionService, SoapVoiceTranscriptionService>();
+        services.AddHttpClient<ISoapVoiceTranscriptionService, SoapVoiceTranscriptionService>();
     }
 }
 
 public class AiOptions
 {
     public const string SectionName = "Ai";
-    public string Provider { get; set; } = "Local";
+    public string Provider { get; set; } = "Gemini";
+    public string ApiKey { get; set; } = string.Empty;
     public string ProjectId { get; set; } = string.Empty;
     public string Location { get; set; } = "us-central1";
-    public string Model { get; set; } = "gemini-2.5-flash";
+    public string Model { get; set; } = "gemini-2.0-flash";
     public bool UseEducationChunks { get; set; } = false;
 }

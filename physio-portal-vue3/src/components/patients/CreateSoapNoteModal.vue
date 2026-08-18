@@ -40,6 +40,10 @@ const emit = defineEmits<{
 const activeTab = ref<'S' | 'O' | 'A' | 'P'>('S')
 const voiceSessionStore = useVoiceSessionStore()
 
+function switchTab(tab: 'S' | 'O' | 'A' | 'P') {
+  activeTab.value = tab
+}
+
 const currentNoteId = ref<number | null>(null)
 const autoSaveStatus = ref<string>('')
 const isAutoSaving = ref(false)
@@ -401,13 +405,6 @@ function handleApplyStructuredNote(note: StructuredSoapNote, mode: 'replace' | '
   autoSaveNote()
 }
 
-function switchTab(tab: 'S' | 'O' | 'A' | 'P' | 'RAW') {
-  if (props.petId && (subjective.value.trim() || objective.value.trim() || action.value.trim() || plan.value.trim() || rawTranscript.value.trim())) {
-    autoSaveNote()
-  }
-  activeTab.value = tab
-}
-
 async function handleReSummarizeFromRaw() {
   if (!rawTranscript.value.trim()) return
   isReSummarizing.value = true
@@ -502,12 +499,10 @@ async function autoSaveNote() {
     }
 
     if (currentNoteId.value) {
-      const updated = await updateSoapNote(currentNoteId.value, payload)
-      emit('updated', currentNoteId.value, updated)
+      await updateSoapNote(currentNoteId.value, payload)
     } else {
       const created = await createSoapNote(props.petId, payload)
       currentNoteId.value = created.soapNoteId
-      emit('created', created)
     }
 
     const now = new Date()

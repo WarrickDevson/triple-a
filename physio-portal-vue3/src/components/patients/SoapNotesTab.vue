@@ -51,30 +51,20 @@ async function loadNotes() {
   }
 }
 
-async function handleNoteCreated(payload: any) {
-  try {
-    const created = await createSoapNote(props.petId, payload)
-    notes.value.unshift(created)
-    expandedNoteId.value = created.soapNoteId
-    showCreateModal.value = false
-  } catch (err) {
-    console.error('Failed to create SOAP note', err)
-  }
+function handleNoteCreated(created: any) {
+  notes.value.unshift(created)
+  expandedNoteId.value = created.soapNoteId
+  showCreateModal.value = false
+  editingNote.value = null
 }
 
-async function handleNoteUpdated(soapNoteId: number, payload: any) {
-  try {
-    const updated = await updateSoapNote(soapNoteId, payload)
-    const idx = notes.value.findIndex(n => n.soapNoteId === soapNoteId)
-    if (idx !== -1) {
-      notes.value[idx] = updated
-    }
-    showCreateModal.value = false
-    editingNote.value = null
-  } catch (err) {
-    console.error('Failed to update SOAP note', err)
-    alert('Could not update SOAP note.')
+function handleNoteUpdated(soapNoteId: number, updated: any) {
+  const idx = notes.value.findIndex(n => n.soapNoteId === soapNoteId)
+  if (idx !== -1) {
+    notes.value[idx] = updated
   }
+  showCreateModal.value = false
+  editingNote.value = null
 }
 
 async function handleDeleteNote(soapNoteId: number) {

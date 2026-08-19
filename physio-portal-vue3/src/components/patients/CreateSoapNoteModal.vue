@@ -1391,7 +1391,7 @@ async function handleSubmit() {
         <div class="flex items-center justify-between border-t border-neutral-grey/80 pt-4">
           <div class="flex gap-2">
             <button
-              v-if="activeTab !== 'S' && activeTab !== 'RAW'"
+              v-if="activeTab !== 'S'"
               type="button"
               class="rounded-xl border border-neutral-grey/80 px-4 py-2 text-xs font-bold text-navy hover:bg-neutral-grey/40"
               @click="switchTab(activeTab === 'AUDIO' ? 'P' : activeTab === 'P' ? 'A' : activeTab === 'A' ? 'O' : 'S')"

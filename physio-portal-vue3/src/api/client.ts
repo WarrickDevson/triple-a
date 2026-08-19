@@ -45,7 +45,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && refreshToken && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true
       try {
-        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+        const { data } = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
           refreshToken,
         })
         setAuthTokens(data.accessToken, data.refreshToken)

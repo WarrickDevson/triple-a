@@ -27,7 +27,7 @@ export interface AiConfigStatus {
  * Sends rough draft or dictated clinical text to AI for contextual medical correction & structuring.
  */
 export async function polishSoapSection(payload: PolishSoapSectionRequest): Promise<PolishSoapSectionResponse> {
-  const { data } = await apiClient.post<PolishSoapSectionResponse>('/soap-notes/ai/polish-section', payload)
+  const { data } = await apiClient.post<PolishSoapSectionResponse>('/api/soap-notes/ai/polish-section', payload)
   return data
 }
 
@@ -44,7 +44,7 @@ export async function transcribeSoapAudioBlob(
   if (petName) formData.append('petName', petName)
   if (species) formData.append('species', species)
 
-  const { data } = await apiClient.post('/soap-notes/dictation/transcribe-audio', formData, {
+  const { data } = await apiClient.post('/api/soap-notes/dictation/transcribe-audio', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
   return data
@@ -66,7 +66,7 @@ export async function processSessionAudioBlob(
   if (petId) formData.append('petId', petId.toString())
 
   const { data } = await apiClient.post<import('../types/soap').ProcessSessionAudioResponse>(
-    '/soap-notes/dictation/process-session-audio',
+    '/api/soap-notes/dictation/process-session-audio',
     formData,
     {
       headers: { 'Content-Type': 'multipart/form-data' }
@@ -80,7 +80,7 @@ export async function processSessionAudioBlob(
  */
 export async function getAiConfigStatus(): Promise<AiConfigStatus> {
   try {
-    const { data } = await apiClient.get<AiConfigStatus>('/soap-notes/ai/config-status')
+    const { data } = await apiClient.get<AiConfigStatus>('/api/soap-notes/ai/config-status')
     return data
   } catch {
     return {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/config/app_config.dart';
 import '../models/pet.dart';
 import '../providers/shared_reports_provider.dart';
 
@@ -24,7 +25,8 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
 
   void _openPdfReport(int? soapNoteId) async {
     if (soapNoteId == null) return;
-    final Uri url = Uri.parse('/api/soap-notes/$soapNoteId/pdf');
+    final baseUrl = AppConfig.fromEnvironment().apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
+    final Uri url = Uri.parse('$baseUrl/api/soap-notes/$soapNoteId/pdf');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {

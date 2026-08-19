@@ -114,17 +114,17 @@ public class AdminController : ControllerBase
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2>Account Approved!</h2>
                 <p>Hello {physio.FirstName},</p>
-                <p>Great news! Your MoveWell Physiotherapist account has been approved by our administration team.</p>
+                <p>Great news! Your Triple A Physiotherapist account has been approved by our administration team.</p>
                 {verificationBlock}
                 <p style="margin: 24px 0;">
-                    <a href="{loginUrl}" style="background-color: #10b981; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Log Into MoveWell Portal</a>
+                    <a href="{loginUrl}" style="background-color: #10b981; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Log Into Triple A Portal</a>
                 </p>
             </div>
             """;
 
         await _emailSender.SendAsync(
             physio.Email,
-            "Your MoveWell Physio Account is Approved",
+            "Your Triple A Physio Account is Approved",
             body,
             cancellationToken);
 
@@ -177,15 +177,15 @@ public class AdminController : ControllerBase
 
         var body = $"""
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2>MoveWell Registration Update</h2>
+                <h2>Triple A Registration Update</h2>
                 <p>Hello {physio.FirstName},</p>
-                <p>Your MoveWell Physiotherapist account registration request was not approved at this time. If you believe this is in error, please contact MoveWell support.</p>
+                <p>Your Triple A Physiotherapist account registration request was not approved at this time. If you believe this is in error, please contact Triple A support.</p>
             </div>
             """;
 
         await _emailSender.SendAsync(
             physio.Email,
-            "MoveWell Physio Registration Update",
+            "Triple A Physio Registration Update",
             body,
             cancellationToken);
 
@@ -208,7 +208,7 @@ public class AdminController : ControllerBase
 
         var clinicName = !string.IsNullOrWhiteSpace(request.ClinicName)
             ? request.ClinicName.Trim()
-            : "MoveWell Partner Clinic";
+            : "Triple A Partner Clinic";
 
         var inviteCode = "ADMIN-" + Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
         var clinic = new Clinic
@@ -226,8 +226,8 @@ public class AdminController : ControllerBase
 
         var body = $"""
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2>Invitation to join MoveWell as a Physiotherapist</h2>
-                <p>You have been invited by a MoveWell Administrator to join the MoveWell Animal Rehabilitation Platform.</p>
+                <h2>Invitation to join Triple A as a Physiotherapist</h2>
+                <p>You have been invited by a Triple A Administrator to join the Triple A Animal Rehabilitation Platform.</p>
                 <p style="margin: 24px 0;">
                     <a href="{registerLink}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Accept Invitation & Register</a>
                 </p>
@@ -238,7 +238,7 @@ public class AdminController : ControllerBase
 
         await _emailSender.SendAsync(
             recipientEmail,
-            "Invitation to join MoveWell Physio Portal",
+            "Invitation to join Triple A Physio Portal",
             body,
             cancellationToken);
 

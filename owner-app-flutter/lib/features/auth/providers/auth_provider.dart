@@ -47,7 +47,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       baseUrl: _config.apiBaseUrl,
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
     ));
 
     dio.interceptors.add(InterceptorsWrapper(
@@ -74,7 +77,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
         bool refreshSucceeded = false;
         try {
-          final response = await Dio(BaseOptions(baseUrl: _config.apiBaseUrl)).post<Map<String, dynamic>>(
+          final response = await Dio(BaseOptions(
+            baseUrl: _config.apiBaseUrl,
+            headers: {'ngrok-skip-browser-warning': 'true'},
+          )).post<Map<String, dynamic>>(
             '/api/auth/refresh',
             data: {'refreshToken': refreshToken},
           );

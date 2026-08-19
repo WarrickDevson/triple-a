@@ -15,7 +15,7 @@ import { correctVeterinaryTranscript, VETERINARY_CATEGORIES, VETERINARY_AUTO_COR
 
 export async function fetchSoapNotesByPet(petId: number): Promise<SoapNote[]> {
   try {
-    const res = await apiClient.get<SoapNote[]>(`/soap-notes/pet/${petId}`)
+    const res = await apiClient.get<SoapNote[]>(`/api/soap-notes/pet/${petId}`)
     return res.data
   } catch {
     return DEMO_SOAP_NOTES[petId] ?? []
@@ -24,7 +24,7 @@ export async function fetchSoapNotesByPet(petId: number): Promise<SoapNote[]> {
 
 export async function createSoapNote(petId: number, payload: CreateSoapNoteRequest): Promise<SoapNote> {
   try {
-    const res = await apiClient.post<SoapNote>(`/soap-notes/pet/${petId}`, payload)
+    const res = await apiClient.post<SoapNote>(`/api/soap-notes/pet/${petId}`, payload)
     return res.data
   } catch {
     const mockNote: SoapNote = {
@@ -54,7 +54,7 @@ export async function createSoapNote(petId: number, payload: CreateSoapNoteReque
 
 export async function updateSoapNote(soapNoteId: number, payload: UpdateSoapNoteRequest): Promise<SoapNote> {
   try {
-    const res = await apiClient.put<SoapNote>(`/soap-notes/${soapNoteId}`, payload)
+    const res = await apiClient.put<SoapNote>(`/api/soap-notes/${soapNoteId}`, payload)
     return res.data
   } catch {
     throw new Error('Could not update SOAP note.')
@@ -63,7 +63,7 @@ export async function updateSoapNote(soapNoteId: number, payload: UpdateSoapNote
 
 export async function deleteSoapNote(soapNoteId: number): Promise<boolean> {
   try {
-    await apiClient.delete(`/soap-notes/${soapNoteId}`)
+    await apiClient.delete(`/api/soap-notes/${soapNoteId}`)
     return true
   } catch {
     return false
@@ -72,7 +72,7 @@ export async function deleteSoapNote(soapNoteId: number): Promise<boolean> {
 
 export async function fetchSharedReportsByPet(petId: number): Promise<SharedReport[]> {
   try {
-    const res = await apiClient.get<SharedReport[]>(`/reports/pet/${petId}/shared`)
+    const res = await apiClient.get<SharedReport[]>(`/api/reports/pet/${petId}/shared`)
     return res.data
   } catch {
     return DEMO_SHARED_REPORTS[petId] ?? []
@@ -81,7 +81,7 @@ export async function fetchSharedReportsByPet(petId: number): Promise<SharedRepo
 
 export async function downloadSoapPdf(soapNoteId: number): Promise<void> {
   try {
-    const response = await apiClient.get<Blob>(`/soap-notes/${soapNoteId}/pdf`, {
+    const response = await apiClient.get<Blob>(`/api/soap-notes/${soapNoteId}/pdf`, {
       responseType: 'blob',
     })
 
@@ -105,7 +105,7 @@ export async function downloadSoapPdf(soapNoteId: number): Promise<void> {
 
 export async function fetchOwnerSubjectiveNotes(petId: number): Promise<OwnerSubjectiveNote[]> {
   try {
-    const res = await apiClient.get<OwnerSubjectiveNote[]>(`/soap-notes/pet/${petId}/owner-notes`)
+    const res = await apiClient.get<OwnerSubjectiveNote[]>(`/api/soap-notes/pet/${petId}/owner-notes`)
     return res.data
   } catch {
     return DEMO_OWNER_SUBJECTIVE_NOTES[petId] ?? []
@@ -115,7 +115,7 @@ export async function fetchOwnerSubjectiveNotes(petId: number): Promise<OwnerSub
 // Voice Dictation & Audio Transcription Endpoints
 export async function parseSoapNarrative(payload: ParseSoapNarrativeRequest): Promise<StructuredSoapNote> {
   try {
-    const res = await apiClient.post<StructuredSoapNote>('/soap-notes/dictation/parse-narrative', payload)
+    const res = await apiClient.post<StructuredSoapNote>('/api/soap-notes/dictation/parse-narrative', payload)
     return res.data
   } catch (err) {
     console.warn('Backend narrative parse unavailable, using client-side clinical NLP parser:', err)
@@ -134,7 +134,7 @@ export async function transcribeSoapAudio(
     if (petName) formData.append('petName', petName)
     if (species) formData.append('species', species)
 
-    const res = await apiClient.post<SoapTranscriptionResult>('/soap-notes/dictation/transcribe-audio', formData, {
+    const res = await apiClient.post<SoapTranscriptionResult>('/api/soap-notes/dictation/transcribe-audio', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     return res.data
@@ -158,7 +158,7 @@ export async function transcribeSoapAudio(
 
 export async function fetchSoapVocabulary(): Promise<SoapVocabulary> {
   try {
-    const res = await apiClient.get<SoapVocabulary>('/soap-notes/dictation/vocabulary')
+    const res = await apiClient.get<SoapVocabulary>('/api/soap-notes/dictation/vocabulary')
     return res.data
   } catch {
     const allTerms = VETERINARY_CATEGORIES.flatMap(c => c.terms)

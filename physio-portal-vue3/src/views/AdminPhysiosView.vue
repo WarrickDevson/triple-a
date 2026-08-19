@@ -357,7 +357,7 @@ async function handleSendInvite() {
             id="inviteClinicName"
             v-model="inviteClinicName"
             label="Clinic Name (Optional)"
-            placeholder="e.g. MoveWell Partner Clinic"
+            placeholder="e.g. Triple A Partner Clinic"
           />
 
           <div class="flex items-center justify-end gap-3 pt-2">

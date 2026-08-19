@@ -34,7 +34,7 @@ class OwnerNotesNotifier extends StateNotifier<OwnerNotesState> {
       if (painObserved != null) data['painObserved'] = painObserved;
       if (energyObserved != null) data['energyObserved'] = energyObserved;
 
-      await _dio.post('/soap-notes/pet/$petId/owner-notes', data: data);
+      await _dio.post('/api/soap-notes/pet/$petId/owner-notes', data: data);
       state = const OwnerNotesState(success: true);
       return true;
     } catch (e) {
@@ -45,7 +45,7 @@ class OwnerNotesNotifier extends StateNotifier<OwnerNotesState> {
 
   Future<List<OwnerSubjectiveNote>> fetchNotes(int petId) async {
     try {
-      final response = await _dio.get('/soap-notes/pet/$petId/owner-notes');
+      final response = await _dio.get('/api/soap-notes/pet/$petId/owner-notes');
       final list = (response.data as List? ?? [])
           .map((item) => OwnerSubjectiveNote.fromJson(item as Map<String, dynamic>))
           .toList();

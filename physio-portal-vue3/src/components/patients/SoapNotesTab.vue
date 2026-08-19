@@ -317,6 +317,36 @@ onUnmounted(() => {
             </h4>
             <p class="mt-2 text-sm text-navy leading-relaxed">{{ note.plan || 'No future plan recorded.' }}</p>
           </div>
+
+          <!-- Preserved Audio Memo & Verbatim Spoken Transcript -->
+          <div v-if="note.audioUrl || note.rawTranscript" class="rounded-xl border border-purple-200 bg-purple-50/60 p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h4 class="flex items-center gap-2 text-xs font-bold text-purple-900 uppercase tracking-wider">
+                <Mic class="h-4 w-4 text-purple-600" />
+                Preserved Consultation Voice Memo & Transcript
+              </h4>
+              <a
+                v-if="note.audioUrl"
+                :href="note.audioUrl"
+                download="consultation-voice-memo.webm"
+                class="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 hover:text-purple-900 hover:underline"
+              >
+                <Download class="h-3 w-3" />
+                Download Audio (.webm)
+              </a>
+            </div>
+
+            <div v-if="note.audioUrl" class="flex items-center gap-3">
+              <audio :src="note.audioUrl" controls class="h-8 w-full max-w-md rounded-lg" />
+            </div>
+
+            <div v-if="note.rawTranscript">
+              <p class="text-[11px] font-semibold text-purple-900/70 mb-1">Verbatim Spoken Transcript:</p>
+              <p class="text-xs text-purple-950/80 bg-white/80 rounded-lg p-3 border border-purple-100 italic leading-relaxed whitespace-pre-wrap">
+                "{{ note.rawTranscript }}"
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

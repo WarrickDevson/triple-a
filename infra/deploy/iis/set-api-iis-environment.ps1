@@ -63,6 +63,13 @@ $mapping = @{
     "DEPLOY_GCP_CREDENTIALS_PATH" = "GOOGLE_APPLICATION_CREDENTIALS"
     "DEPLOY_APP_PUBLIC_PORTAL_URL" = "App__PublicPortalUrl"
     "DEPLOY_APP_PUBLIC_OWNER_APP_URL" = "App__PublicOwnerAppUrl"
+    "DEPLOY_SENDGRID_API_KEY" = "SendGrid__ApiKey"
+    "DEPLOY_SENDGRID_PROVIDER" = "SendGrid__Provider"
+    "DEPLOY_SENDGRID_FROM_EMAIL" = "SendGrid__FromEmail"
+    "DEPLOY_SENDGRID_FROM_NAME" = "SendGrid__FromName"
+    "DEPLOY_AI_APIKEY" = "Ai__ApiKey"
+    "DEPLOY_AI_PROVIDER" = "Ai__Provider"
+    "DEPLOY_AI_MODEL" = "Ai__Model"
 }
 
 foreach ($deployName in $mapping.Keys) {

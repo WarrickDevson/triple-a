@@ -31,7 +31,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
-  applyStructuredNote: [note: StructuredSoapNote, mode: 'replace' | 'append']
+  applyStructuredNote: [note: StructuredSoapNote, mode: 'replace' | 'append', rawTranscript?: string, audioUrl?: string]
   insertRawTranscript: [rawText: string, targetSection: 'Subjective' | 'Objective' | 'Action' | 'Plan' | 'All']
 }>()
 
@@ -248,7 +248,7 @@ function handleApplyStructuredNote(mode: 'replace' | 'append') {
     customMetrics: editableCustomMetrics.value
   }
 
-  emit('applyStructuredNote', finalPayload, mode)
+  emit('applyStructuredNote', finalPayload, mode, liveTranscript.value.trim(), audioUrl.value || undefined)
   emit('close')
 }
 

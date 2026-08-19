@@ -60,7 +60,7 @@ public class ResendVerificationEmailCommandHandler : IRequestHandler<ResendVerif
 
             var body = $"""
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    <h2>Verify your MoveWell account</h2>
+                    <h2>Verify your Triple A account</h2>
                     <p>Hello {user.FirstName},</p>
                     <p>Please click the link below to verify your email address.</p>
                     <p style="margin: 24px 0;">
@@ -74,7 +74,7 @@ public class ResendVerificationEmailCommandHandler : IRequestHandler<ResendVerif
 
             await _emailSender.SendAsync(
                 user.Email,
-                "Verify your MoveWell account",
+                "Verify your Triple A account",
                 body,
                 cancellationToken);
         }

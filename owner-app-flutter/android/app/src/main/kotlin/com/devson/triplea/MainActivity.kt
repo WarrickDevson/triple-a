@@ -1,4 +1,4 @@
-package com.kpw.movewell.owner_app_flutter
+package com.devson.triplea
 
 import io.flutter.embedding.android.FlutterActivity
 

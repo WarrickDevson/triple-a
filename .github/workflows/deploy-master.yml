@@ -205,16 +205,23 @@ jobs:
 
       - name: Verify API origin in portal build
         shell: powershell
+        env:
+          VITE_API_BASE_URL: ${{ env.API_BASE_URL }}
         run: |
-          $js = Get-ChildItem physio-portal-vue3/dist/assets/*.js -ErrorAction Stop
-          $haystack = $js | Get-Content -Raw -ErrorAction SilentlyContinue
-          if ($haystack -match 'localhost') {
-            throw "Portal production bundle still contains 'localhost'. VITE_API_BASE_URL did not bake in."
+          $jsFiles = Get-ChildItem physio-portal-vue3/dist/assets/*.js -ErrorAction Stop
+          $haystack = ($jsFiles | Get-Content -Raw) -join "`n"
+          $expected = $env:VITE_API_BASE_URL.TrimEnd('/')
+          if ([string]::IsNullOrWhiteSpace($expected)) {
+            throw "VITE_API_BASE_URL is empty during verify."
           }
-          if ($haystack -notmatch 'mytriplea\.co\.za') {
-            throw "Portal production bundle is missing mytriplea.co.za. Check VITE_API_BASE_URL."
+          $escaped = [regex]::Escape($expected)
+          if ($haystack -notmatch $escaped) {
+            throw "Portal production bundle is missing API origin '$expected'."
           }
-          Write-Host "Portal bundle contains mytriplea.co.za and no localhost."
+          if ($haystack -match 'localhost:(5057|7112)') {
+            throw "Portal production bundle still contains a localhost API port (5057 or 7112)."
+          }
+          Write-Host "Portal bundle contains $expected (SignalR/other libs may still mention the word localhost)."
 
       - name: Deploy portal to IIS
         shell: powershell

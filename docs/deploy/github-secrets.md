@@ -31,6 +31,7 @@ Repository variables override workflow defaults when set.
 | `OWNER_APP_PUBLIC_URL` | `https://owner.mytriplea.co.za` | Documented owner app URL |
 | `DEPLOY_BACKUP_RETENTION` | `1` | API backups under `C:\WebApps\TripleA\_backups` |
 | `DEPLOY_ASPNETCORE_ENVIRONMENT` | `Staging` | Documented; set in published `web.config` |
+| `FLUTTER_ROOT` | `C:\flutter` | Flutter SDK folder on the runner (not `\bin`) |
 
 ## Portal and app builds
 

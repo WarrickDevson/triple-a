@@ -36,6 +36,7 @@ env:
   PORTAL_PUBLIC_URL: ${{ vars.PORTAL_PUBLIC_URL || 'https://app.mytriplea.co.za' }}
   OWNER_APP_PUBLIC_URL: ${{ vars.OWNER_APP_PUBLIC_URL || 'https://owner.mytriplea.co.za' }}
   DEPLOY_ASPNETCORE_ENVIRONMENT: ${{ vars.DEPLOY_ASPNETCORE_ENVIRONMENT || 'Staging' }}
+  FLUTTER_ROOT: ${{ vars.FLUTTER_ROOT || 'C:\flutter' }}
 
 jobs:
   detect-changes:
@@ -234,10 +235,39 @@ jobs:
       - name: Verify Flutter SDK
         shell: powershell
         run: |
-          if (-not (Get-Command flutter -ErrorAction SilentlyContinue)) {
-            throw "flutter SDK not found on runner. Install Flutter on the IIS runner host."
+          $candidates = @(
+            "${{ env.FLUTTER_ROOT }}\bin",
+            "C:\flutter\bin",
+            "C:\src\flutter\bin",
+            "C:\Program Files\flutter\bin"
+          ) | Select-Object -Unique
+
+          foreach ($bin in $candidates) {
+            if (Test-Path -LiteralPath (Join-Path $bin "flutter.bat")) {
+              $env:PATH = "$bin;$env:PATH"
+              "$bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+              Write-Host "Using Flutter at $bin"
+              flutter --version
+              exit 0
+            }
           }
-          flutter --version
+
+          if (Get-Command flutter -ErrorAction SilentlyContinue) {
+            flutter --version
+            exit 0
+          }
+
+          throw @"
+          Flutter SDK not found on the runner (service PATH does not include user installs).
+          Install Flutter machine-wide, then re-run:
+
+            git clone https://github.com/flutter/flutter.git -b stable C:\flutter
+            C:\flutter\bin\flutter.bat doctor
+            [Environment]::SetEnvironmentVariable('Path', `$env:Path + ';C:\flutter\bin', 'Machine')
+
+          Or set repo variable FLUTTER_ROOT to the SDK folder (not \bin).
+          Checked: $($candidates -join ', ')
+          "@.Trim()
 
       - name: Build owner app (web)
         shell: powershell

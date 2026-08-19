@@ -77,13 +77,33 @@ Recommended service account: dedicated deploy user with rights to:
 | Git | checkout |
 | Node.js 24 | portal build |
 | .NET SDK 9.x | API publish |
-| Flutter SDK | owner web build |
+| Flutter SDK | owner web build (install to `C:\flutter`; add `C:\flutter\bin` to **Machine** PATH) |
 | IIS + URL Rewrite | hosting |
 | [.NET 9 Hosting Bundle](https://dotnet.microsoft.com/download/dotnet/9.0) | ASP.NET Core Module |
 
 The runner polls GitHub outbound. No inbound ports from GitHub are required.
 
 If no runner is online, jobs remain **Queued** indefinitely.
+
+### Flutter on the runner (required for deploy-app)
+
+The GitHub Actions service (Local System or `svc-landdiary-deploy`) does **not** use an interactive user's PATH. Flutter under `C:\Users\...` will fail with "flutter SDK not found".
+
+On the IIS host, as Administrator:
+
+```powershell
+git clone https://github.com/flutter/flutter.git -b stable C:\flutter
+C:\flutter\bin\flutter.bat --version
+C:\flutter\bin\flutter.bat config --enable-web
+C:\flutter\bin\flutter.bat doctor
+
+$machinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+if ($machinePath -notlike '*C:\flutter\bin*') {
+  [Environment]::SetEnvironmentVariable('Path', "$machinePath;C:\flutter\bin", 'Machine')
+}
+```
+
+Restart the Triple A runner service so it picks up Machine PATH. The workflow also looks in `C:\flutter\bin` and optional repo variable `FLUTTER_ROOT`.
 
 ### NTFS permissions (fix robocopy ERROR 5)
 

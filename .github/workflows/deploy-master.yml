@@ -191,24 +191,30 @@ jobs:
           $env:NODE_ENV = "development"
           npm ci --prefix physio-portal-vue3 --include=dev
 
-      - name: Prepare portal production env
-        shell: powershell
-        run: |
-          $envFile = "physio-portal-vue3/.env.production.local"
-          Set-Content -Path $envFile -Value "VITE_API_BASE_URL=${{ env.API_BASE_URL }}" -Encoding utf8
-          Write-Host "Wrote $envFile for production build."
-
       - name: Build portal
         shell: powershell
+        env:
+          VITE_API_BASE_URL: ${{ env.API_BASE_URL }}
         run: |
-          $env:NODE_ENV = "development"
+          Remove-Item Env:NODE_ENV -ErrorAction SilentlyContinue
+          if ([string]::IsNullOrWhiteSpace($env:VITE_API_BASE_URL)) {
+            throw "VITE_API_BASE_URL is empty; portal would bake in the wrong API origin."
+          }
+          Write-Host "Building portal with VITE_API_BASE_URL=$($env:VITE_API_BASE_URL)"
           npm run build --prefix physio-portal-vue3
 
-      - name: Remove portal production env file
-        if: always()
+      - name: Verify API origin in portal build
         shell: powershell
         run: |
-          Remove-Item -Path "physio-portal-vue3/.env.production.local" -Force -ErrorAction SilentlyContinue
+          $js = Get-ChildItem physio-portal-vue3/dist/assets/*.js -ErrorAction Stop
+          $haystack = $js | Get-Content -Raw -ErrorAction SilentlyContinue
+          if ($haystack -match 'localhost') {
+            throw "Portal production bundle still contains 'localhost'. VITE_API_BASE_URL did not bake in."
+          }
+          if ($haystack -notmatch 'mytriplea\.co\.za') {
+            throw "Portal production bundle is missing mytriplea.co.za. Check VITE_API_BASE_URL."
+          }
+          Write-Host "Portal bundle contains mytriplea.co.za and no localhost."
 
       - name: Deploy portal to IIS
         shell: powershell
@@ -275,7 +281,7 @@ jobs:
         run: |
           flutter pub get
           if ($LASTEXITCODE -ne 0) { throw "flutter pub get failed with exit code $LASTEXITCODE" }
-          flutter build web --release --base-href /app/ --dart-define=ENV=staging
+          flutter build web --release --base-href /app/ --dart-define=ENV=staging --dart-define=API_BASE_URL=${{ env.API_BASE_URL }}
           if ($LASTEXITCODE -ne 0) { throw "flutter build web failed with exit code $LASTEXITCODE" }
 
       - name: Deploy owner app to IIS

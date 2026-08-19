@@ -132,6 +132,12 @@ try {
         npm ci --include=dev
         if ($LASTEXITCODE -ne 0) { throw "npm ci failed with exit code $LASTEXITCODE" }
     }
+    # Do not leave NODE_ENV=development for vite build — it would load .env.development (localhost).
+    if ($null -eq $savedNodeEnv) {
+        Remove-Item Env:NODE_ENV -ErrorAction SilentlyContinue
+    } else {
+        $env:NODE_ENV = $savedNodeEnv
+    }
     $env:VITE_API_BASE_URL = $ApiBaseUrl
     npm run build
     if ($LASTEXITCODE -ne 0) { throw "npm run build failed with exit code $LASTEXITCODE" }
@@ -161,7 +167,7 @@ try {
     flutter pub get
     if ($LASTEXITCODE -ne 0) { throw "flutter pub get failed with exit code $LASTEXITCODE" }
 
-    flutter build web --release --base-href /app/ --dart-define=ENV=staging
+    flutter build web --release --base-href /app/ --dart-define=ENV=staging --dart-define=API_BASE_URL=$ApiBaseUrl
     if ($LASTEXITCODE -ne 0) { throw "flutter build web failed with exit code $LASTEXITCODE" }
 } finally {
     Pop-Location

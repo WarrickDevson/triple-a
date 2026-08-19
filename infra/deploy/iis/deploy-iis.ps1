@@ -84,6 +84,34 @@ function Start-AppPoolSafe {
     Start-WebAppPool -Name $Name
 }
 
+function Test-DestinationWritable {
+    param([string] $Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        try {
+            New-Item -ItemType Directory -Path $Path -Force | Out-Null
+        } catch {
+            throw "Cannot create destination directory '$Path'. Grant the GitHub Actions runner service account Modify rights on C:\WebApps\TripleA. $($_.Exception.Message)"
+        }
+    }
+
+    $probe = Join-Path $Path ".deploy-write-test"
+    try {
+        Set-Content -LiteralPath $probe -Value "ok" -Encoding ascii -ErrorAction Stop
+        Remove-Item -LiteralPath $probe -Force -ErrorAction Stop
+    } catch {
+        $runner = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+        throw @"
+Destination '$Path' is not writable by the runner ($runner).
+Robocopy ERROR 5 (Access denied) — fix NTFS permissions on the IIS server (run as Administrator):
+
+  icacls C:\WebApps\TripleA /grant "$runner`:(OI)(CI)M" /T
+
+Also ensure the runner service account can stop/start the KPW app pool.
+"@
+    }
+}
+
 function Remove-OldBackups {
     param(
         [string] $Root,
@@ -116,6 +144,8 @@ if (-not (Test-Path -LiteralPath $destination)) {
 }
 $destination = (Resolve-Path -LiteralPath $destination).Path
 
+Test-DestinationWritable -Path $destination
+
 Write-Host "Deploying '$source' -> '$destination'"
 
 if (-not $SkipBackup -and -not [string]::IsNullOrWhiteSpace($BackupRoot)) {
@@ -129,6 +159,7 @@ if (-not $SkipBackup -and -not [string]::IsNullOrWhiteSpace($BackupRoot)) {
     Write-Host "Backing up live folder to '$backupPath'..."
     New-Item -ItemType Directory -Path $backupPath -Force | Out-Null
     & robocopy $destination $backupPath /MIR /NFL /NDL /NJH /NJS /NC /NS /NP | Out-Null
+    # Robocopy 0-7 = success (1 = files copied). 8+ = failure.
     if ($LASTEXITCODE -ge 8) {
       throw "Backup robocopy failed with exit code $LASTEXITCODE"
     }
@@ -155,16 +186,19 @@ try {
     }
 
     Write-Host "Running robocopy /MIR..."
-    $robocopyArgs = @($source, $destination, "/MIR", "/NFL", "/NDL", "/NJH", "/NJS", "/NC", "/NS", "/NP")
+    $robocopyArgs = @($source, $destination, "/MIR", "/R:2", "/W:5", "/NFL", "/NDL", "/NJH", "/NJS", "/NC", "/NS", "/NP")
     if ($ExcludeDirectories.Count -gt 0) {
         $robocopyArgs += "/XD"
         $robocopyArgs += $ExcludeDirectories
         Write-Host "Excluding directories from mirror: $($ExcludeDirectories -join ', ')"
     }
     & robocopy @robocopyArgs
-    if ($LASTEXITCODE -ge 8) {
-        throw "Deploy robocopy failed with exit code $LASTEXITCODE"
+    $copyExit = $LASTEXITCODE
+    # Robocopy 0-7 = success (1 = files copied). GitHub Actions fails on any non-zero process exit.
+    if ($copyExit -ge 8) {
+        throw "Deploy robocopy failed with exit code $copyExit"
     }
+    Write-Host "Robocopy succeeded with exit code $copyExit"
 }
 finally {
     if (Test-Path -LiteralPath $offlineFile) {
@@ -178,3 +212,4 @@ finally {
 }
 
 Write-Host "Deploy complete: $destination"
+exit 0

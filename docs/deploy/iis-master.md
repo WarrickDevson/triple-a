@@ -85,6 +85,35 @@ The runner polls GitHub outbound. No inbound ports from GitHub are required.
 
 If no runner is online, jobs remain **Queued** indefinitely.
 
+### NTFS permissions (fix robocopy ERROR 5)
+
+The runner service account must have **Modify** on `C:\WebApps\TripleA\` and subfolders (`api`, `portal`, `app`, `_backups`). LandDiary’s runner already has access to `C:\WebApps\LandDiary\`; Triple A needs the same for its folder.
+
+On the IIS server, **run PowerShell as Administrator**:
+
+```powershell
+# 1. Find which account runs the triple-a runner
+Get-CimInstance Win32_Service |
+  Where-Object { $_.Name -like 'actions.runner.*' } |
+  Select-Object Name, StartName, State
+
+# 2. Grant Modify (replace StartName from step 1, e.g. NT SERVICE\actions.runner... or DOMAIN\svc-deploy)
+$runner = 'NT SERVICE\actions.runner.triple-a-iis'   # <-- your runner's StartName
+icacls C:\WebApps\TripleA /grant "${runner}:(OI)(CI)M" /T
+
+# 3. Quick write test (optional — run as the runner user or re-run deploy)
+New-Item -ItemType File -Path C:\WebApps\TripleA\.write-test -Force
+Remove-Item C:\WebApps\TripleA\.write-test -Force
+```
+
+If `C:\WebApps\TripleA` does not exist yet:
+
+```powershell
+New-Item -ItemType Directory -Path C:\WebApps\TripleA\api, C:\WebApps\TripleA\portal, C:\WebApps\TripleA\app, C:\WebApps\TripleA\_backups -Force
+```
+
+The runner also needs permission to **stop/start the KPW app pool** (same as LandDiary’s deploy account — often membership in `IIS_IUSRS` is not enough; use a dedicated deploy user in the local Administrators group or delegate app pool rights).
+
 ## IIS layout
 
 Create IIS sites/bindings before the first deploy:

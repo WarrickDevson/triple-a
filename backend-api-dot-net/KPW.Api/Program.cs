@@ -91,7 +91,9 @@ builder.Services.AddCors(options =>
     });
     options.AddPolicy("StagingCors", policy =>
     {
-        policy.WithOrigins("https://kpw.devson.co.za")
+        policy.WithOrigins(
+                "https://mytriplea.co.za",
+                "https://www.mytriplea.co.za")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -144,6 +146,7 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
 

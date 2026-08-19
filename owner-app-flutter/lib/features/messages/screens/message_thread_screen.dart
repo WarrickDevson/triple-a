@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/pet_avatar.dart';
@@ -459,7 +460,7 @@ class _MessageBubble extends StatelessWidget {
 
   String _resolveAttachmentUrl(String path) {
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    return 'http://localhost:5057${path.startsWith('/') ? path : '/$path'}';
+    return '${AppConfig.fromEnvironment().apiBaseUrl}${path.startsWith('/') ? path : '/$path'}';
   }
 
   @override

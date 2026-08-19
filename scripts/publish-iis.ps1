@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Publishes KPW MoveWell for IIS staging (kpw.devson.co.za).
+  Publishes KPW MoveWell for IIS (mytriplea.co.za).
 
 .DESCRIPTION
   Builds all three applications into a single output tree:
@@ -17,7 +17,7 @@
 
 .PARAMETER ApiBaseUrl
   Base URL clients use for API calls (no trailing slash).
-  Default: https://kpw.devson.co.za
+  Default: https://mytriplea.co.za
 
 .PARAMETER Clean
   Delete OutputRoot before publishing.
@@ -34,7 +34,7 @@
 [CmdletBinding()]
 param(
     [string] $OutputRoot = "",
-    [string] $ApiBaseUrl = "https://kpw.devson.co.za",
+    [string] $ApiBaseUrl = "https://mytriplea.co.za",
     [switch] $Clean,
     [switch] $SkipNpmInstall
 )
@@ -132,6 +132,12 @@ try {
         npm ci --include=dev
         if ($LASTEXITCODE -ne 0) { throw "npm ci failed with exit code $LASTEXITCODE" }
     }
+    # Do not leave NODE_ENV=development for vite build — it would load .env.development (localhost).
+    if ($null -eq $savedNodeEnv) {
+        Remove-Item Env:NODE_ENV -ErrorAction SilentlyContinue
+    } else {
+        $env:NODE_ENV = $savedNodeEnv
+    }
     $env:VITE_API_BASE_URL = $ApiBaseUrl
     npm run build
     if ($LASTEXITCODE -ne 0) { throw "npm run build failed with exit code $LASTEXITCODE" }
@@ -161,7 +167,7 @@ try {
     flutter pub get
     if ($LASTEXITCODE -ne 0) { throw "flutter pub get failed with exit code $LASTEXITCODE" }
 
-    flutter build web --release --base-href /app/ --dart-define=ENV=staging
+    flutter build web --release --base-href /app/ --dart-define=ENV=staging --dart-define=API_BASE_URL=$ApiBaseUrl
     if ($LASTEXITCODE -ne 0) { throw "flutter build web failed with exit code $LASTEXITCODE" }
 } finally {
     Pop-Location
@@ -185,17 +191,17 @@ Copy-Item -Path (Join-Path $LandingDir "*") -Destination $OutputRoot -Force
 Write-Host ""
 Write-Host "Publish complete." -ForegroundColor Green
 Write-Host ""
-Write-Host "Copy to IIS site root (e.g. C:\inetpub\kpw\):"
-Write-Host "  $OutputRoot\index.html (+ styles.css, favicon.svg, web.config)  ->  site root"
+Write-Host "Copy to IIS (C:\WebApps\TripleA\):"
+Write-Host "  $OutputRoot\index.html (+ styles.css, favicon.svg, web.config, landing.js)  ->  www site root"
 Write-Host "  $ApiOut     ->  ...\api"
 Write-Host "  $PortalOut  ->  ...\portal"
 Write-Host "  $AppOut     ->  ...\app"
 Write-Host ""
 Write-Host "URLs after deploy:"
-Write-Host "  Gateway: $ApiBaseUrl/"
-Write-Host "  API:     $ApiBaseUrl/api/"
-Write-Host "  Portal:  $ApiBaseUrl/portal/"
-Write-Host "  App:     $ApiBaseUrl/app/"
+Write-Host "  Gateway: https://mytriplea.co.za/"
+Write-Host "  API:     https://mytriplea.co.za/api/"
+Write-Host "  Portal:  https://mytriplea.co.za/portal/"
+Write-Host "  App:     https://mytriplea.co.za/app/"
 Write-Host ""
 Write-Host "API app pool: set ASPNETCORE_ENVIRONMENT=Staging and GOOGLE_APPLICATION_CREDENTIALS."
 Write-Host "See backend-api-dot-net\docs\IIS_STAGING.md for full checklist."

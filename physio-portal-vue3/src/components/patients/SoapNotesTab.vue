@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Plus, Download, ChevronDown, ChevronUp, FileText, CheckCircle2, MessageSquareQuote, Pencil, Trash2, Mic, Volume2, Sparkles } from '@lucide/vue'
-import type { SoapNote, OwnerSubjectiveNote, StructuredSoapNote } from '../../types/soap'
-import { fetchSoapNotesByPet, createSoapNote, updateSoapNote, deleteSoapNote, downloadSoapPdf, fetchOwnerSubjectiveNotes } from '../../api/soapNotes'
+import { Plus, Download, ChevronDown, ChevronUp, FileText, CheckCircle2, MessageSquareQuote, Pencil, Trash2, Mic } from '@lucide/vue'
+import type { SoapNote, OwnerSubjectiveNote } from '../../types/soap'
+import { fetchSoapNotesByPet, deleteSoapNote, downloadSoapPdf, fetchOwnerSubjectiveNotes } from '../../api/soapNotes'
 import CreateSoapNoteModal from './CreateSoapNoteModal.vue'
 import VoiceSoapDictationModal from '../soap/VoiceSoapDictationModal.vue'
 

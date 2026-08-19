@@ -25,5 +25,10 @@
   <ItemGroup>
     <Content Update="devson-development-*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Update="devson-development-6d4da133b74e.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
 </Project>

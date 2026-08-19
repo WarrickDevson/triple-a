@@ -1,17 +1,19 @@
-# IIS Staging — kpw.devson.co.za
+# IIS Staging — mytriplea.co.za
 
-Single IIS site with a gateway page at the root and three applications:
+Single IIS site with path-based applications (LandDiary-style):
 
-| URL path | Physical folder | Content |
-|----------|-----------------|---------|
-| `https://kpw.devson.co.za/` | `C:\inetpub\kpw\` | Static gateway (`index.html`) |
-| `https://kpw.devson.co.za/api` | `C:\inetpub\kpw\api` | Published `KPW.Api` |
-| `https://kpw.devson.co.za/portal` | `C:\inetpub\kpw\portal` | Vue `dist/` |
-| `https://kpw.devson.co.za/app` | `C:\inetpub\kpw\app` | Flutter `build/web/` |
+| Public URL | Physical folder | Content |
+|------------|-----------------|---------|
+| `https://mytriplea.co.za/` | `C:\WebApps\TripleA\` (site root) | Static gateway (`site-landing/`) — deployed by CI |
+| `https://mytriplea.co.za/api` | `C:\WebApps\TripleA\api` | Published `KPW.Api` |
+| `https://mytriplea.co.za/portal` | `C:\WebApps\TripleA\portal` | Vue physio portal (`dist/`) |
+| `https://mytriplea.co.za/app` | `C:\WebApps\TripleA\app` | Flutter owner web (`build/web/`) |
 
-The site **physical path** (`C:\inetpub\kpw`) holds the gateway files at the root. `/api`, `/portal`, and `/app` are IIS **applications** as child folders — not nested inside each other.
+API routes are `/api/pets`, `/api/auth/login`, etc. Controllers have no `api/` prefix; IIS application `/api` supplies it.
 
-API routes are exposed as `/api/pets`, `/api/auth/login`, etc. Controllers use paths without the `api/` prefix; IIS (or local `Hosting:PathBase`) supplies `/api`.
+Portal is built with Vite `base: '/portal/'`. Owner web uses `--base-href /app/`.
+
+**Automated deploy:** push to `main` or run **Deploy Master to IIS** in GitHub Actions. See [`docs/deploy/iis-master.md`](../../docs/deploy/iis-master.md).
 
 ---
 
@@ -21,8 +23,8 @@ API routes are exposed as `/api/pets`, `/api/auth/login`, etc. Controllers use p
 2. **[.NET 9 Hosting Bundle](https://dotnet.microsoft.com/download/dotnet/9.0)** (includes ASP.NET Core Module)
 3. **IIS URL Rewrite** module
 4. **SQL Server** (local on VPS or reachable instance)
-5. **HTTPS** certificate for `kpw.devson.co.za` (wildcard `*.devson.co.za` is fine)
-6. DNS **A record**: `kpw.devson.co.za` → VPS public IP
+5. **HTTPS** certificate for `mytriplea.co.za`
+6. DNS **A records** for `www`, `owner`, and `app` → VPS public IP
 
 ---
 
@@ -90,15 +92,17 @@ Output:
 
 ```
 publish/iis/
-  index.html, styles.css, favicon.svg, web.config  -> IIS site root (/)
-  api/      -> IIS application /api
+  index.html, styles.css, favicon.svg, web.config  -> C:\WebApps\TripleA\ (www site root)
+  api/      -> IIS application /api on www
   portal/   -> IIS application /portal
   app/      -> IIS application /app
 ```
 
-Copy gateway files to the site physical path (`C:\inetpub\kpw\`) and each subfolder to its matching IIS application. Optional: `-ApiBaseUrl https://kpw.devson.co.za` (default).
+Copy each folder to `C:\WebApps\TripleA\` and bind to the matching IIS site. Optional: `-ApiBaseUrl https://mytriplea.co.za` (default).
 
-Source for the gateway page: [`site-landing/`](../../site-landing/) (no build step).
+For production-like staging on the IIS host, prefer the GitHub Actions workflow (`.github/workflows/deploy-master.yml`) which copies directly to `C:\WebApps\TripleA\{api,portal,app}`.
+
+Source for the gateway page: [`site-landing/`](../../site-landing/) (no build step). Gateway links point to `/app/` and `/portal/`.
 
 ---
 
@@ -111,7 +115,7 @@ cd backend-api-dot-net
 dotnet publish KPW.Api/KPW.Api.csproj -c Release -o .\publish\api
 ```
 
-Copy `publish\api\*` to `C:\inetpub\kpw\api`.
+Copy `publish\api\*` to `C:\WebApps\TripleA\api`.
 
 ### GCP credentials (video + AI)
 
@@ -124,7 +128,7 @@ The same service account JSON used locally (`KPW.Api/devson-development-6d4da133
 After deploy, confirm the file exists on the server:
 
 ```
-C:\WebApps\KPW\api\devson-development-6d4da133b74e.json
+C:\WebApps\TripleA\api\devson-development-6d4da133b74e.json
 ```
 
 **Do not commit** the JSON key to git. If missing from publish output, copy it manually to the API folder on the server.
@@ -132,22 +136,19 @@ C:\WebApps\KPW\api\devson-development-6d4da133b74e.json
 Optional IIS app pool override (Advanced Settings → Environment Variables):
 
 - `ASPNETCORE_ENVIRONMENT` = `Staging`
-- `GOOGLE_APPLICATION_CREDENTIALS` = `C:\WebApps\KPW\api\devson-development-6d4da133b74e.json`
+- `GOOGLE_APPLICATION_CREDENTIALS` = `C:\WebApps\TripleA\api\devson-development-6d4da133b74e.json`
 
-### Staging secrets
+### Staging configuration
 
-Edit on server (not in git):
-
-- `Jwt:Key` — unique QA secret (min 32 chars)
-- `ConnectionStrings:DefaultConnection`
+`appsettings.json`, `appsettings.Staging.json`, `web.config`, and the GCP credentials JSON are published with the API (`dotnet publish /p:EnvironmentName=Staging`). No GitHub Actions secrets or extra copy steps in CI.
 
 **Do not** set `Hosting:PathBase` on IIS — the `/api` application path is applied automatically by the ASP.NET Core Module.
 
 ### IIS: API application
 
-1. Site: **kpw.devson.co.za** (binding HTTPS, cert; physical path `C:\inetpub\kpw`)
-2. Copy gateway files from `publish/iis/` root (`index.html`, `styles.css`, `favicon.svg`, `web.config`) to `C:\inetpub\kpw\`
-3. Add **Application** alias `api`, physical path `C:\inetpub\kpw\api`
+1. Site **TripleA** — physical path `C:\WebApps\TripleA\` (gateway at root; CI **deploy-landing**)
+2. Gateway files deploy automatically from `site-landing/` or via `.\scripts\publish-iis.ps1`
+3. Add **Application** alias `api`, physical path `C:\WebApps\TripleA\api`
 4. App pool: **No Managed Code**, .NET CLR version empty
 5. Ensure `web.config` from publish exists (created by Hosting Bundle)
 
@@ -157,20 +158,20 @@ Edit on server (not in git):
 
 ```powershell
 cd physio-portal-vue3
-npm ci
-$env:VITE_API_BASE_URL="https://kpw.devson.co.za"
+npm ci --include=dev
+$env:NODE_ENV = "development"
+$env:VITE_API_BASE_URL="https://mytriplea.co.za"
 npm run build
 ```
 
-Copy `dist\*` to `C:\inetpub\kpw\portal`.
+Copy `dist\*` to `C:\WebApps\TripleA\portal`.
 
 `public/web.config` is included in the build for SPA routing under `/portal/`.
 
 ### IIS: portal application
 
 - Alias: `portal`
-- Physical path: `C:\inetpub\kpw\portal`
-- App pool: same site pool or dedicated static pool
+- Physical path: `C:\WebApps\TripleA\portal`
 
 ---
 
@@ -179,15 +180,15 @@ Copy `dist\*` to `C:\inetpub\kpw\portal`.
 ```powershell
 cd owner-app-flutter
 flutter pub get
-flutter build web --base-href /app/ --dart-define=ENV=staging
+flutter build web --release --base-href /app/ --dart-define=ENV=staging
 ```
 
-Copy `build\web\*` to `C:\inetpub\kpw\app` (includes `web.config` from `web/`).
+Copy `build\web\*` to `C:\WebApps\TripleA\app` (includes `web.config` from `web/`).
 
-### IIS: app application
+### IIS: owner app application
 
 - Alias: `app`
-- Physical path: `C:\inetpub\kpw\app`
+- Physical path: `C:\WebApps\TripleA\app`
 
 ---
 
@@ -224,13 +225,14 @@ Copy `build\web\*` to `C:\inetpub\kpw\app` (includes `web.config` from `web/`).
 
 After deploy:
 
-- [ ] `https://kpw.devson.co.za/` loads gateway with Owner App and Physio Portal buttons
+- [ ] `https://mytriplea.co.za/` loads gateway with Owner App and Physio Portal buttons
 - [ ] Gateway buttons navigate to `/app/` and `/portal/`
-- [ ] `https://kpw.devson.co.za/portal/` loads login
-- [ ] `https://kpw.devson.co.za/app/` loads owner login
+- [ ] `https://mytriplea.co.za/portal/` loads physio login
+- [ ] `https://mytriplea.co.za/app/` loads owner login
 - [ ] Physio login → dashboard, patients, appointments, messages, videos
 - [ ] Owner login → pets, exercises, tracking, upload video, messages, reminders
-- [ ] API auth: `POST https://kpw.devson.co.za/api/auth/login` returns tokens
+- [ ] `https://mytriplea.co.za/api/health` returns 200
+- [ ] API auth: `POST https://mytriplea.co.za/api/auth/login` returns tokens
 - [ ] No double `/api/api` in browser network tab
 - [ ] Video upload / AI chat (requires valid GCP credentials on API pool)
 
@@ -240,10 +242,11 @@ After deploy:
 
 | Issue | Check |
 |-------|--------|
-| 404 on `/` | Gateway files at site physical path; `index.html` in `web.config` defaultDocument |
-| 404 on `/api/pets` | API app alias is `api`; app pool running; `web.config` present |
-| 404 on portal routes | URL Rewrite installed; `web.config` in portal folder |
-| CORS errors | `ASPNETCORE_ENVIRONMENT=Staging`; portal/app served from `https://kpw.devson.co.za` |
+| 404 on `/` | Gateway files at www site physical path; `index.html` in `web.config` defaultDocument |
+| 404 on `/api/pets` | API app alias is `api` on www site; app pool running; `web.config` present |
+| 404 on portal routes | URL Rewrite installed; `web.config` in portal folder rewrites to `/portal/index.html` |
+| 404 on owner routes | Same for `/app/` and `/app/index.html` |
+| CORS errors | `ASPNETCORE_ENVIRONMENT=Staging`; origin `https://mytriplea.co.za` |
 | 500 on API | Event Viewer / stdout logs; connection string; migrations applied |
 | EF: object already exists (Clinics) | DB has schema but no migration history — run [`baseline_ef_migrations.sql`](sql/baseline_ef_migrations.sql) then `dotnet ef database update` |
 | EF: Login failed for user kpw_app | Password in appsettings ≠ SQL login — sync via `ALTER LOGIN` or update appsettings (see SQL section above) |

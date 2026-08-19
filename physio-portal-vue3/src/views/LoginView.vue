@@ -81,9 +81,22 @@ async function onSubmit() {
 
         <div
           v-if="auth.error"
-          class="mt-6 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-700"
+          class="mt-6 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-700 space-y-2"
         >
-          {{ auth.error }}
+          <p>{{ auth.error }}</p>
+          <div v-if="auth.error.includes('EMAIL_NOT_VERIFIED')" class="pt-1">
+            <button
+              type="button"
+              class="font-semibold underline hover:text-red-900 text-xs"
+              @click="auth.resendVerification(form.email)"
+            >
+              Resend verification email to {{ form.email }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="auth.message" class="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-sm text-emerald-800 font-medium">
+          {{ auth.message }}
         </div>
 
         <form class="mt-8 space-y-4" @submit.prevent="onSubmit">
@@ -118,11 +131,17 @@ async function onSubmit() {
           </BaseButton>
         </form>
 
-        <p class="mt-4 text-center text-sm">
+        <div class="mt-6 flex flex-col items-center justify-center gap-2 text-sm text-neutral-muted">
           <RouterLink to="/forgot-password" class="font-semibold text-sage hover:underline">
             Forgot password?
           </RouterLink>
-        </p>
+          <p class="text-xs">
+            Don't have an account?
+            <RouterLink to="/register" class="font-semibold text-sage hover:underline ml-1">
+              Sign up as a Physio
+            </RouterLink>
+          </p>
+        </div>
       </div>
     </main>
   </div>

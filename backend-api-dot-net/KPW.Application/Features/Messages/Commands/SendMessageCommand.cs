@@ -13,11 +13,16 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Mes
 {
     private readonly DbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IChatNotificationService? _chatNotificationService;
 
-    public SendMessageCommandHandler(DbContext dbContext, ICurrentUserService currentUserService)
+    public SendMessageCommandHandler(
+        DbContext dbContext,
+        ICurrentUserService currentUserService,
+        IChatNotificationService? chatNotificationService = null)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
+        _chatNotificationService = chatNotificationService;
     }
 
     public async Task<MessageDto> Handle(SendMessageCommand command, CancellationToken cancellationToken)
@@ -54,7 +59,10 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Mes
             MessageThreadId = thread.MessageThreadId,
             SenderUserId = _currentUserService.UserId.Value,
             Body = command.Request.Body.Trim(),
-            VideoSubmissionId = command.Request.VideoSubmissionId
+            VideoSubmissionId = command.Request.VideoSubmissionId,
+            AttachmentUrl = command.Request.AttachmentUrl,
+            AttachmentName = command.Request.AttachmentName,
+            AttachmentType = command.Request.AttachmentType
         };
 
         _dbContext.Set<Message>().Add(message);
@@ -64,6 +72,13 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Mes
             .Include(m => m.Sender)
             .FirstAsync(m => m.MessageId == message.MessageId, cancellationToken);
 
-        return MessageMapper.ToDto(created);
+        var dto = MessageMapper.ToDto(created);
+
+        if (_chatNotificationService is not null)
+        {
+            await _chatNotificationService.NotifyMessageSentAsync(command.PetId, dto, cancellationToken);
+        }
+
+        return dto;
     }
 }

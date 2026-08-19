@@ -15,10 +15,16 @@ public class User : AuditableEntity
     public string SubscriptionTier { get; set; } = Enums.SubscriptionTier.Free;
     public string? RefreshTokenHash { get; set; }
     public DateTime? RefreshTokenExpiresAt { get; set; }
+    public bool IsEmailVerified { get; set; }
+    public string? EmailVerificationTokenHash { get; set; }
+    public DateTime? EmailVerificationTokenExpiresAt { get; set; }
+    public bool IsApproved { get; set; } = true;
 
     public Clinic? Clinic { get; set; }
     public ICollection<Pet> Pets { get; set; } = [];
     public ICollection<RehabProgram> RehabProgramsAsPhysio { get; set; } = [];
     public ICollection<Appointment> AppointmentsAsPhysio { get; set; } = [];
     public ICollection<Appointment> AppointmentsAsOwner { get; set; } = [];
+    public ICollection<SoapNote> SoapNotesAsPhysio { get; set; } = [];
+    public ICollection<SharedReport> SharedReportsAsPhysio { get; set; } = [];
 }

@@ -21,7 +21,7 @@ const stubMessage = ref('')
 
 const selectedPetId = computed(() => {
   const param = route.params.petId
-  if (param) return Number(param)
+  if (param && !isNaN(Number(param))) return Number(param)
   return messagesStore.activePetId ?? messagesStore.threads[0]?.petId ?? null
 })
 
@@ -42,24 +42,45 @@ onMounted(async () => {
   syncRouteAndOpenThread()
 })
 
-watch(() => messagesStore.threads, syncRouteAndOpenThread, { deep: true })
-
 async function syncRouteAndOpenThread() {
-  if (messagesStore.threads.length === 0) return
-  const paramId = route.params.petId ? Number(route.params.petId) : null
-  const petId = paramId ?? messagesStore.threads[0]!.petId
-  if (!paramId) {
-    router.replace({ name: 'message-thread', params: { petId } })
-  }
-  if (petId) {
-    await messagesStore.openThread(petId)
-    markUnreadAsRead()
+  try {
+    const rawParam = route.params.petId
+    const paramId = rawParam && !isNaN(Number(rawParam)) ? Number(rawParam) : null
+    const firstThreadPetId = messagesStore.threads.length > 0 ? messagesStore.threads[0].petId : null
+    const targetPetId = paramId ?? firstThreadPetId
+
+    if (!targetPetId) return
+
+    if (paramId) {
+      mobileView.value = 'chat'
+      if (messagesStore.activePetId !== targetPetId) {
+        await messagesStore.openThread(targetPetId)
+        markUnreadAsRead()
+      }
+    } else if (typeof targetPetId === 'number' && !isNaN(targetPetId)) {
+      if (String(route.params.petId) !== String(targetPetId)) {
+        await router.replace({ name: 'message-thread', params: { petId: String(targetPetId) } }).catch(() => undefined)
+      }
+      if (messagesStore.activePetId !== targetPetId) {
+        await messagesStore.openThread(targetPetId)
+        markUnreadAsRead()
+      }
+    }
+  } catch (err) {
+    console.error('Error syncing message thread:', err)
   }
 }
 
+watch(() => route.params.petId, () => syncRouteAndOpenThread())
+
 async function selectThread(petId: number) {
-  router.push({ name: 'message-thread', params: { petId } })
+  if (!petId || isNaN(petId)) return
+  router.push({ name: 'message-thread', params: { petId: String(petId) } })
   mobileView.value = 'chat'
+}
+
+function backToInbox() {
+  mobileView.value = 'list'
 }
 
 function markUnreadAsRead() {
@@ -85,10 +106,10 @@ function showStub(message: string) {
 </script>
 
 <template>
-  <div class="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)_260px]">
+  <div class="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_240px]">
     <div
-      class="min-h-[600px]"
-      :class="mobileView === 'chat' ? 'hidden xl:block' : 'block'"
+      class="min-h-[500px]"
+      :class="mobileView === 'chat' ? 'hidden lg:block' : 'block'"
     >
       <MessageThreadList
         :threads="messagesStore.threads"
@@ -99,18 +120,20 @@ function showStub(message: string) {
     </div>
 
     <div
-      class="min-h-[600px]"
-      :class="mobileView === 'list' ? 'hidden xl:block' : 'block'"
+      class="min-h-[500px]"
+      :class="mobileView === 'list' ? 'hidden lg:block' : 'block'"
     >
       <button
         type="button"
-        class="mb-2 text-sm font-semibold text-sage xl:hidden"
-        @click="mobileView = 'list'"
+        class="mb-2 text-sm font-semibold text-sage lg:hidden"
+        @click="backToInbox"
       >
         ← Back to inbox
       </button>
       <MessageChatWindow
         :thread="selectedThread"
+        :patient="selectedPatient"
+        :selected-pet-id="selectedPetId"
         :messages="messagesStore.activeMessages"
         :loading="messagesStore.loading"
       />

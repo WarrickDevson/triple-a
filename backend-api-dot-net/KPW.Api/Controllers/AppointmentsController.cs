@@ -11,6 +11,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("appointments")]
+[Route("api/appointments")]
 [Authorize]
 public class AppointmentsController : ControllerBase
 {

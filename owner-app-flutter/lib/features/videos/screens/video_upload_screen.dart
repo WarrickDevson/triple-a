@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
@@ -25,27 +26,51 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
   double _uploadProgress = 0;
   bool _isUploading = false;
   String? _error;
-  String? _successMessage;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(petsProvider.notifier).loadPets());
+    Future.microtask(() async {
+      await ref.read(petsProvider.notifier).loadPets(force: true);
+      if (!mounted) return;
+      final pets = ref.read(petsProvider).pets;
+      if (pets.isNotEmpty && _selectedPet == null) {
+        _loadExercisesForPet(pets.first);
+      }
+    });
   }
 
   Future<void> _pickVideo() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.video,
-      allowedExtensions: const ['mp4', 'mov', 'hevc'],
-      withData: true,
-      withReadStream: true,
-    );
-    if (result == null || result.files.isEmpty) return;
-    setState(() {
-      _selectedFile = result.files.first;
-      _error = null;
-      _successMessage = null;
-    });
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.video,
+        allowMultiple: false,
+        withData: kIsWeb,
+        withReadStream: kIsWeb,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = result.files.first;
+
+      // Validate video format extensions
+      final ext = file.extension?.toLowerCase() ?? '';
+      final validExtensions = ['mp4', 'mov', 'hevc', 'm4v', 'avi', 'mkv', 'webm', '3gp'];
+      if (ext.isNotEmpty && !validExtensions.contains(ext)) {
+        setState(() {
+          _error = 'Unsupported file format (.$ext). Please select a video file (.mp4, .mov, .hevc, etc.).';
+        });
+        return;
+      }
+
+      setState(() {
+        _selectedFile = file;
+        _error = null;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to select video: ${e.toString()}';
+      });
+    }
   }
 
   Future<void> _loadExercisesForPet(Pet pet) async {
@@ -54,6 +79,22 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
       _selectedExercise = null;
     });
     await ref.read(rehabProgramsProvider(pet.petId).notifier).loadPrograms(pet.petId, force: true);
+    if (!mounted) return;
+    final programsState = ref.read(rehabProgramsProvider(pet.petId));
+    final exercises = programsState.activeProgram?.exercises ?? [];
+    if (exercises.isNotEmpty) {
+      setState(() {
+        _selectedExercise = exercises.first;
+      });
+    }
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes <= 0) return '';
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
   Future<void> _upload() async {
@@ -66,7 +107,7 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
       return;
     }
 
-    if (file.path == null && file.bytes == null) {
+    if (!kIsWeb && file.path == null && file.bytes == null && file.readStream == null) {
       setState(() => _error = 'Unable to read the selected video file.');
       return;
     }
@@ -75,14 +116,33 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
       _isUploading = true;
       _uploadProgress = 0;
       _error = null;
-      _successMessage = null;
     });
 
     try {
       final dio = ref.read(authProvider.notifier).client;
-      final multipartFile = file.path != null
-          ? await MultipartFile.fromFile(file.path!, filename: file.name)
-          : MultipartFile.fromBytes(file.bytes!, filename: file.name);
+      MultipartFile multipartFile;
+
+      if (kIsWeb) {
+        if (file.bytes != null) {
+          multipartFile = MultipartFile.fromBytes(file.bytes!, filename: file.name);
+        } else if (file.readStream != null) {
+          multipartFile = MultipartFile.fromStream(
+            () => file.readStream!,
+            file.size,
+            filename: file.name,
+          );
+        } else {
+          throw Exception('Unable to read selected video data on Web.');
+        }
+      } else {
+        if (file.path != null) {
+          multipartFile = await MultipartFile.fromFile(file.path!, filename: file.name);
+        } else if (file.bytes != null) {
+          multipartFile = MultipartFile.fromBytes(file.bytes!, filename: file.name);
+        } else {
+          throw Exception('Unable to read selected video file path.');
+        }
+      }
 
       final formData = FormData.fromMap({
         'exerciseId': exercise.exerciseId,
@@ -99,27 +159,21 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
       );
 
       setState(() {
-        _successMessage = 'Video uploaded. Your physiotherapist will review it soon.';
         _selectedFile = null;
         _uploadProgress = 0;
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Video uploaded successfully.'),
-          action: SnackBarAction(
-            label: 'View feedback',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const VideoInboxScreen()),
-            ),
-          ),
-        ),
+      ScaffoldMessenger.of(context).clearSnackBars();
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const VideoInboxScreen()),
       );
     } on DioException catch (e) {
       final message = e.response?.data is Map
           ? (e.response!.data as Map)['message']?.toString()
           : null;
       setState(() => _error = message ?? 'Upload failed. Please try again.');
+    } catch (e) {
+      setState(() => _error = 'Upload failed: ${e.toString()}');
     } finally {
       setState(() => _isUploading = false);
     }
@@ -133,6 +187,22 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
         : const RehabProgramsState();
 
     final exercises = programsState.activeProgram?.exercises ?? [];
+
+    if (_selectedPet == null && petsState.pets.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _selectedPet == null) {
+          _loadExercisesForPet(petsState.pets.first);
+        }
+      });
+    } else if (_selectedPet != null && _selectedExercise == null && exercises.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _selectedExercise == null) {
+          setState(() {
+            _selectedExercise = exercises.first;
+          });
+        }
+      });
+    }
 
     return AppPageScaffold(
       title: 'Upload Video',
@@ -153,7 +223,9 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
             child: Column(
               children: [
                 DropdownButtonFormField<Pet>(
-                  initialValue: _selectedPet,
+                  initialValue: petsState.pets.any((p) => p.petId == _selectedPet?.petId)
+                      ? petsState.pets.firstWhere((p) => p.petId == _selectedPet!.petId)
+                      : null,
                   decoration: const InputDecoration(labelText: 'Pet'),
                   items: petsState.pets
                       .map((pet) => DropdownMenuItem(value: pet, child: Text(pet.petName)))
@@ -163,7 +235,9 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<RehabProgramExercise>(
-                  initialValue: _selectedExercise,
+                  initialValue: exercises.any((ex) => ex.exerciseId == _selectedExercise?.exerciseId)
+                      ? exercises.firstWhere((ex) => ex.exerciseId == _selectedExercise!.exerciseId)
+                      : null,
                   decoration: const InputDecoration(labelText: 'Exercise'),
                   items: exercises
                       .map((ex) => DropdownMenuItem(value: ex, child: Text(ex.title)))
@@ -173,12 +247,59 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
                       : (ex) => setState(() => _selectedExercise = ex),
                 ),
                 const SizedBox(height: 20),
+                if (_selectedFile != null) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded, color: AppColors.primaryLight),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _selectedFile!.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.neutralDark,
+                                ),
+                              ),
+                              if (_selectedFile!.size > 0)
+                                Text(
+                                  _formatFileSize(_selectedFile!.size),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.neutralDark.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        if (!_isUploading)
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 20),
+                            onPressed: () => setState(() => _selectedFile = null),
+                            tooltip: 'Change video',
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _isUploading ? null : _pickVideo,
-                    icon: const Icon(Icons.video_library_outlined),
-                    label: Text(_selectedFile?.name ?? 'CHOOSE VIDEO (.mp4, .mov, .hevc)'),
+                    icon: Icon(_selectedFile == null ? Icons.video_library_outlined : Icons.edit),
+                    label: Text(_selectedFile == null ? 'CHOOSE VIDEO (.mp4, .mov, .hevc)' : 'CHANGE VIDEO'),
                   ),
                 ),
                 if (_isUploading || _uploadProgress > 0) ...[
@@ -194,10 +315,6 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
                 if (_error != null) ...[
                   const SizedBox(height: 16),
                   Text(_error!, style: const TextStyle(color: AppColors.alertRed)),
-                ],
-                if (_successMessage != null) ...[
-                  const SizedBox(height: 16),
-                  Text(_successMessage!, style: const TextStyle(color: AppColors.successGreen)),
                 ],
               ],
             ),
@@ -215,3 +332,4 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
     );
   }
 }
+

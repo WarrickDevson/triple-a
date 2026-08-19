@@ -9,6 +9,7 @@ import '../providers/auth_provider.dart';
 import '../../shell/main_shell.dart';
 import 'forgot_password_screen.dart';
 import 'signup_screen.dart';
+import 'verify_email_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -30,8 +31,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    final email = _emailController.text.trim();
     final ok = await ref.read(authProvider.notifier).login(
-          _emailController.text.trim(),
+          email,
           _passwordController.text,
         );
     if (!mounted) return;
@@ -39,6 +41,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainShell()),
       );
+    } else {
+      final err = ref.read(authProvider).error ?? '';
+      if (err.contains('EMAIL_NOT_VERIFIED') || err.toLowerCase().contains('verify your email')) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => VerifyEmailScreen(email: email),
+          ),
+        );
+      }
     }
   }
 

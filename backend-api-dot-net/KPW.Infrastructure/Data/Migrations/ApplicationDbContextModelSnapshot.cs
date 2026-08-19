@@ -1664,6 +1664,18 @@ namespace KPW.Infrastructure.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MessageId"));
 
+                    b.Property<string>("AttachmentName")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("AttachmentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("AttachmentUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -1996,6 +2008,61 @@ namespace KPW.Infrastructure.Data.Migrations
                             PetId = 5,
                             PhysioId = 2
                         });
+                });
+
+            modelBuilder.Entity("KPW.Domain.Entities.OwnerSubjectiveNote", b =>
+                {
+                    b.Property<int>("OwnerSubjectiveNoteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OwnerSubjectiveNoteId"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EnergyObserved")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsReviewed")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ModifiedUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("NoteDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("OwnerId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PainObserved")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PetId")
+                        .HasColumnType("int");
+
+                    b.HasKey("OwnerSubjectiveNoteId");
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("PetId");
+
+                    b.ToTable("OwnerSubjectiveNotes", (string)null);
                 });
 
             modelBuilder.Entity("KPW.Domain.Entities.PasswordResetToken", b =>
@@ -2473,6 +2540,150 @@ namespace KPW.Infrastructure.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("KPW.Domain.Entities.SharedReport", b =>
+                {
+                    b.Property<int>("SharedReportId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SharedReportId"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ModifiedUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PetId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReportType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("SharedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SharedByPhysioId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SoapNoteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("SharedReportId");
+
+                    b.HasIndex("PetId");
+
+                    b.HasIndex("SharedByPhysioId");
+
+                    b.HasIndex("SoapNoteId");
+
+                    b.ToTable("SharedReports", (string)null);
+                });
+
+            modelBuilder.Entity("KPW.Domain.Entities.SoapNote", b =>
+                {
+                    b.Property<int>("SoapNoteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SoapNoteId"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int?>("AppointmentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomMetricsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSharedWithOwner")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("LamenessScore")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ModifiedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ModifiedUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Objective")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int?>("PainScore")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PetId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PhysioId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("SessionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("SharedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("StiffnessScore")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subjective")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("SoapNoteId");
+
+                    b.HasIndex("AppointmentId");
+
+                    b.HasIndex("PetId");
+
+                    b.HasIndex("PhysioId");
+
+                    b.ToTable("SoapNotes", (string)null);
+                });
+
             modelBuilder.Entity("KPW.Domain.Entities.User", b =>
                 {
                     b.Property<int>("UserId")
@@ -2495,6 +2706,13 @@ namespace KPW.Infrastructure.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<DateTime?>("EmailVerificationTokenExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmailVerificationTokenHash")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -2502,6 +2720,14 @@ namespace KPW.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsEmailVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -2558,6 +2784,8 @@ namespace KPW.Infrastructure.Data.Migrations
                             Email = "sysadmin@kpw.local",
                             FirstName = "System",
                             IsActive = true,
+                            IsApproved = true,
+                            IsEmailVerified = true,
                             LastName = "Administrator",
                             ModifiedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PasswordHash = "$argon2id$v=19$m=65536,t=3,p=1$pE6t/ab4vs6xAn1qMByDZQ$GtKjB012JDKkMeTUDEMOBROTGRMOp2ubJZIZkE06NfI",
@@ -2573,6 +2801,8 @@ namespace KPW.Infrastructure.Data.Migrations
                             Email = "physio@kpw.local",
                             FirstName = "Demo",
                             IsActive = true,
+                            IsApproved = true,
+                            IsEmailVerified = true,
                             LastName = "Physiotherapist",
                             ModifiedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PasswordHash = "$argon2id$v=19$m=65536,t=3,p=1$pE6t/ab4vs6xAn1qMByDZQ$GtKjB012JDKkMeTUDEMOBROTGRMOp2ubJZIZkE06NfI",
@@ -2588,6 +2818,8 @@ namespace KPW.Infrastructure.Data.Migrations
                             Email = "owner@kpw.local",
                             FirstName = "Demo",
                             IsActive = true,
+                            IsApproved = true,
+                            IsEmailVerified = true,
                             LastName = "Owner",
                             ModifiedDate = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             PasswordHash = "$argon2id$v=19$m=65536,t=3,p=1$pE6t/ab4vs6xAn1qMByDZQ$GtKjB012JDKkMeTUDEMOBROTGRMOp2ubJZIZkE06NfI",
@@ -2887,6 +3119,25 @@ namespace KPW.Infrastructure.Data.Migrations
                     b.Navigation("Physio");
                 });
 
+            modelBuilder.Entity("KPW.Domain.Entities.OwnerSubjectiveNote", b =>
+                {
+                    b.HasOne("KPW.Domain.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KPW.Domain.Entities.Pet", "Pet")
+                        .WithMany("OwnerSubjectiveNotes")
+                        .HasForeignKey("PetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("Pet");
+                });
+
             modelBuilder.Entity("KPW.Domain.Entities.PasswordResetToken", b =>
                 {
                     b.HasOne("KPW.Domain.Entities.User", "User")
@@ -2945,6 +3196,58 @@ namespace KPW.Infrastructure.Data.Migrations
                     b.Navigation("Exercise");
 
                     b.Navigation("RehabProgram");
+                });
+
+            modelBuilder.Entity("KPW.Domain.Entities.SharedReport", b =>
+                {
+                    b.HasOne("KPW.Domain.Entities.Pet", "Pet")
+                        .WithMany("SharedReports")
+                        .HasForeignKey("PetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("KPW.Domain.Entities.User", "SharedByPhysio")
+                        .WithMany("SharedReportsAsPhysio")
+                        .HasForeignKey("SharedByPhysioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("KPW.Domain.Entities.SoapNote", "SoapNote")
+                        .WithMany()
+                        .HasForeignKey("SoapNoteId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Pet");
+
+                    b.Navigation("SharedByPhysio");
+
+                    b.Navigation("SoapNote");
+                });
+
+            modelBuilder.Entity("KPW.Domain.Entities.SoapNote", b =>
+                {
+                    b.HasOne("KPW.Domain.Entities.Appointment", "Appointment")
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("KPW.Domain.Entities.Pet", "Pet")
+                        .WithMany("SoapNotes")
+                        .HasForeignKey("PetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("KPW.Domain.Entities.User", "Physio")
+                        .WithMany("SoapNotesAsPhysio")
+                        .HasForeignKey("PhysioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Appointment");
+
+                    b.Navigation("Pet");
+
+                    b.Navigation("Physio");
                 });
 
             modelBuilder.Entity("KPW.Domain.Entities.User", b =>
@@ -3007,7 +3310,13 @@ namespace KPW.Infrastructure.Data.Migrations
 
                     b.Navigation("MessageThread");
 
+                    b.Navigation("OwnerSubjectiveNotes");
+
                     b.Navigation("RehabPrograms");
+
+                    b.Navigation("SharedReports");
+
+                    b.Navigation("SoapNotes");
 
                     b.Navigation("VideoSubmissions");
                 });
@@ -3026,6 +3335,10 @@ namespace KPW.Infrastructure.Data.Migrations
                     b.Navigation("Pets");
 
                     b.Navigation("RehabProgramsAsPhysio");
+
+                    b.Navigation("SharedReportsAsPhysio");
+
+                    b.Navigation("SoapNotesAsPhysio");
                 });
 #pragma warning restore 612, 618
         }

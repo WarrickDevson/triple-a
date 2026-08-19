@@ -20,3 +20,18 @@ export async function markMessageRead(messageId: number): Promise<Message> {
   const { data } = await apiClient.put<Message>(`/api/messages/${messageId}/read`)
   return data
 }
+
+export async function uploadMessageAttachment(
+  file: File,
+): Promise<{ attachmentUrl: string; attachmentName: string; attachmentType: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const { data } = await apiClient.post<{
+    attachmentUrl: string
+    attachmentName: string
+    attachmentType: string
+  }>('/api/messages/attachments/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}

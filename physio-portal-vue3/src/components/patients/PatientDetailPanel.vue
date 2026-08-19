@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ArrowLeft } from '@lucide/vue'
 import PatientActionBar from './PatientActionBar.vue'
 import PatientOverviewTab from './PatientOverviewTab.vue'
-import PatientTabStub from './PatientTabStub.vue'
+import PatientPlanTab from './PatientPlanTab.vue'
+import PatientProgressTab from './PatientProgressTab.vue'
+import PatientDocumentsTab from './PatientDocumentsTab.vue'
+import SoapNotesTab from './SoapNotesTab.vue'
 import type { Appointment } from '../../types/appointment'
 import type { PatientDemoMeta } from '../../data/patientDemo'
 import type { RehabProgram } from '../../types/exercise'
 import type { Pet } from '../../types/pet'
+
+const route = useRoute()
 
 defineProps<{
   patient: Pet | null
@@ -25,14 +31,23 @@ const emit = defineEmits<{
 
 const tabs = [
   { id: 'overview', label: 'Overview' },
-  { id: 'assessment', label: 'Assessment' },
+  { id: 'soap', label: 'SOAP Notes' },
   { id: 'plan', label: 'Plan' },
   { id: 'progress', label: 'Progress' },
   { id: 'documents', label: 'Documents' },
-  { id: 'notes', label: 'Notes' },
 ] as const
 
-const activeTab = ref<(typeof tabs)[number]['id']>('overview')
+const activeTab = ref<(typeof tabs)[number]['id']>(route.query.openSoap === 'true' || route.query.tab === 'soap' ? 'soap' : 'overview')
+
+watch(
+  () => route.query,
+  (q) => {
+    if (q.openSoap === 'true' || q.tab === 'soap') {
+      activeTab.value = 'soap'
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -86,33 +101,27 @@ const activeTab = ref<(typeof tabs)[number]['id']>('overview')
             :next-appointment="nextAppointment"
             :progress-percent="progressPercent"
           />
-          <PatientTabStub
-            v-else-if="activeTab === 'assessment'"
-            title="Assessment"
-            description="Record and review clinical assessments for this patient."
+          <SoapNotesTab
+            v-else-if="activeTab === 'soap'"
+            :pet-id="patient.petId"
+            :pet-name="patient.petName"
           />
-          <PatientTabStub
+          <PatientPlanTab
             v-else-if="activeTab === 'plan'"
-            title="Treatment Plan"
-            description="Build and manage rehabilitation plans and exercise prescriptions."
+            :patient="patient"
+            :active-program="activeProgram"
           />
-          <PatientTabStub
+          <PatientProgressTab
             v-else-if="activeTab === 'progress'"
-            title="Progress"
-            description="Track outcome measures and rehabilitation milestones over time."
+            :patient="patient"
+            :progress-percent="progressPercent"
           />
-          <PatientTabStub
+          <PatientDocumentsTab
             v-else-if="activeTab === 'documents'"
-            title="Documents"
-            description="Access reports, consent forms, and shared files."
-          />
-          <PatientTabStub
-            v-else-if="activeTab === 'notes'"
-            title="Notes"
-            description="Clinical notes and session observations will appear here."
+            :patient="patient"
           />
 
-          <PatientActionBar v-if="activeTab === 'overview'" />
+          <PatientActionBar v-if="activeTab === 'overview'" :pet-id="patient.petId" />
         </template>
       </div>
     </template>

@@ -22,13 +22,13 @@ export const REPORT_TYPES: { id: string; label: ReportType; description: string;
     id: 'discharge',
     label: 'Discharge Summary',
     description: 'End-of-care summary for owner and referring veterinarian.',
-    available: false,
+    available: true,
   },
   {
     id: 'home-program',
     label: 'Owner Home Program',
     description: 'Printable home exercise guide for the pet owner.',
-    available: false,
+    available: true,
   },
 ]
 

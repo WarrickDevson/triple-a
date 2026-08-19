@@ -7,11 +7,13 @@ import '../../../core/widgets/pet_avatar.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../appointments/models/appointment.dart';
 import '../../appointments/providers/appointments_provider.dart';
+import '../../appointments/screens/appointments_screen.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../pets/models/pet.dart';
 import '../../pets/providers/pets_provider.dart';
 import '../../pets/screens/pet_detail_screen.dart';
 import '../../reminders/providers/reminders_provider.dart';
+import '../../reminders/screens/reminders_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key, this.embedded = false});
@@ -41,7 +43,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(authProvider).user;
+    final user = ref.watch(authProvider.select((s) => s.user));
     final petsState = ref.watch(petsProvider);
     final appointmentsState = ref.watch(appointmentsProvider);
     final reminderCount = ref.watch(remindersProvider).reminders.length;
@@ -151,12 +153,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
           if (nextAppointment != null) ...[
             const SizedBox(height: 8),
-            const Text(
-              'Upcoming Appointment',
-              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.navy, fontSize: 15),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Upcoming Appointment',
+                  style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.navy, fontSize: 15),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: nextAppointment.appointmentStatus == 'Requested'
+                        ? const Color(0xFFFEF3C7)
+                        : const Color(0xFFD1FAE5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    nextAppointment.appointmentStatus == 'Requested'
+                        ? '⏳ Pending Approval'
+                        : '✅ Booked',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: nextAppointment.appointmentStatus == 'Requested'
+                          ? const Color(0xFF92400E)
+                          : const Color(0xFF065F46),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             SectionCard(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AppointmentsScreen()),
+                );
+              },
               child: Row(
                 children: [
                   Container(
@@ -239,22 +272,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
           if (reminderCount > 0) ...[
             const SizedBox(height: 16),
-            SectionCard(
-              child: Row(
-                children: [
-                  const Icon(Icons.notifications_outlined, color: AppColors.sage),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      '$reminderCount reminder${reminderCount == 1 ? '' : 's'} due soon',
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy),
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RemindersScreen()),
+                );
+              },
+              child: SectionCard(
+                child: Row(
+                  children: [
+                    const Icon(Icons.notifications_outlined, color: AppColors.sage),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '$reminderCount reminder${reminderCount == 1 ? '' : 's'} due soon',
+                        style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy),
+                      ),
                     ),
-                  ),
-                ],
+                    const Icon(Icons.chevron_right, color: AppColors.neutralMuted),
+                  ],
+                ),
               ),
             ),
           ],
         ],
+      ),
+    );
+
+    final notificationButton = IconButton(
+      onPressed: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const RemindersScreen()),
+        );
+      },
+      icon: Badge(
+        isLabelVisible: reminderCount > 0,
+        label: Text('$reminderCount'),
+        child: const Icon(Icons.notifications_outlined, color: AppColors.navy),
       ),
     );
 
@@ -267,14 +321,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 title: 'Dashboard',
                 showLogo: true,
                 actions: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: Badge(
-                      isLabelVisible: reminderCount > 0,
-                      label: Text('$reminderCount'),
-                      child: const Icon(Icons.notifications_outlined, color: AppColors.navy),
-                    ),
-                  ),
+                  notificationButton,
                 ],
               ),
               Expanded(child: content),
@@ -287,6 +334,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return AppPageScaffold(
       title: 'Dashboard',
       showBrand: true,
+      actions: [
+        notificationButton,
+      ],
       body: content,
     );
   }

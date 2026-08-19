@@ -31,11 +31,13 @@ public class GetPhysioDashboardQueryHandler : IRequestHandler<GetPhysioDashboard
             .AsNoTracking()
             .FirstAsync(u => u.UserId == _currentUserService.UserId, cancellationToken);
 
-        var petsQuery = _dbContext.Set<Pet>().AsQueryable();
-        if (currentUser.ClinicId is not null)
+        if (currentUser.ClinicId is null)
         {
-            petsQuery = petsQuery.Where(p => p.Owner.ClinicId == currentUser.ClinicId);
+            return new PhysioDashboardDto(0, 0, 0, []);
         }
+
+        var petsQuery = _dbContext.Set<Pet>()
+            .Where(p => p.Owner.ClinicId == currentUser.ClinicId);
 
         var patientCount = await petsQuery.CountAsync(cancellationToken);
 

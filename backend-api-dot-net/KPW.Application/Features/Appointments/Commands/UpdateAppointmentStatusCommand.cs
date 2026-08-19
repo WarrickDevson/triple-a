@@ -59,9 +59,9 @@ public class UpdateAppointmentStatusCommandHandler
                 throw new UnauthorizedAccessException("Owners can only cancel appointments.");
             }
 
-            if (appointment.AppointmentStatus != AppointmentStatus.Scheduled)
+            if (appointment.AppointmentStatus is not (AppointmentStatus.Requested or AppointmentStatus.Scheduled))
             {
-                throw new InvalidOperationException("Only scheduled appointments can be cancelled.");
+                throw new InvalidOperationException("Only requested or scheduled appointments can be cancelled.");
             }
         }
         else if (role is UserRole.Physio or UserRole.SysAdmin)
@@ -71,14 +71,23 @@ public class UpdateAppointmentStatusCommandHandler
                 throw new UnauthorizedAccessException("You can only update your own appointments.");
             }
 
-            if (newStatus is not (AppointmentStatus.Completed or AppointmentStatus.Cancelled))
+            if (appointment.AppointmentStatus == AppointmentStatus.Requested)
             {
-                throw new InvalidOperationException("Physiotherapists can only mark appointments as Completed or Cancelled.");
+                if (newStatus is not (AppointmentStatus.Scheduled or AppointmentStatus.Rejected or AppointmentStatus.Cancelled))
+                {
+                    throw new InvalidOperationException("Requested appointments can only be accepted (Scheduled), Rejected, or Cancelled.");
+                }
             }
-
-            if (appointment.AppointmentStatus != AppointmentStatus.Scheduled)
+            else if (appointment.AppointmentStatus == AppointmentStatus.Scheduled)
             {
-                throw new InvalidOperationException("Only scheduled appointments can be updated.");
+                if (newStatus is not (AppointmentStatus.Completed or AppointmentStatus.Cancelled))
+                {
+                    throw new InvalidOperationException("Scheduled appointments can only be marked as Completed or Cancelled.");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException("This appointment cannot be updated in its current status.");
             }
 
             if (!string.IsNullOrWhiteSpace(command.Request.ClinicianNotes))

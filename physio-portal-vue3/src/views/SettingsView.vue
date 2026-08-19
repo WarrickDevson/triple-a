@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseButton from '../components/BaseButton.vue'
 import {
@@ -14,16 +14,22 @@ import {
   type NotificationSettings,
 } from '../data/settingsDemo'
 import { useAuthStore } from '../store/auth'
+import { useNotificationsStore } from '../store/notifications'
+import InviteOwnerModal from '../components/clinic/InviteOwnerModal.vue'
+import EditProfileModal from '../components/profile/EditProfileModal.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 
 const activeTab = ref<'profile' | 'clinic' | 'notifications' | 'security'>('profile')
 const showStubModal = ref(false)
+const showInviteModal = ref(false)
+const showEditProfileModal = ref(false)
 const stubMessage = ref('')
 
 const clinic = ref<ClinicSettings>(loadClinicSettings())
 const notifications = ref<NotificationSettings>(loadNotificationSettings())
+const clinicSaveSuccess = ref<string | null>(null)
 
 const changeForm = reactive({
   currentPassword: '',
@@ -31,21 +37,48 @@ const changeForm = reactive({
 })
 const changeMessage = ref<string | null>(null)
 
+function syncClinicName() {
+  if (auth.user?.clinicName) {
+    clinic.value.clinicName = auth.user.clinicName
+  }
+}
+
 onMounted(() => {
-  auth.fetchCurrentUser().catch(() => undefined)
+  auth.fetchCurrentUser()
+    .then(() => syncClinicName())
+    .catch(() => undefined)
 })
 
-function persistClinic() {
+watch(() => auth.user?.clinicName, (newClinicName) => {
+  if (newClinicName) {
+    clinic.value.clinicName = newClinicName
+  }
+})
+
+async function persistClinic() {
+  clinicSaveSuccess.value = null
   saveClinicSettings(clinic.value)
+  if (auth.user) {
+    await auth.updateProfile({
+      firstName: auth.user.firstName,
+      lastName: auth.user.lastName,
+      clinicName: clinic.value.clinicName,
+    })
+  }
+  clinicSaveSuccess.value = 'Clinic settings saved successfully.'
+  setTimeout(() => {
+    clinicSaveSuccess.value = null
+  }, 3000)
+}
+
+function onProfileUpdated() {
+  syncClinicName()
 }
 
 function persistNotifications() {
   saveNotificationSettings(notifications.value)
-}
-
-function showStub(message: string) {
-  stubMessage.value = message
-  showStubModal.value = true
+  const notificationsStore = useNotificationsStore()
+  notificationsStore.reloadSettings()
 }
 
 async function submitChangePassword() {
@@ -87,7 +120,7 @@ function logout() {
     <section v-if="activeTab === 'profile'" class="portal-card p-6">
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-bold text-navy">Profile</h2>
-        <button type="button" class="text-xs font-semibold text-sage" @click="showStub('Profile editing coming soon.')">
+        <button type="button" class="text-xs font-semibold text-sage hover:underline" @click="showEditProfileModal = true">
           Edit
         </button>
       </div>
@@ -112,7 +145,7 @@ function logout() {
           </div>
           <div>
             <dt class="text-neutral-muted">Clinic</dt>
-            <dd class="font-medium text-navy">{{ auth.user.clinicName ?? '—' }}</dd>
+            <dd class="font-medium text-navy">{{ auth.user.clinicName ?? clinic.clinicName ?? '—' }}</dd>
           </div>
           <div v-if="auth.user.clinicInviteCode">
             <dt class="text-neutral-muted">Owner invite code</dt>
@@ -122,15 +155,23 @@ function logout() {
         <p v-if="auth.user.clinicInviteCode" class="text-sm text-neutral-muted">
           Share this code with pet owners so they can create an account linked to your clinic.
         </p>
+        <div class="pt-2">
+          <BaseButton size="sm" @click="showInviteModal = true">Send Owner Invite Email</BaseButton>
+        </div>
       </div>
     </section>
 
     <section v-else-if="activeTab === 'clinic'" class="portal-card p-6">
       <h2 class="text-sm font-bold text-navy">Clinic Settings</h2>
-      <div v-if="auth.user?.clinicInviteCode" class="mt-4 rounded-xl border border-sage/30 bg-sage-muted/40 p-4">
-        <p class="text-xs font-semibold uppercase tracking-wide text-neutral-muted">Owner invite code</p>
-        <p class="mt-1 font-mono text-lg font-bold text-navy">{{ auth.user.clinicInviteCode }}</p>
-        <p class="mt-2 text-sm text-neutral-muted">Owners enter this when signing up in the mobile app.</p>
+      <div v-if="auth.user?.clinicInviteCode" class="mt-4 rounded-xl border border-sage/30 bg-sage-muted/40 p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-neutral-muted">Owner invite code</p>
+          <p class="mt-1 font-mono text-lg font-bold text-navy">{{ auth.user.clinicInviteCode }}</p>
+          <p class="mt-1 text-xs text-neutral-muted">Owners enter this when signing up in the mobile app.</p>
+        </div>
+        <BaseButton size="sm" variant="secondary" @click="showInviteModal = true">
+          Send Email Invite
+        </BaseButton>
       </div>
       <form class="mt-4 space-y-4" @submit.prevent="persistClinic">
         <label class="block">
@@ -152,6 +193,9 @@ function logout() {
             <option v-for="mins in APPOINTMENT_DURATIONS" :key="mins" :value="mins">{{ mins }} minutes</option>
           </select>
         </label>
+        <div v-if="clinicSaveSuccess" class="rounded-lg bg-emerald-50 p-2.5 text-xs font-medium text-emerald-800 border border-emerald-200">
+          {{ clinicSaveSuccess }}
+        </div>
         <BaseButton type="submit" size="sm">Save clinic settings</BaseButton>
       </form>
     </section>
@@ -227,6 +271,9 @@ function logout() {
       </div>
     </section>
   </div>
+
+  <InviteOwnerModal v-if="showInviteModal" @close="showInviteModal = false" />
+  <EditProfileModal v-if="showEditProfileModal" @close="showEditProfileModal = false" @updated="onProfileUpdated" />
 
   <div
     v-if="showStubModal"

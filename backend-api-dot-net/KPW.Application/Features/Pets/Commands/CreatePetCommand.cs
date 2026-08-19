@@ -33,6 +33,20 @@ public class CreatePetCommandHandler : IRequestHandler<CreatePetCommand, PetDto>
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         try
         {
+            if (_currentUserService.Role is UserRole.Physio or UserRole.SysAdmin && _currentUserService.UserId.HasValue)
+            {
+                var physioUser = await _dbContext.Set<User>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.UserId == _currentUserService.UserId.Value, cancellationToken);
+                var ownerUser = await _dbContext.Set<User>()
+                    .FirstOrDefaultAsync(u => u.UserId == ownerId, cancellationToken);
+
+                if (physioUser?.ClinicId is not null && ownerUser is not null && ownerUser.ClinicId != physioUser.ClinicId)
+                {
+                    ownerUser.ClinicId = physioUser.ClinicId;
+                }
+            }
+
             var pet = new Pet
             {
                 OwnerId = ownerId,
@@ -77,6 +91,11 @@ public class CreatePetCommandHandler : IRequestHandler<CreatePetCommand, PetDto>
 
     private async Task<int> ResolveOwnerId(CreatePetRequestDto request, CancellationToken cancellationToken)
     {
+        if (!_currentUserService.UserId.HasValue)
+        {
+            throw new UnauthorizedAccessException("Authentication is required to create a pet profile.");
+        }
+
         if (_currentUserService.Role == UserRole.Owner)
         {
             if (request.OwnerId.HasValue && request.OwnerId != _currentUserService.UserId)
@@ -116,18 +135,15 @@ public class CreatePetCommandHandler : IRequestHandler<CreatePetCommand, PetDto>
                 PhoneNumber = request.NewOwner.PhoneNumber?.Trim(),
                 UserRole = UserRole.Owner,
                 SubscriptionTier = SubscriptionTier.Free,
-                ClinicId = currentUser.ClinicId
+                ClinicId = currentUser.ClinicId,
+                IsEmailVerified = true,
+                IsApproved = true
             };
             users.Add(owner);
             await _dbContext.SaveChangesAsync(cancellationToken);
             return owner.UserId;
         }
 
-        if (!request.OwnerId.HasValue)
-        {
-            throw new InvalidOperationException("OwnerId or NewOwner is required.");
-        }
-
-        return request.OwnerId.Value;
+        return request.OwnerId ?? _currentUserService.UserId!.Value;
     }
 }

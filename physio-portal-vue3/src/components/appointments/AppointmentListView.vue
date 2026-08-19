@@ -12,7 +12,9 @@ const emit = defineEmits<{
 }>()
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString([], {
+  const str = value.endsWith('Z') || value.includes('+') ? value : `${value}Z`
+  return new Date(str).toLocaleString([], {
+    timeZone: 'UTC',
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -49,6 +51,9 @@ function formatDateTime(value: string) {
             <p class="text-xs text-neutral-muted">{{ formatDateTime(appointment.scheduledDateTime) }}</p>
             <p class="text-xs text-neutral-muted">
               {{ appointment.ownerName }} · {{ getAppointmentLocation(appointment.appointmentId) }}
+            </p>
+            <p v-if="appointment.clientNotes" class="mt-1 text-xs font-medium text-amber-800 bg-amber-50/80 rounded px-1.5 py-0.5 inline-block">
+              📝 Owner note attached
             </p>
           </div>
         </button>

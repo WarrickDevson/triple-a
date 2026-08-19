@@ -10,6 +10,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("pets/{petId:int}/exercise-sessions")]
+[Route("api/pets/{petId:int}/exercise-sessions")]
 [Authorize]
 public class ExerciseSessionsController : ControllerBase
 {

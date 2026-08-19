@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router'
 import { Plus } from '@lucide/vue'
 import PlanExerciseTable from './PlanExerciseTable.vue'
 import type { PlanPhase } from '../../data/planDemo'
-import type { RehabProgram } from '../../types/exercise'
+import type { RehabProgramExercise } from '../../types/exercise'
 
 defineProps<{
   phase: PlanPhase
-  program: RehabProgram | null
+  exercises: RehabProgramExercise[]
 }>()
 
 const emit = defineEmits<{
   editPhase: []
+  addExercise: []
 }>()
 </script>
 
@@ -44,16 +44,17 @@ const emit = defineEmits<{
       </ul>
 
       <div class="mt-6">
-        <PlanExerciseTable :program="program" />
+        <PlanExerciseTable :exercises="exercises" />
       </div>
 
-      <RouterLink
-        :to="{ name: 'exercises' }"
+      <button
+        type="button"
         class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-sage hover:text-navy"
+        @click="emit('addExercise')"
       >
         <Plus class="h-4 w-4" />
         Add Exercise
-      </RouterLink>
+      </button>
     </div>
   </section>
 </template>

@@ -8,7 +8,8 @@ defineProps<{
 }>()
 
 function formatTime(value: string) {
-  return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const str = value.endsWith('Z') || value.includes('+') ? value : `${value}Z`
+  return new Date(str).toLocaleTimeString([], { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' })
 }
 
 function statusColor(status: string) {

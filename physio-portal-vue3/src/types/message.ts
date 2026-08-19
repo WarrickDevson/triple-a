@@ -5,6 +5,9 @@ export interface Message {
   senderName: string
   body: string
   videoSubmissionId: number | null
+  attachmentUrl?: string | null
+  attachmentName?: string | null
+  attachmentType?: string | null
   readAt: string | null
   createdDate: string
 }
@@ -25,4 +28,7 @@ export interface MessageThread {
 export interface SendMessageRequest {
   body: string
   videoSubmissionId?: number
+  attachmentUrl?: string
+  attachmentName?: string
+  attachmentType?: string
 }

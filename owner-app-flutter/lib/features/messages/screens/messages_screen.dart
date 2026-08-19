@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
@@ -51,11 +52,16 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     super.dispose();
   }
 
-  Future<void> _loadThreads() async {
-    setState(() => _loadingThreads = true);
-    await ref.read(petsProvider.notifier).loadPets(force: true);
+  Future<void> _loadThreads({bool silent = false}) async {
+    if (!silent) {
+      setState(() => _loadingThreads = true);
+      await ref.read(petsProvider.notifier).loadPets(force: true);
+    } else {
+      await ref.read(petsProvider.notifier).loadPets();
+    }
     final pets = ref.read(petsProvider).pets;
     final dio = ref.read(authProvider.notifier).client;
+    final userId = ref.read(authProvider).user?.userId;
 
     final map = <int, List<PetMessage>>{};
     for (final pet in pets) {
@@ -64,6 +70,17 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
         final messages = response.data!
             .map((item) => PetMessage.fromJson(item as Map<String, dynamic>))
             .toList();
+
+        if (silent && _messagesByPet.containsKey(pet.petId)) {
+          final oldMessages = _messagesByPet[pet.petId] ?? [];
+          if (messages.length > oldMessages.length) {
+            final newest = messages.last;
+            if (userId != null && newest.senderUserId != userId) {
+              _showNotificationSnackBar(pet, newest);
+            }
+          }
+        }
+
         map[pet.petId] = messages;
       } catch (_) {
         map[pet.petId] = [];
@@ -75,10 +92,10 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
       _messagesByPet
         ..clear()
         ..addAll(map);
-      _loadingThreads = false;
+      if (!silent) _loadingThreads = false;
     });
 
-    if (widget.openThreadOnLoad && widget.initialPetId != null && pets.isNotEmpty) {
+    if (!silent && widget.openThreadOnLoad && widget.initialPetId != null && pets.isNotEmpty) {
       Pet pet;
       try {
         pet = pets.firstWhere((p) => p.petId == widget.initialPetId);
@@ -89,14 +106,62 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     }
   }
 
-  void _openThread(Pet pet) {
-    Navigator.of(context).push(
+  Future<void> _openThread(Pet pet) async {
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => MessageThreadScreen(
           pet: pet,
           initialMessage: widget.initialPetId == pet.petId ? widget.initialMessage : null,
           initialVideoSubmissionId:
               widget.initialPetId == pet.petId ? widget.initialVideoSubmissionId : null,
+        ),
+      ),
+    );
+    if (mounted) {
+      _loadThreads(silent: true);
+    }
+  }
+
+  void _showNotificationSnackBar(Pet pet, PetMessage message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'New Message for ${pet.petName}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13),
+                  ),
+                  Text(
+                    message.body,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.navy,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'View',
+          textColor: AppColors.sageLight,
+          onPressed: () {
+            _openThread(pet);
+          },
         ),
       ),
     );
@@ -191,7 +256,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                           child: ListView.separated(
                             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                             itemCount: threads.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            separatorBuilder: (_, _) => const SizedBox(height: 8),
                             itemBuilder: (context, index) {
                               final pet = threads[index];
                               final messages = _messagesByPet[pet.petId] ?? [];

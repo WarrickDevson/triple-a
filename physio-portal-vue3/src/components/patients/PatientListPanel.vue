@@ -14,6 +14,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   select: [petId: number]
   add: []
+  invite: []
 }>()
 
 const search = ref('')
@@ -46,13 +47,22 @@ function selectPatient(petId: number) {
     <div class="border-b border-neutral-grey/80 p-4">
       <div class="flex items-center justify-between gap-2">
         <h2 class="text-sm font-bold text-navy">My Patients</h2>
-        <button
-          type="button"
-          class="rounded-lg bg-sage px-3 py-1.5 text-xs font-semibold text-white hover:bg-sage-light"
-          @click="emit('add')"
-        >
-          Add patient
-        </button>
+        <div class="flex gap-1.5">
+          <button
+            type="button"
+            class="rounded-lg border border-sage/40 bg-sage-muted/50 px-2.5 py-1.5 text-xs font-semibold text-navy transition-colors hover:bg-sage-muted"
+            @click="emit('invite')"
+          >
+            Invite owner
+          </button>
+          <button
+            type="button"
+            class="rounded-lg bg-sage px-3 py-1.5 text-xs font-semibold text-white hover:bg-sage-light"
+            @click="emit('add')"
+          >
+            Add patient
+          </button>
+        </div>
       </div>
       <div class="relative mt-3">
         <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-muted" />

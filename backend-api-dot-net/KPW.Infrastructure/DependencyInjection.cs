@@ -25,19 +25,33 @@ public static class DependencyInjection
         services.Configure<VideoOptions>(configuration.GetSection(VideoOptions.SectionName));
         services.Configure<AiOptions>(configuration.GetSection(AiOptions.SectionName));
         services.Configure<AppOptions>(configuration.GetSection(AppOptions.SectionName));
+        services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
 
-        services.AddSingleton<IEmailSender, LoggingEmailSender>();
+        services.AddSingleton<LoggingEmailSender>();
+        services.AddHttpClient<SendGridEmailSender>();
+        services.AddTransient<IEmailSender>(sp => sp.GetRequiredService<SendGridEmailSender>());
 
         RegisterVideoServices(services, configuration);
         RegisterAiServices(services, configuration);
 
         services.AddSingleton<IVideoProcessingQueue, VideoProcessingQueue>();
         services.AddSingleton<IPetReportPdfGenerator, QuestPetReportPdfGenerator>();
+        services.AddSingleton<ISoapReportPdfGenerator, QuestSoapReportPdfGenerator>();
         services.AddHostedService<VideoProcessingBackgroundService>();
 
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
-            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
+            options.UseSqlServer(
+                configuration.GetConnectionString("DefaultConnection"),
+                sqlOptions =>
+                {
+                    sqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorNumbersToAdd: null);
+                    sqlOptions.CommandTimeout(60);
+                });
+            options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
             options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
         });
 
@@ -50,8 +64,10 @@ public static class DependencyInjection
     private static void RegisterVideoServices(IServiceCollection services, IConfiguration configuration)
     {
         var videoProvider = configuration.GetSection(VideoOptions.SectionName).Get<VideoOptions>()?.Provider ?? "Local";
+        var gcpCredsEnv = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+        var hasGcpCreds = !string.IsNullOrWhiteSpace(gcpCredsEnv) && File.Exists(gcpCredsEnv);
 
-        if (videoProvider.Equals("Google", StringComparison.OrdinalIgnoreCase))
+        if (videoProvider.Equals("Google", StringComparison.OrdinalIgnoreCase) && hasGcpCreds)
         {
             services.AddSingleton<GcsVideoStorage>();
             services.AddSingleton<IVideoStorage>(sp => sp.GetRequiredService<GcsVideoStorage>());
@@ -77,15 +93,18 @@ public static class DependencyInjection
         {
             services.AddSingleton<IAiChatService, LocalAiChatService>();
         }
+
+        services.AddHttpClient<ISoapVoiceTranscriptionService, SoapVoiceTranscriptionService>();
     }
 }
 
 public class AiOptions
 {
     public const string SectionName = "Ai";
-    public string Provider { get; set; } = "Local";
+    public string Provider { get; set; } = "Gemini";
+    public string ApiKey { get; set; } = string.Empty;
     public string ProjectId { get; set; } = string.Empty;
     public string Location { get; set; } = "us-central1";
-    public string Model { get; set; } = "gemini-2.5-flash";
+    public string Model { get; set; } = "gemini-2.0-flash";
     public bool UseEducationChunks { get; set; } = false;
 }

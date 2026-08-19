@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { createRehabProgram, getRehabProgramsByPet } from '../api/rehab-programs'
-import type { RehabProgram } from '../types/exercise'
+import type { CreateRehabProgramExercise, RehabProgram } from '../types/exercise'
 
 export function useTreatmentPlan(petId: () => number | null) {
   const program = ref<RehabProgram | null>(null)
@@ -26,7 +26,12 @@ export function useTreatmentPlan(petId: () => number | null) {
     }
   }
 
-  async function createProgram(id: number, title: string, startDate: string) {
+  async function createProgram(
+    id: number,
+    title: string,
+    startDate: string,
+    exercises: CreateRehabProgramExercise[] = [],
+  ) {
     loading.value = true
     error.value = null
     try {
@@ -34,10 +39,10 @@ export function useTreatmentPlan(petId: () => number | null) {
         petId: id,
         programTitle: title,
         startDate,
-        exercises: [],
+        exercises,
       })
     } catch {
-      error.value = 'Unable to create treatment plan.'
+      error.value = 'Unable to save treatment plan.'
       throw new Error(error.value)
     } finally {
       loading.value = false

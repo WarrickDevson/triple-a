@@ -48,10 +48,12 @@ public class GetAppointmentsQueryHandler : IRequestHandler<GetAppointmentsQuery,
                 .AsNoTracking()
                 .FirstAsync(u => u.UserId == _currentUserService.UserId, cancellationToken);
 
-            if (currentUser.ClinicId is not null)
+            if (currentUser.ClinicId is null)
             {
-                query = query.Where(a => a.Pet.Owner.ClinicId == currentUser.ClinicId);
+                return [];
             }
+
+            query = query.Where(a => a.Pet.Owner.ClinicId == currentUser.ClinicId);
         }
         else
         {

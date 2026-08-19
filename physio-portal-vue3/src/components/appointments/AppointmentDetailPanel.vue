@@ -15,8 +15,11 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  accept: [appointmentId: number]
+  reject: [appointmentId: number]
   cancel: [appointmentId: number]
   complete: [appointmentId: number]
+  startSoap: [appointment: Appointment]
   reschedule: [appointment: Appointment, newDatetime: string]
 }>()
 
@@ -28,8 +31,14 @@ const sessionType = computed(() =>
   props.appointment ? getAppointmentType(props.appointment.appointmentId) : null,
 )
 
+function parseUtcDate(value: string) {
+  const str = value.endsWith('Z') || value.includes('+') ? value : `${value}Z`
+  return new Date(str)
+}
+
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString([], {
+  return parseUtcDate(value).toLocaleString([], {
+    timeZone: 'UTC',
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -40,15 +49,20 @@ function formatDateTime(value: string) {
 
 function openReschedule() {
   if (!props.appointment) return
-  const d = new Date(props.appointment.scheduledDateTime)
-  rescheduleDate.value = d.toISOString().slice(0, 10)
-  rescheduleTime.value = d.toTimeString().slice(0, 5)
+  const d = parseUtcDate(props.appointment.scheduledDateTime)
+  const y = d.getUTCFullYear()
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  const hh = String(d.getUTCHours()).padStart(2, '0')
+  const mm = String(d.getUTCMinutes()).padStart(2, '0')
+  rescheduleDate.value = `${y}-${m}-${day}`
+  rescheduleTime.value = `${hh}:${mm}`
   showReschedule.value = true
 }
 
 function submitReschedule() {
   if (!props.appointment || !rescheduleDate.value) return
-  const newDatetime = new Date(`${rescheduleDate.value}T${rescheduleTime.value}`).toISOString()
+  const newDatetime = `${rescheduleDate.value}T${rescheduleTime.value}:00Z`
   emit('reschedule', props.appointment, newDatetime)
   showReschedule.value = false
 }
@@ -68,7 +82,7 @@ function submitReschedule() {
           <div>
             <p class="font-semibold text-navy">{{ appointment.petName }}</p>
             <p class="text-xs text-neutral-muted">{{ sessionType?.label }}</p>
-            <span :class="statusBadgeClass(appointment.appointmentStatus)" class="mt-2">
+            <span :class="statusBadgeClass(appointment.appointmentStatus)" class="mt-2 inline-block">
               {{ appointment.appointmentStatus }}
             </span>
           </div>
@@ -95,25 +109,68 @@ function submitReschedule() {
           </div>
         </dl>
 
-        <div class="mt-4 grid grid-cols-3 gap-2">
-          <BaseButton size="sm" variant="secondary" @click="openReschedule">Reschedule</BaseButton>
-          <BaseButton size="sm" variant="secondary">Edit</BaseButton>
+        <!-- Owner Notes Box -->
+        <div v-if="appointment.clientNotes" class="mt-4 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-sm">
+          <p class="text-xs font-bold text-amber-900 flex items-center gap-1">
+            <span class="text-amber-600">📝</span> Owner Notes:
+          </p>
+          <p class="mt-1 text-xs text-amber-950 font-medium whitespace-pre-line">
+            {{ appointment.clientNotes }}
+          </p>
+        </div>
+
+        <!-- Action Buttons depending on status -->
+        <div v-if="appointment.appointmentStatus === 'Requested'" class="mt-4 space-y-2">
+          <div class="flex gap-2">
+            <BaseButton
+              class="flex-1"
+              variant="accent"
+              size="sm"
+              @click="emit('accept', appointment.appointmentId)"
+            >
+              ✓ Accept Request
+            </BaseButton>
+            <BaseButton
+              class="flex-1"
+              variant="danger"
+              size="sm"
+              @click="emit('reject', appointment.appointmentId)"
+            >
+              ✕ Reject Request
+            </BaseButton>
+          </div>
+        </div>
+
+        <div v-else-if="appointment.appointmentStatus === 'Scheduled'" class="mt-4 space-y-2">
           <BaseButton
+            class="w-full"
+            variant="accent"
             size="sm"
-            variant="danger"
-            @click="emit('cancel', appointment.appointmentId)"
+            @click="emit('startSoap', appointment)"
           >
-            Cancel
+            📋 Start SOAP Assessment
+          </BaseButton>
+
+          <div class="grid grid-cols-3 gap-2">
+            <BaseButton size="sm" variant="secondary" @click="openReschedule">Reschedule</BaseButton>
+            <BaseButton size="sm" variant="secondary">Edit</BaseButton>
+            <BaseButton
+              size="sm"
+              variant="danger"
+              @click="emit('cancel', appointment.appointmentId)"
+            >
+              Cancel
+            </BaseButton>
+          </div>
+          <BaseButton
+            class="mt-2 w-full"
+            variant="accent"
+            size="sm"
+            @click="emit('complete', appointment.appointmentId)"
+          >
+            Mark Complete
           </BaseButton>
         </div>
-        <BaseButton
-          class="mt-2 w-full"
-          variant="accent"
-          size="sm"
-          @click="emit('complete', appointment.appointmentId)"
-        >
-          Mark Complete
-        </BaseButton>
 
         <div v-if="showReschedule" class="mt-4 rounded-xl border border-neutral-grey/80 bg-surface p-3">
           <p class="text-xs font-semibold text-navy">Reschedule to</p>
@@ -145,8 +202,8 @@ function submitReschedule() {
         >
           <span class="font-medium text-navy">{{ item.petName }}</span>
           <span class="text-xs text-neutral-muted">
-            {{ new Date(item.scheduledDateTime).toLocaleDateString([], { month: 'short', day: 'numeric' }) }}
-            {{ new Date(item.scheduledDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+            {{ parseUtcDate(item.scheduledDateTime).toLocaleDateString([], { timeZone: 'UTC', month: 'short', day: 'numeric' }) }}
+            {{ parseUtcDate(item.scheduledDateTime).toLocaleTimeString([], { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' }) }}
           </span>
         </li>
       </ul>

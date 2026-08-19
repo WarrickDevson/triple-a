@@ -11,6 +11,10 @@ import BaseButton from '../components/BaseButton.vue'
 import { useAppointmentsStore } from '../store/appointments'
 import { usePatientsStore } from '../store/patients'
 
+import CreateSoapNoteModal from '../components/patients/CreateSoapNoteModal.vue'
+import { createSoapNote } from '../api/soapNotes'
+import type { Appointment } from '../types/appointment'
+
 const appointmentsStore = useAppointmentsStore()
 const patientsStore = usePatientsStore()
 
@@ -20,6 +24,35 @@ const selectedAppointmentId = ref<number | null>(null)
 const showNewModal = ref(false)
 const showCancelled = ref(false)
 const showCompleted = ref(false)
+
+const showSoapModal = ref(false)
+const soapPetId = ref<number>(0)
+const soapPetName = ref<string>('')
+const soapAppointmentId = ref<number | null>(null)
+
+function handleScheduleWaitlistPatient(_petId: number) {
+  showNewModal.value = true
+}
+
+function openSoapFromAppointment(appointment: Appointment) {
+  soapPetId.value = appointment.petId
+  soapPetName.value = appointment.petName
+  soapAppointmentId.value = appointment.appointmentId
+  showSoapModal.value = true
+}
+
+async function handleSoapCreated(payload: any) {
+  try {
+    await createSoapNote(soapPetId.value, payload)
+    if (soapAppointmentId.value) {
+      await appointmentsStore.completeAppointment(soapAppointmentId.value)
+    }
+    showSoapModal.value = false
+    await loadMonthAppointments()
+  } catch (err) {
+    console.error('Failed to create SOAP note from appointment', err)
+  }
+}
 
 onMounted(async () => {
   await Promise.all([
@@ -79,6 +112,14 @@ function shiftDay(delta: number) {
   const next = new Date(selectedDate.value)
   next.setDate(next.getDate() + delta)
   selectedDate.value = next
+}
+
+async function onAccept(appointmentId: number) {
+  await appointmentsStore.acceptAppointment(appointmentId)
+}
+
+async function onReject(appointmentId: number) {
+  await appointmentsStore.rejectAppointment(appointmentId)
 }
 
 async function onCancel(appointmentId: number) {
@@ -142,9 +183,11 @@ async function onReschedule(appointment: { appointmentId: number; petId: number;
       <section class="portal-card min-h-[600px] overflow-hidden">
         <AppointmentTabs v-model:active-tab="activeTab" />
         <div class="p-4">
-          <div v-if="activeTab === 'waitlist'" class="empty-state py-16">
-            <p class="text-sm text-neutral-muted">Waitlist management coming soon.</p>
-          </div>
+          <AppointmentWaitlistTab
+            v-if="activeTab === 'waitlist'"
+            :patients="patientsStore.patients"
+            @schedule-waitlist-patient="handleScheduleWaitlistPatient"
+          />
           <DaySchedule
             v-else-if="activeTab === 'calendar'"
             :appointments="filteredAppointments"
@@ -167,8 +210,11 @@ async function onReschedule(appointment: { appointmentId: number; petId: number;
         <AppointmentDetailPanel
           :appointment="selectedAppointment"
           :upcoming="upcomingAppointments"
+          @accept="onAccept"
+          @reject="onReject"
           @cancel="onCancel"
           @complete="onComplete"
+          @start-soap="openSoapFromAppointment"
           @reschedule="onReschedule"
         />
       </div>
@@ -178,6 +224,15 @@ async function onReschedule(appointment: { appointmentId: number; petId: number;
       :open="showNewModal"
       @close="showNewModal = false"
       @created="loadMonthAppointments"
+    />
+
+    <CreateSoapNoteModal
+      :pet-id="soapPetId"
+      :pet-name="soapPetName"
+      :appointment-id="soapAppointmentId"
+      :is-open="showSoapModal"
+      @close="showSoapModal = false"
+      @created="handleSoapCreated"
     />
   </div>
 </template>

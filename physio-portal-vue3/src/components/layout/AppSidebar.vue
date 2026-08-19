@@ -13,6 +13,7 @@ import {
   MessageSquare,
   PawPrint,
   Settings,
+  ShieldCheck,
   TrendingUp,
 } from '@lucide/vue'
 import { brand } from '../../config/brand'
@@ -34,6 +35,7 @@ const iconMap = {
   CheckSquare,
   CreditCard,
   Settings,
+  ShieldCheck,
 } as const
 
 const auth = useAuthStore()
@@ -41,6 +43,17 @@ const messagesStore = useMessagesStore()
 const route = useRoute()
 const router = useRouter()
 const { logoUrl, hasLogo } = useBrandLogo()
+
+const navItems = computed(() => {
+  if (auth.user?.userRole === 'SysAdmin') {
+    return [
+      { name: 'admin-physios', label: 'Admin Management', to: { name: 'admin-physios' }, icon: 'ShieldCheck' },
+      { name: 'exercises', label: 'Exercise Library', to: { name: 'exercises' }, icon: 'Dumbbell' },
+      { name: 'settings', label: 'Settings', to: { name: 'settings' }, icon: 'Settings' },
+    ]
+  }
+  return portalNavItems
+})
 
 onMounted(() => {
   messagesStore.loadThreads().catch(() => undefined)
@@ -96,7 +109,7 @@ function displayRole(role?: string) {
 
     <nav class="flex-1 overflow-y-auto py-4" aria-label="Portal navigation">
       <RouterLink
-        v-for="item in portalNavItems"
+        v-for="item in navItems"
         :key="item.name"
         :to="item.to"
         class="nav-item"

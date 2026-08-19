@@ -9,6 +9,9 @@ public class Message : AuditableEntity
     public int SenderUserId { get; set; }
     public string Body { get; set; } = string.Empty;
     public int? VideoSubmissionId { get; set; }
+    public string? AttachmentUrl { get; set; }
+    public string? AttachmentName { get; set; }
+    public string? AttachmentType { get; set; }
     public DateTime? ReadAt { get; set; }
 
     public MessageThread Thread { get; set; } = null!;

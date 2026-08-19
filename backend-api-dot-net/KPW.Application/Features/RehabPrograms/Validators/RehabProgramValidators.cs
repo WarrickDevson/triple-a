@@ -9,7 +9,7 @@ public class CreateRehabProgramRequestValidator : AbstractValidator<CreateRehabP
     {
         RuleFor(x => x.PetId).GreaterThan(0);
         RuleFor(x => x.ProgramTitle).NotEmpty().MaximumLength(150);
-        RuleFor(x => x.Exercises).NotEmpty();
+        RuleFor(x => x.Exercises).NotNull();
         RuleForEach(x => x.Exercises).ChildRules(exercise =>
         {
             exercise.RuleFor(e => e.ExerciseId).GreaterThan(0);

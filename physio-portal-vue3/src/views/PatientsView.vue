@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AddPatientModal from '../components/patients/AddPatientModal.vue'
+import InviteOwnerModal from '../components/clinic/InviteOwnerModal.vue'
 import PatientDetailPanel from '../components/patients/PatientDetailPanel.vue'
 import PatientListPanel from '../components/patients/PatientListPanel.vue'
 import PatientOutcomePanel from '../components/patients/PatientOutcomePanel.vue'
@@ -14,6 +15,7 @@ const router = useRouter()
 
 const mobileView = ref<'list' | 'detail'>('list')
 const showAddModal = ref(false)
+const showInviteModal = ref(false)
 
 const selectedPetId = computed(() => {
   const param = route.params.petId
@@ -80,6 +82,10 @@ function onPatientCreated(petId: number) {
       @close="showAddModal = false"
       @created="onPatientCreated"
     />
+    <InviteOwnerModal
+      v-if="showInviteModal"
+      @close="showInviteModal = false"
+    />
     <div
       class="min-h-[420px] xl:min-h-[calc(100vh-10rem)]"
       :class="mobileView === 'detail' ? 'hidden xl:block' : 'block'"
@@ -90,6 +96,7 @@ function onPatientCreated(petId: number) {
         :loading="patientsStore.loading"
         @select="selectPatient"
         @add="showAddModal = true"
+        @invite="showInviteModal = true"
       />
     </div>
 

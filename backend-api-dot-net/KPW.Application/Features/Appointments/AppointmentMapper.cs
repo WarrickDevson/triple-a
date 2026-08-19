@@ -14,7 +14,7 @@ internal static class AppointmentMapper
             $"{appointment.Owner.FirstName} {appointment.Owner.LastName}",
             appointment.PetId,
             appointment.Pet.PetName,
-            appointment.ScheduledDateTime,
+            DateTime.SpecifyKind(appointment.ScheduledDateTime, DateTimeKind.Utc),
             appointment.AppointmentStatus,
             appointment.ClientNotes,
             appointment.ClinicianNotes);

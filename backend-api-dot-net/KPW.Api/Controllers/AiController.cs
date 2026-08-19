@@ -8,6 +8,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("ai")]
+[Route("api/ai")]
 [Authorize]
 public class AiController : ControllerBase
 {

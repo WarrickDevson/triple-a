@@ -45,11 +45,22 @@ public class GetMessageThreadsQueryHandler : IRequestHandler<GetMessageThreadsQu
 
         if (_currentUserService.Role == UserRole.Physio)
         {
-            query = query.Where(t => t.PhysioId == currentUserId);
+            if (currentUser.ClinicId is not null)
+            {
+                query = query.Where(t => t.PhysioId == currentUserId || t.Pet.Owner.ClinicId == currentUser.ClinicId);
+            }
+            else
+            {
+                query = query.Where(t => t.PhysioId == currentUserId);
+            }
         }
         else if (currentUser.ClinicId is not null)
         {
             query = query.Where(t => t.Pet.Owner.ClinicId == currentUser.ClinicId);
+        }
+        else
+        {
+            return [];
         }
 
         var threads = await query.ToListAsync(cancellationToken);

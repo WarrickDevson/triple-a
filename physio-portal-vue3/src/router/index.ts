@@ -12,6 +12,17 @@ const router = createRouter({
       meta: { guestOnly: true },
     },
     {
+      path: '/register',
+      name: 'register',
+      component: () => import('../views/RegisterView.vue'),
+      meta: { guestOnly: true },
+    },
+    {
+      path: '/verify-email',
+      name: 'verify-email',
+      component: () => import('../views/VerifyEmailView.vue'),
+    },
+    {
       path: '/forgot-password',
       name: 'forgot-password',
       component: () => import('../views/ForgotPasswordView.vue'),
@@ -37,6 +48,12 @@ const router = createRouter({
           name: 'dashboard',
           component: () => import('../views/DashboardView.vue'),
           meta: { title: 'Dashboard' },
+        },
+        {
+          path: 'admin/physios',
+          name: 'admin-physios',
+          component: () => import('../views/AdminPhysiosView.vue'),
+          meta: { title: 'Admin Physio Management' },
         },
         {
           path: 'patients',
@@ -87,13 +104,13 @@ const router = createRouter({
           meta: { title: 'Progress' },
         },
         {
-          path: 'messages',
+          path: 'messages/:petId?',
           name: 'messages',
           component: () => import('../views/MessagesView.vue'),
           meta: { title: 'Messages' },
         },
         {
-          path: 'messages/:petId',
+          path: 'messages/thread/:petId?',
           name: 'message-thread',
           component: () => import('../views/MessagesView.vue'),
           meta: { title: 'Messages' },
@@ -142,7 +159,32 @@ router.beforeEach((to) => {
   }
 
   if (to.meta.guestOnly && auth.isAuthenticated) {
+    if (auth.user?.userRole === 'SysAdmin') {
+      return { name: 'admin-physios' }
+    }
     return { name: 'dashboard' }
+  }
+
+  if (auth.isAuthenticated && auth.user?.userRole === 'SysAdmin') {
+    const physioOnlyRoutes = [
+      'dashboard',
+      'patients',
+      'patient-detail',
+      'appointments',
+      'treatment-plans',
+      'treatment-plan-detail',
+      'progress',
+      'progress-detail',
+      'messages',
+      'message-thread',
+      'reports',
+      'documents',
+      'tasks',
+      'billing',
+    ]
+    if (physioOnlyRoutes.includes(String(to.name))) {
+      return { name: 'admin-physios' }
+    }
   }
 
   return true

@@ -2,15 +2,39 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import DonutChart from './DonutChart.vue'
-import { demoSpeciesBreakdown } from '../../data/dashboardDemo'
+import { usePatientsStore } from '../../store/patients'
 
 const props = defineProps<{
   patientCount: number
 }>()
 
-const chartLabels = computed(() => demoSpeciesBreakdown.map((s) => s.label))
-const chartValues = computed(() => demoSpeciesBreakdown.map((s) => s.value))
-const chartColors = computed(() => demoSpeciesBreakdown.map((s) => s.color))
+const patientsStore = usePatientsStore()
+
+const speciesBreakdown = computed(() => {
+  if (props.patientCount === 0 || patientsStore.patients.length === 0) {
+    return []
+  }
+  const counts: Record<string, number> = {}
+  for (const p of patientsStore.patients) {
+    const s = p.species || 'Other'
+    counts[s] = (counts[s] || 0) + 1
+  }
+  const total = patientsStore.patients.length
+  const colors: Record<string, string> = {
+    Canine: '#2c3e50',
+    Equine: '#5a7865',
+    Feline: '#c9a227',
+  }
+  return Object.entries(counts).map(([label, count]) => ({
+    label,
+    value: Math.round((count / total) * 100),
+    color: colors[label] || '#718096',
+  }))
+})
+
+const chartLabels = computed(() => speciesBreakdown.value.map((s) => s.label))
+const chartValues = computed(() => speciesBreakdown.value.map((s) => s.value))
+const chartColors = computed(() => speciesBreakdown.value.map((s) => s.color))
 </script>
 
 <template>
@@ -24,11 +48,15 @@ const chartColors = computed(() => demoSpeciesBreakdown.map((s) => s.color))
       <span class="text-sm font-medium text-neutral-muted">active patients</span>
     </p>
 
-    <div class="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+    <div v-if="patientCount === 0" class="py-8 text-center text-xs text-neutral-muted">
+      No active patients registered yet.
+    </div>
+
+    <div v-else class="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
       <DonutChart :labels="chartLabels" :values="chartValues" :colors="chartColors" />
       <ul class="flex-1 space-y-2 text-sm">
         <li
-          v-for="item in demoSpeciesBreakdown"
+          v-for="item in speciesBreakdown"
           :key="item.label"
           class="flex items-center justify-between gap-2"
         >

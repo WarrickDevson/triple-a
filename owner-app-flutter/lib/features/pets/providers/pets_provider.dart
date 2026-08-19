@@ -25,11 +25,13 @@ class PetsNotifier extends StateNotifier<PetsState> {
   final Dio _dio;
   final int? _ownerId;
 
-  Future<void> loadPets({bool force = false}) async {
+  Future<void> loadPets({bool force = false, bool silent = false}) async {
     if (_ownerId == null) return;
     if (state.pets.isNotEmpty && !force) return;
 
-    state = const PetsState(isLoading: true);
+    if (!silent && state.pets.isEmpty) {
+      state = PetsState(pets: state.pets, isLoading: true);
+    }
     try {
       final response = await _dio.get<List<dynamic>>('/api/pets/owner/$_ownerId');
       final pets = response.data!
@@ -37,7 +39,7 @@ class PetsNotifier extends StateNotifier<PetsState> {
           .toList();
       state = PetsState(pets: pets);
     } on DioException {
-      state = const PetsState(error: 'Unable to load pets.');
+      state = PetsState(pets: state.pets, error: 'Unable to load pets.');
     }
   }
 
@@ -59,7 +61,7 @@ class PetsNotifier extends StateNotifier<PetsState> {
           'species': species,
           if (breed != null && breed.isNotEmpty) 'breed': breed,
           if (birthDate != null) 'birthDate': _formatDate(birthDate),
-          if (weightKg != null) 'weightKg': weightKg,
+          'weightKg': ?weightKg,
           if (diagnosis != null && diagnosis.isNotEmpty)
             'initialMedicalHistory': {
               'diagnosis': diagnosis,
@@ -71,8 +73,11 @@ class PetsNotifier extends StateNotifier<PetsState> {
       final pet = Pet.fromJson(response.data!);
       state = PetsState(pets: [pet, ...state.pets]);
       return true;
-    } on DioException {
-      state = PetsState(pets: state.pets, error: 'Unable to create pet profile.');
+    } on DioException catch (e) {
+      final serverMsg = e.response?.data is Map
+          ? (e.response?.data['message'] ?? e.response?.data['title'] ?? e.response?.data['errors']?.toString())
+          : null;
+      state = PetsState(pets: state.pets, error: serverMsg?.toString() ?? 'Unable to create pet profile.');
       return false;
     }
   }
@@ -85,7 +90,7 @@ class PetsNotifier extends StateNotifier<PetsState> {
 }
 
 final petsProvider = StateNotifierProvider<PetsNotifier, PetsState>((ref) {
-  final auth = ref.watch(authProvider);
+  final userId = ref.watch(authProvider.select((s) => s.user?.userId));
   final authNotifier = ref.read(authProvider.notifier);
-  return PetsNotifier(authNotifier.client, auth.user?.userId);
+  return PetsNotifier(authNotifier.client, userId);
 });

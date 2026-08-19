@@ -78,11 +78,11 @@ export const defaultTasks: TaskItem[] = [
 export function loadTasks(): TaskItem[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return defaultTasks.map((t) => ({ ...t }))
+    if (!raw) return []
     const parsed = JSON.parse(raw) as TaskItem[]
-    return Array.isArray(parsed) ? parsed : defaultTasks.map((t) => ({ ...t }))
+    return Array.isArray(parsed) ? parsed : []
   } catch {
-    return defaultTasks.map((t) => ({ ...t }))
+    return []
   }
 }
 

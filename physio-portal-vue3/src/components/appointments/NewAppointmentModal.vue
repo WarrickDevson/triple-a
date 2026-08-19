@@ -32,7 +32,7 @@ async function onSubmit() {
   if (!form.petId || !form.date) return
   saving.value = true
   try {
-    const scheduledDateTime = new Date(`${form.date}T${form.time}`).toISOString()
+    const scheduledDateTime = `${form.date}T${form.time}:00Z`
     await appointmentsStore.scheduleAppointment({
       petId: Number(form.petId),
       scheduledDateTime,

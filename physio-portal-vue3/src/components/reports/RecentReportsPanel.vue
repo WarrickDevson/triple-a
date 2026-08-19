@@ -12,6 +12,9 @@ defineProps<{
       <h2 class="text-sm font-bold text-navy">Recent Reports</h2>
     </div>
     <ul class="flex-1 overflow-y-auto">
+      <li v-if="reports.length === 0" class="p-8 text-center text-xs text-neutral-muted">
+        No recent reports generated.
+      </li>
       <li
         v-for="report in reports"
         :key="report.id"

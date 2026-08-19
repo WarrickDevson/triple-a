@@ -59,7 +59,7 @@ public class GetClinicPatientsQueryHandler : IRequestHandler<GetClinicPatientsQu
             .AsNoTracking()
             .FirstAsync(u => u.UserId == _currentUserService.UserId, cancellationToken);
 
-        if (currentUser.ClinicId is null && _currentUserService.Role != UserRole.SysAdmin)
+        if (currentUser.ClinicId is null)
         {
             return [];
         }

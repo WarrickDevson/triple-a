@@ -11,6 +11,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("auth")]
+[Route("api/auth")]
 public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -137,6 +138,83 @@ public class AuthController : ControllerBase
         {
             var result = await _mediator.Send(new GetCurrentUserQuery(), cancellationToken);
             return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<ActionResult<AuthUserDto>> UpdateProfile(
+        [FromBody] UpdateProfileRequestDto request,
+        [FromServices] IValidator<UpdateProfileRequestDto> validator,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(request, cancellationToken);
+        try
+        {
+            var result = await _mediator.Send(new UpdateProfileCommand(request), cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("verify-email")]
+    [AllowAnonymous]
+    public async Task<ActionResult<VerifyEmailResponseDto>> VerifyEmail(
+        [FromBody] VerifyEmailRequestDto request,
+        [FromServices] IValidator<VerifyEmailRequestDto> validator,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(request, cancellationToken);
+        try
+        {
+            var result = await _mediator.Send(new VerifyEmailCommand(request), cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("resend-verification")]
+    [AllowAnonymous]
+    public async Task<ActionResult<MessageResponseDto>> ResendVerification(
+        [FromBody] ResendVerificationEmailRequestDto request,
+        [FromServices] IValidator<ResendVerificationEmailRequestDto> validator,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(request, cancellationToken);
+        var result = await _mediator.Send(new ResendVerificationEmailCommand(request), cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("send-owner-invite")]
+    [Authorize]
+    public async Task<ActionResult<MessageResponseDto>> SendOwnerInvite(
+        [FromBody] SendOwnerInviteRequestDto request,
+        [FromServices] IValidator<SendOwnerInviteRequestDto> validator,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(request, cancellationToken);
+        try
+        {
+            var result = await _mediator.Send(new SendOwnerInviteCommand(request), cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (UnauthorizedAccessException ex)
         {

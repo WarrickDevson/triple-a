@@ -11,6 +11,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("rehab-programs")]
+[Route("api/rehab-programs")]
 [Authorize]
 public class RehabProgramsController : ControllerBase
 {
@@ -41,11 +42,15 @@ public class RehabProgramsController : ControllerBase
         [FromServices] IValidator<CreateRehabProgramRequestDto> validator,
         CancellationToken cancellationToken)
     {
-        await validator.ValidateAndThrowAsync(request, cancellationToken);
         try
         {
+            await validator.ValidateAndThrowAsync(request, cancellationToken);
             var result = await _mediator.Send(new CreateRehabProgramCommand(request), cancellationToken);
             return CreatedAtAction(nameof(GetByPet), new { petId = result.PetId }, result);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message, errors = ex.Errors.Select(e => e.ErrorMessage) });
         }
         catch (UnauthorizedAccessException ex)
         {

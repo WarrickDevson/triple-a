@@ -8,6 +8,8 @@ export interface AuthUser {
   clinicId: number | null
   clinicName?: string | null
   clinicInviteCode?: string | null
+  isEmailVerified?: boolean
+  isApproved?: boolean
 }
 
 export interface AuthResponse {
@@ -28,7 +30,38 @@ export interface RegisterRequest {
   firstName: string
   lastName: string
   phoneNumber?: string
-  inviteCode: string
+  inviteCode?: string
+  role?: string
+  clinicName?: string
+}
+
+export interface VerifyEmailRequest {
+  email: string
+  token: string
+}
+
+export interface ResendVerificationEmailRequest {
+  email: string
+}
+
+export interface PhysioApproval {
+  userId: number
+  email: string
+  firstName: string
+  lastName: string
+  phoneNumber?: string
+  userRole: string
+  clinicId: number | null
+  clinicName?: string | null
+  isEmailVerified: boolean
+  isApproved: boolean
+  isActive: boolean
+  createdDate: string
+}
+
+export interface SendAdminInviteRequest {
+  recipientEmail: string
+  clinicName?: string
 }
 
 export interface ForgotPasswordRequest {
@@ -45,6 +78,25 @@ export interface ChangePasswordRequest {
   newPassword: string
 }
 
+export interface SendOwnerInviteRequest {
+  recipientEmail: string
+  ownerName?: string
+}
+
 export interface MessageResponse {
   message: string
+}
+
+export interface VerifyEmailResponse {
+  message: string
+  isEmailVerified: boolean
+  isApproved: boolean
+  userRole: string
+}
+
+export interface UpdateProfileRequest {
+  firstName: string
+  lastName: string
+  phoneNumber?: string
+  clinicName?: string
 }

@@ -7,6 +7,9 @@ public record MessageDto(
     string SenderName,
     string Body,
     int? VideoSubmissionId,
+    string? AttachmentUrl,
+    string? AttachmentName,
+    string? AttachmentType,
     DateTime? ReadAt,
     DateTime CreatedDate);
 
@@ -24,4 +27,7 @@ public record MessageThreadDto(
 
 public record SendMessageRequestDto(
     string Body,
-    int? VideoSubmissionId);
+    int? VideoSubmissionId,
+    string? AttachmentUrl,
+    string? AttachmentName,
+    string? AttachmentType);

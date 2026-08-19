@@ -8,6 +8,7 @@ namespace KPW.Api.Controllers;
 
 [ApiController]
 [Route("pets/{petId:int}/progress")]
+[Route("api/pets/{petId:int}/progress")]
 [Authorize]
 public class PetProgressController : ControllerBase
 {

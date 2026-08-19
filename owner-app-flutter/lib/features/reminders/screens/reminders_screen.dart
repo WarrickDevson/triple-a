@@ -5,6 +5,7 @@ import '../../../core/widgets/app_chrome.dart';
 import '../../appointments/screens/appointments_screen.dart';
 import '../../pets/models/pet.dart';
 import '../../pets/providers/pets_provider.dart';
+import '../../pets/screens/pet_detail_screen.dart';
 import '../../pets/screens/pets_list_screen.dart';
 import '../models/reminder.dart';
 import '../providers/reminders_provider.dart';
@@ -30,7 +31,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
         '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
   }
 
-  void _openReminder(Reminder reminder) {
+  Future<void> _openReminder(Reminder reminder) async {
     if (reminder.type == 'Appointment') {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const AppointmentsScreen()),
@@ -38,7 +39,12 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       return;
     }
 
-    final pets = ref.read(petsProvider).pets;
+    var pets = ref.read(petsProvider).pets;
+    if (pets.isEmpty) {
+      await ref.read(petsProvider.notifier).loadPets();
+      pets = ref.read(petsProvider).pets;
+    }
+
     Pet? pet;
     for (final item in pets) {
       if (item.petId == reminder.petId) {
@@ -47,12 +53,17 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
       }
     }
 
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PetsListScreen()),
-    );
-    if (pet != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Open ${pet.petName}\'s exercise programme to complete today\'s session.')),
+    if (!mounted) return;
+
+    if (pet != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PetDetailScreen(pet: pet!),
+        ),
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const PetsListScreen()),
       );
     }
   }

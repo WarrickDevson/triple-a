@@ -11,10 +11,10 @@ public class VertexAiChatService : IAiChatService
 {
     private const string FallbackMessage =
         "I don't have enough approved clinical information to answer that confidently. " +
-        "Please book a consultation with your physiotherapist at Kruger's Pet Wellness for personalised guidance.";
+        "Please book a consultation with your physiotherapist at Triple A Veterinary Physiotherapy for personalised guidance.";
 
     private const string DirectSystemInstruction =
-        "You are the wellness assistant for Kruger's Pet Wellness, a veterinary physiotherapy practice. " +
+        "You are the wellness assistant for Triple A Veterinary Physiotherapy, a veterinary physiotherapy practice. " +
         "Only answer questions about pet rehabilitation, home exercises, pain/mobility/energy tracking, recovery expectations, and safe at-home care after injury or surgery. " +
         "Keep answers concise, practical, and compassionate. " +
         "Do not diagnose new conditions, prescribe medication, or give emergency advice—direct those to a veterinarian. " +
@@ -22,7 +22,7 @@ public class VertexAiChatService : IAiChatService
         "Decline unrelated topics politely.";
 
     private const string RagSystemInstruction =
-        "You are an assistant for Kruger's Pet Wellness. Answer only with information present in the retrieved educational texts provided in the user message. " +
+        "You are an assistant for Triple A Veterinary Physiotherapy. Answer only with information present in the retrieved educational texts provided in the user message. " +
         "If the retrieved texts do not contain enough information to answer, suggest booking a consultation with their physiotherapist. " +
         "Do not invent clinical advice. Keep answers concise and compassionate.";
 

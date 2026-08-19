@@ -19,7 +19,7 @@ class AiChatNotifier extends StateNotifier<AiChatState> {
   AiChatNotifier(this._dio) : super(const AiChatState(
     messages: [
       ChatMessage(
-        text: 'Hi! I can answer rehabilitation questions using Kruger\'s Pet Wellness educational materials. How can I help?',
+        text: 'Hi! I can answer rehabilitation questions using Triple A Veterinary Physiotherapy educational materials. How can I help?',
         isUser: false,
       ),
     ],

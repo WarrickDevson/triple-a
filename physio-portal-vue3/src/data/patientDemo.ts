@@ -12,41 +12,30 @@ export interface PatientDemoMeta {
 }
 
 const equineDefaults: PatientDemoMeta = {
-  status: 'improving',
-  phaseLabel: 'Phase 2: Strength Building',
-  progressPercent: 72,
-  discipline: 'Dressage',
-  height: '16.2 hh',
-  vet: 'Dr. van Wyk',
-  farrier: 'Johan Steyn',
-  saddleFitter: 'Sarah Naude',
+  status: 'stable',
+  phaseLabel: 'Active rehabilitation plan',
+  progressPercent: 0,
 }
 
 const canineDefaults: PatientDemoMeta = {
   status: 'stable',
-  phaseLabel: 'Phase 1: Mobility',
-  progressPercent: 58,
+  phaseLabel: 'Active rehabilitation plan',
+  progressPercent: 0,
 }
 
 const felineDefaults: PatientDemoMeta = {
-  status: 'improving',
-  phaseLabel: 'Phase 1: Recovery',
-  progressPercent: 64,
+  status: 'stable',
+  phaseLabel: 'Active rehabilitation plan',
+  progressPercent: 0,
 }
 
 const defaultMeta: PatientDemoMeta = {
   status: 'stable',
   phaseLabel: 'Active rehabilitation plan',
-  progressPercent: 50,
+  progressPercent: 0,
 }
 
-const overrides: Record<number, Partial<PatientDemoMeta>> = {
-  1: { status: 'improving', progressPercent: 92, phaseLabel: 'Phase 2: Strength Building' },
-  2: { status: 'stable', progressPercent: 68, phaseLabel: 'Phase 1: Core Stability' },
-  3: { status: 'at-risk', progressPercent: 41, phaseLabel: 'Reassessment needed' },
-}
-
-export function getPatientDemoMeta(petId: number, species?: string): PatientDemoMeta {
+export function getPatientDemoMeta(_petId: number, species?: string): PatientDemoMeta {
   const speciesKey = species?.toLowerCase() ?? ''
   const base =
     speciesKey.includes('equine') || speciesKey.includes('horse')
@@ -57,7 +46,7 @@ export function getPatientDemoMeta(petId: number, species?: string): PatientDemo
           ? felineDefaults
           : defaultMeta
 
-  return { ...base, ...overrides[petId] }
+  return { ...base }
 }
 
 export function statusDotClass(status: PatientStatus) {

@@ -25,6 +25,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<ExerciseSessionLog> ExerciseSessionLogs => Set<ExerciseSessionLog>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<SoapNote> SoapNotes => Set<SoapNote>();
+    public DbSet<SharedReport> SharedReports => Set<SharedReport>();
+    public DbSet<OwnerSubjectiveNote> OwnerSubjectiveNotes => Set<OwnerSubjectiveNote>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,5 +53,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<MessageThread>().HasQueryFilter(e => e.IsActive);
         modelBuilder.Entity<Message>().HasQueryFilter(e => e.IsActive);
         modelBuilder.Entity<ExerciseSessionLog>().HasQueryFilter(e => e.IsActive);
+        modelBuilder.Entity<SoapNote>().HasQueryFilter(e => e.IsActive);
+        modelBuilder.Entity<SharedReport>().HasQueryFilter(e => e.IsActive);
+        modelBuilder.Entity<OwnerSubjectiveNote>().HasQueryFilter(e => e.IsActive);
     }
 }

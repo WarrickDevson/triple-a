@@ -20,9 +20,11 @@ class RemindersNotifier extends StateNotifier<RemindersState> {
 
   final Dio _dio;
 
-  Future<void> loadReminders({bool force = false}) async {
+  Future<void> loadReminders({bool force = false, bool silent = false}) async {
     if (state.reminders.isNotEmpty && !force) return;
-    state = const RemindersState(isLoading: true);
+    if (!silent && state.reminders.isEmpty) {
+      state = RemindersState(reminders: state.reminders, isLoading: true);
+    }
     try {
       final response = await _dio.get<List<dynamic>>('/api/reminders');
       final reminders = response.data!
@@ -30,7 +32,7 @@ class RemindersNotifier extends StateNotifier<RemindersState> {
           .toList();
       state = RemindersState(reminders: reminders);
     } on DioException {
-      state = const RemindersState(error: 'Unable to load reminders.');
+      state = RemindersState(reminders: state.reminders, error: 'Unable to load reminders.');
     }
   }
 }

@@ -40,6 +40,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   late final Dio _dio;
 
   Dio get client => _dio;
+  String? get accessToken => _tokenStorage.accessToken;
 
   Dio _createDio() {
     final dio = Dio(BaseOptions(
@@ -58,7 +59,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         handler.next(options);
       },
       onError: (error, handler) async {
-        if (error.response?.statusCode != 401) {
+        final path = error.requestOptions.path;
+        final isAuthEndpoint = path.contains('/api/auth/');
+
+        if (error.response?.statusCode != 401 || isAuthEndpoint) {
           return handler.next(error);
         }
 
@@ -68,20 +72,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
           return handler.next(error);
         }
 
+        bool refreshSucceeded = false;
         try {
           final response = await Dio(BaseOptions(baseUrl: _config.apiBaseUrl)).post<Map<String, dynamic>>(
             '/api/auth/refresh',
             data: {'refreshToken': refreshToken},
           );
           await applyAuth(AuthResponse.fromJson(response.data!));
-
-          final request = error.requestOptions;
-          request.headers['Authorization'] = 'Bearer ${_tokenStorage.accessToken}';
-          final retryResponse = await dio.fetch(request);
-          return handler.resolve(retryResponse);
+          refreshSucceeded = true;
         } catch (_) {
           await logout();
           return handler.next(error);
+        }
+
+        if (refreshSucceeded) {
+          try {
+            final request = error.requestOptions;
+            request.headers['Authorization'] = 'Bearer ${_tokenStorage.accessToken}';
+            final retryResponse = await dio.fetch(request);
+            return handler.resolve(retryResponse);
+          } catch (e) {
+            return handler.next(e is DioException ? e : error);
+          }
         }
       },
     ));
@@ -102,6 +114,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await prefs.setString('${_userKeyPrefix}lastName', auth.user.lastName);
     await prefs.setString('${_userKeyPrefix}userRole', auth.user.userRole);
     await prefs.setString('${_userKeyPrefix}subscriptionTier', auth.user.subscriptionTier);
+    await prefs.setBool('${_userKeyPrefix}isEmailVerified', auth.user.isEmailVerified);
     if (auth.user.clinicId != null) {
       await prefs.setInt('${_userKeyPrefix}clinicId', auth.user.clinicId!);
     }
@@ -129,6 +142,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         userRole: prefs.getString('${_userKeyPrefix}userRole') ?? 'Owner',
         subscriptionTier: prefs.getString('${_userKeyPrefix}subscriptionTier') ?? 'Free',
         clinicId: prefs.getInt('${_userKeyPrefix}clinicId'),
+        isEmailVerified: prefs.getBool('${_userKeyPrefix}isEmailVerified') ?? false,
       ),
     );
   }
@@ -138,7 +152,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> login(String email, String password) async {
-    state = AuthState(isLoading: true);
+    state = const AuthState(isLoading: true);
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/auth/login',
@@ -146,8 +160,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       await applyAuth(AuthResponse.fromJson(response.data!));
       return true;
-    } on DioException {
-      state = const AuthState(error: 'Invalid email or password.');
+    } on DioException catch (e) {
+      final serverMessage = e.response?.data is Map
+          ? (e.response?.data['message'] as String?)
+          : null;
+      final errorMsg = serverMessage ?? 'Invalid email or password.';
+      state = AuthState(error: errorMsg);
       return false;
     }
   }
@@ -170,16 +188,76 @@ class AuthNotifier extends StateNotifier<AuthState> {
           'firstName': firstName,
           'lastName': lastName,
           'inviteCode': inviteCode,
+          'role': 'Owner',
           if (phoneNumber != null && phoneNumber.isNotEmpty) 'phoneNumber': phoneNumber,
         },
       );
-      await applyAuth(AuthResponse.fromJson(response.data!));
+      final auth = AuthResponse.fromJson(response.data!);
+      await applyAuth(auth);
       return true;
     } on DioException catch (e) {
       final message = e.response?.data is Map
           ? (e.response?.data['message'] as String?) ?? 'Unable to create account.'
           : 'Unable to create account.';
       state = AuthState(error: message);
+      return false;
+    }
+  }
+
+  Future<String?> resendVerification(String email) async {
+    state = AuthState(user: state.user, isLoading: true);
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/auth/resend-verification',
+        data: {'email': email},
+      );
+      final msg = response.data?['message'] as String? ?? 'Verification email sent if account exists.';
+      state = AuthState(user: state.user, message: msg);
+      return msg;
+    } catch (e) {
+      String msg = 'Failed to send verification email.';
+      if (e is DioException && e.response?.data is Map) {
+        msg = (e.response?.data['message'] as String?) ?? msg;
+      }
+      state = AuthState(user: state.user, error: msg);
+      return null;
+    }
+  }
+
+  Future<bool> verifyEmail(String email, String token) async {
+    state = AuthState(user: state.user, isLoading: true);
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/auth/verify-email',
+        data: {'email': email, 'token': token},
+      );
+      final msg = response.data?['message'] as String? ?? 'Email verified successfully!';
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('${_userKeyPrefix}isEmailVerified', true);
+
+      AuthUser? updatedUser;
+      if (state.user != null) {
+        updatedUser = AuthUser(
+          userId: state.user!.userId,
+          email: state.user!.email,
+          firstName: state.user!.firstName,
+          lastName: state.user!.lastName,
+          userRole: state.user!.userRole,
+          subscriptionTier: state.user!.subscriptionTier,
+          clinicId: state.user!.clinicId,
+          clinicName: state.user!.clinicName,
+          clinicInviteCode: state.user!.clinicInviteCode,
+          isEmailVerified: true,
+        );
+      }
+      state = AuthState(user: updatedUser ?? state.user, message: msg);
+      return true;
+    } catch (e) {
+      String msg = 'Invalid or expired verification link.';
+      if (e is DioException && e.response?.data is Map) {
+        msg = (e.response?.data['message'] as String?) ?? msg;
+      }
+      state = AuthState(user: state.user, error: msg);
       return false;
     }
   }
@@ -235,6 +313,39 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final message = e.response?.data is Map
           ? (e.response?.data['message'] as String?) ?? 'Unable to change password.'
           : 'Unable to change password.';
+      state = AuthState(user: state.user, error: message);
+      return false;
+    }
+  }
+
+  Future<bool> updateProfile({
+    required String firstName,
+    required String lastName,
+    String? phoneNumber,
+  }) async {
+    state = AuthState(user: state.user, isLoading: true);
+    try {
+      final response = await _dio.put<Map<String, dynamic>>(
+        '/api/auth/profile',
+        data: {
+          'firstName': firstName,
+          'lastName': lastName,
+          if (phoneNumber != null && phoneNumber.isNotEmpty) 'phoneNumber': phoneNumber,
+        },
+      );
+      final updatedUser = AuthUser.fromJson(response.data!);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('${_userKeyPrefix}firstName', updatedUser.firstName);
+      await prefs.setString('${_userKeyPrefix}lastName', updatedUser.lastName);
+      if (updatedUser.phoneNumber != null) {
+        await prefs.setString('${_userKeyPrefix}phoneNumber', updatedUser.phoneNumber!);
+      }
+      state = AuthState(user: updatedUser, message: 'Profile updated successfully!');
+      return true;
+    } on DioException catch (e) {
+      final message = e.response?.data is Map
+          ? (e.response?.data['message'] as String?) ?? 'Failed to update profile.'
+          : 'Failed to update profile.';
       state = AuthState(user: state.user, error: message);
       return false;
     }

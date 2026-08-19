@@ -13,6 +13,10 @@ export interface DocumentItem {
   category: DocumentCategory
   uploadedAt: string
   sizeKb: number
+  fileUrl?: string
+  fileType?: string
+  fileDataUrl?: string
+  contentSummary?: string
 }
 
 export const DOCUMENT_CATEGORIES: DocumentCategory[] = [

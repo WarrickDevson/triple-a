@@ -5,7 +5,7 @@ import ReportTypesPanel from '../components/reports/ReportTypesPanel.vue'
 import RecentReportsPanel from '../components/reports/RecentReportsPanel.vue'
 import BaseButton from '../components/BaseButton.vue'
 import { downloadPetReport } from '../api/reports'
-import { demoReportHistory } from '../data/reportsDemo'
+import type { ReportHistoryItem } from '../data/reportsDemo'
 import { usePatientsStore } from '../store/patients'
 
 const patientsStore = usePatientsStore()
@@ -13,6 +13,8 @@ const selectedPetId = ref<number | null>(null)
 const downloading = ref(false)
 const showStubModal = ref(false)
 const stubMessage = ref('')
+
+const recentReports = ref<ReportHistoryItem[]>([])
 
 const selectedPatient = computed(() => {
   if (!selectedPetId.value) return null
@@ -58,7 +60,7 @@ function showStub(message: string) {
       @download="downloadReport"
       @stub="showStub"
     />
-    <RecentReportsPanel :reports="demoReportHistory" />
+    <RecentReportsPanel :reports="recentReports" />
   </div>
 
   <div

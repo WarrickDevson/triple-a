@@ -39,9 +39,14 @@ export function getAppointmentLocation(appointmentId: number): string {
 
 export function statusBadgeClass(status: string) {
   const normalized = status.toLowerCase()
-  if (normalized.includes('confirm') || normalized.includes('complete')) {
+  if (normalized.includes('confirm') || normalized.includes('complete') || normalized.includes('schedule')) {
     return 'status-badge status-badge--improving'
   }
-  if (normalized.includes('cancel')) return 'status-badge status-badge--at-risk'
+  if (normalized.includes('request') || normalized.includes('pending')) {
+    return 'status-badge status-badge--stable'
+  }
+  if (normalized.includes('cancel') || normalized.includes('reject')) {
+    return 'status-badge status-badge--at-risk'
+  }
   return 'status-badge status-badge--stable'
 }

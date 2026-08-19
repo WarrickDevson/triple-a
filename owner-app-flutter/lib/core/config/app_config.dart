@@ -19,19 +19,24 @@ class AppConfig {
 
   static AppConfig fromEnvironment() {
     const envName = String.fromEnvironment('ENV', defaultValue: 'development');
-    const customBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+    const rawCustomBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+    
+    // Normalize custom URL: strip trailing /api or slashes so leading /api endpoints resolve correctly
+    final customBaseUrl = rawCustomBaseUrl.isNotEmpty
+        ? rawCustomBaseUrl.replaceAll(RegExp(r'/api/?$'), '').replaceAll(RegExp(r'/+$'), '')
+        : '';
 
     switch (envName) {
       case 'staging':
         return AppConfig(
           environment: AppEnvironment.staging,
-          apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : 'https://kpw.devson.co.za',
+          apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : 'https://mytriplea.co.za',
           appName: 'Triple A (Staging)',
         );
       case 'production':
         return AppConfig(
           environment: AppEnvironment.production,
-          apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : 'https://api.kpw.movewell',
+          apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : 'https://mytriplea.co.za',
           appName: 'Triple A',
         );
       case 'development':

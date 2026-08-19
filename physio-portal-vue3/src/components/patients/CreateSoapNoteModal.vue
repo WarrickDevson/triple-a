@@ -37,10 +37,10 @@ const emit = defineEmits<{
   updated: [noteId: number, payload: any]
 }>()
 
-const activeTab = ref<'S' | 'O' | 'A' | 'P'>('S')
+const activeTab = ref<'S' | 'O' | 'A' | 'P' | 'AUDIO'>('S')
 const voiceSessionStore = useVoiceSessionStore()
 
-function switchTab(tab: 'S' | 'O' | 'A' | 'P') {
+function switchTab(tab: 'S' | 'O' | 'A' | 'P' | 'AUDIO') {
   activeTab.value = tab
 }
 
@@ -364,7 +364,11 @@ function revertPolishedSection(sectionKey: string) {
 
 const showVoiceDictationModal = ref(false)
 
-function handleApplyStructuredNote(note: StructuredSoapNote, mode: 'replace' | 'append') {
+function handleApplyStructuredNote(note: StructuredSoapNote, mode: 'replace' | 'append', rawText?: string, audio?: string) {
+  if (rawText) rawTranscript.value = rawText
+  if (audio) audioUrl.value = audio
+  aiSourceNotice.value = 'Populated automatically from your Voice Session Memo.'
+
   if (mode === 'replace') {
     if (note.subjective) subjective.value = note.subjective
     if (note.objective) objective.value = note.objective
@@ -679,6 +683,24 @@ async function handleSubmit() {
           Plan & Follow-up
         </button>
 
+        <!-- Audio & Spoken Transcript Tab -->
+        <button
+          type="button"
+          class="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-colors"
+          :class="
+            activeTab === 'AUDIO'
+              ? 'bg-purple-600 text-white shadow-sm'
+              : audioUrl || rawTranscript
+                ? 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+                : 'bg-neutral-grey/40 text-navy hover:bg-neutral-grey/70'
+          "
+          @click="switchTab('AUDIO')"
+        >
+          <Mic class="h-3.5 w-3.5" />
+          <span>Audio & Transcript</span>
+          <span v-if="audioUrl || rawTranscript" class="h-2 w-2 rounded-full bg-purple-500 animate-pulse"></span>
+        </button>
+
         <!-- Full Session AI Dictation Master Button -->
         <button
           type="button"
@@ -706,9 +728,9 @@ async function handleSubmit() {
         <button
           type="button"
           class="inline-flex items-center gap-1 font-bold text-purple-700 hover:underline text-[11px]"
-          @click="activeTab === 'RAW' ? switchTab('S') : switchTab('RAW')"
+          @click="activeTab === 'AUDIO' ? switchTab('S') : switchTab('AUDIO')"
         >
-          {{ activeTab === 'RAW' ? '← View Structured SOAP Note' : 'View Raw Speech & Audio Memo →' }}
+          {{ activeTab === 'AUDIO' ? '← View Structured SOAP Note' : 'View Raw Speech & Audio Memo →' }}
         </button>
       </div>
 
@@ -1283,6 +1305,88 @@ async function handleSubmit() {
           </div>
         </div>
 
+        <!-- Tab 5: AUDIO & VERBATIM TRANSCRIPT -->
+        <div v-show="activeTab === 'AUDIO'" class="space-y-4">
+          <!-- Audio Player & Download Card -->
+          <div v-if="audioUrl" class="rounded-2xl border border-purple-200 bg-purple-50/60 p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <Volume2 class="h-4 w-4 text-purple-700" />
+                <span class="text-xs font-bold uppercase tracking-wider text-purple-900">Recorded Consultation Audio</span>
+              </div>
+              <a
+                :href="audioUrl"
+                download="consultation-voice-memo.webm"
+                class="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:text-purple-900 hover:underline"
+              >
+                <Download class="h-3.5 w-3.5" />
+                Download Audio (.webm)
+              </a>
+            </div>
+            <audio :src="audioUrl" controls class="h-9 w-full rounded-xl" />
+          </div>
+
+          <!-- Empty Audio State -->
+          <div v-else class="rounded-2xl border border-neutral-grey/60 bg-neutral-grey/10 p-6 text-center">
+            <Mic class="mx-auto h-8 w-8 text-neutral-muted" />
+            <p class="mt-2 text-xs font-semibold text-navy">No audio recording attached yet</p>
+            <p class="text-[11px] text-neutral-muted mt-0.5">Use Full SOAP Note to record and transcribe audio automatically.</p>
+            <button
+              type="button"
+              class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-purple-700 transition-all hover:scale-105 active:scale-95"
+              @click="showVoiceDictationModal = true"
+            >
+              <Mic class="h-3.5 w-3.5" />
+              Record Consultation Audio
+            </button>
+          </div>
+
+          <!-- Verbatim Spoken Transcript Text Area -->
+          <div class="rounded-2xl border border-neutral-grey/80 bg-surface p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-navy">
+                  Spoken Consultation Transcript
+                </label>
+                <p class="text-[11px] text-neutral-muted">
+                  Full transcript captured from dictation. You can edit this freely or re-summarize into SOAP with AI.
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-lg border border-neutral-grey/80 bg-neutral-grey/20 px-2.5 py-1 text-xs font-semibold text-navy hover:bg-neutral-grey/40 transition-colors"
+                  @click="copyRawTranscript"
+                >
+                  <Copy class="h-3.5 w-3.5" />
+                  {{ copiedNotice ? 'Copied!' : 'Copy' }}
+                </button>
+
+                <button
+                  type="button"
+                  :disabled="isReSummarizing || !rawTranscript.trim()"
+                  class="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-purple-700 disabled:opacity-50 transition-all hover:scale-105 active:scale-95"
+                  title="Parse and re-structure this verbatim transcript into Subjective, Objective, Action, and Plan fields with Gemini AI"
+                  @click="handleReSummarizeFromRaw"
+                >
+                  <Loader2 v-if="isReSummarizing" class="h-3.5 w-3.5 animate-spin" />
+                  <Sparkles v-else class="h-3.5 w-3.5" />
+                  {{ isReSummarizing ? 'Summarizing...' : '✨ Re-Summarize into SOAP' }}
+                </button>
+              </div>
+            </div>
+
+            <textarea
+              v-model="rawTranscript"
+              rows="7"
+              class="w-full rounded-xl border border-neutral-grey/80 bg-surface p-3.5 text-sm text-navy focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+              placeholder="Spoken consultation notes and verbatim transcript will appear here..."
+              @input="autoSaveNote"
+            />
+          </div>
+        </div>
+
         <!-- Footer Actions -->
         <div class="flex items-center justify-between border-t border-neutral-grey/80 pt-4">
           <div class="flex gap-2">
@@ -1290,15 +1394,15 @@ async function handleSubmit() {
               v-if="activeTab !== 'S'"
               type="button"
               class="rounded-xl border border-neutral-grey/80 px-4 py-2 text-xs font-bold text-navy hover:bg-neutral-grey/40"
-              @click="switchTab(activeTab === 'P' ? 'A' : activeTab === 'A' ? 'O' : 'S')"
+              @click="switchTab(activeTab === 'AUDIO' ? 'P' : activeTab === 'P' ? 'A' : activeTab === 'A' ? 'O' : 'S')"
             >
               Previous Section
             </button>
             <button
-              v-if="activeTab !== 'P'"
+              v-if="activeTab !== 'AUDIO'"
               type="button"
               class="rounded-xl bg-navy/10 px-4 py-2 text-xs font-bold text-navy hover:bg-navy/20"
-              @click="switchTab(activeTab === 'S' ? 'O' : activeTab === 'O' ? 'A' : 'P')"
+              @click="switchTab(activeTab === 'S' ? 'O' : activeTab === 'O' ? 'A' : activeTab === 'A' ? 'P' : 'AUDIO')"
             >
               Next Section
             </button>

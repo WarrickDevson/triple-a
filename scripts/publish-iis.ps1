@@ -17,7 +17,7 @@
 
 .PARAMETER ApiBaseUrl
   Base URL clients use for API calls (no trailing slash).
-  Default: https://www.mytriplea.co.za
+  Default: https://mytriplea.co.za
 
 .PARAMETER Clean
   Delete OutputRoot before publishing.
@@ -34,7 +34,7 @@
 [CmdletBinding()]
 param(
     [string] $OutputRoot = "",
-    [string] $ApiBaseUrl = "https://www.mytriplea.co.za",
+    [string] $ApiBaseUrl = "https://mytriplea.co.za",
     [switch] $Clean,
     [switch] $SkipNpmInstall
 )
@@ -188,13 +188,13 @@ Write-Host ""
 Write-Host "Copy to IIS (C:\WebApps\TripleA\):"
 Write-Host "  $OutputRoot\index.html (+ styles.css, favicon.svg, web.config, landing.js)  ->  www site root"
 Write-Host "  $ApiOut     ->  ...\api"
-Write-Host "  $PortalOut  ->  ...\portal  (bind app.mytriple.co.za)"
+Write-Host "  $PortalOut  ->  ...\portal  (bind app.mytriplea.co.za)"
 Write-Host "  $AppOut     ->  ...\app     (bind owner.mytriplea.co.za)"
 Write-Host ""
 Write-Host "URLs after deploy:"
-Write-Host "  Gateway: https://www.mytriplea.co.za/"
-Write-Host "  API:     https://www.mytriplea.co.za/api/"
-Write-Host "  Portal:  https://app.mytriple.co.za/"
+Write-Host "  Gateway: https://mytriplea.co.za/"
+Write-Host "  API:     https://mytriplea.co.za/api/"
+Write-Host "  Portal:  https://app.mytriplea.co.za/"
 Write-Host "  App:     https://owner.mytriplea.co.za/"
 Write-Host ""
 Write-Host "API app pool: set ASPNETCORE_ENVIRONMENT=Staging and GOOGLE_APPLICATION_CREDENTIALS."

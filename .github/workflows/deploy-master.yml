@@ -31,9 +31,9 @@ env:
   PORTAL_APP_POOL: ${{ vars.PORTAL_APP_POOL || 'KPW' }}
   APP_APP_POOL: ${{ vars.APP_APP_POOL || 'KPW' }}
   LANDING_APP_POOL: ${{ vars.LANDING_APP_POOL || 'KPW' }}
-  API_BASE_URL: ${{ vars.API_BASE_URL || 'https://www.mytriplea.co.za' }}
-  API_HEALTH_URL: ${{ vars.API_HEALTH_URL || 'https://www.mytriplea.co.za/api/health' }}
-  PORTAL_PUBLIC_URL: ${{ vars.PORTAL_PUBLIC_URL || 'https://app.mytriple.co.za' }}
+  API_BASE_URL: ${{ vars.API_BASE_URL || 'https://mytriplea.co.za' }}
+  API_HEALTH_URL: ${{ vars.API_HEALTH_URL || 'https://mytriplea.co.za/api/health' }}
+  PORTAL_PUBLIC_URL: ${{ vars.PORTAL_PUBLIC_URL || 'https://app.mytriplea.co.za' }}
   OWNER_APP_PUBLIC_URL: ${{ vars.OWNER_APP_PUBLIC_URL || 'https://owner.mytriplea.co.za' }}
   DEPLOY_ASPNETCORE_ENVIRONMENT: ${{ vars.DEPLOY_ASPNETCORE_ENVIRONMENT || 'Staging' }}
 

@@ -25,9 +25,9 @@ Repository variables override workflow defaults when set.
 | `PORTAL_APP_POOL` | `KPW` | Portal site app pool name |
 | `APP_APP_POOL` | `KPW` | Owner app site app pool name |
 | `LANDING_APP_POOL` | `KPW` | www site app pool for landing deploy |
-| `API_BASE_URL` | `https://www.mytriplea.co.za` | Baked into portal build as `VITE_API_BASE_URL` |
-| `API_HEALTH_URL` | `https://www.mytriplea.co.za/api/health` | Post-deploy health check |
-| `PORTAL_PUBLIC_URL` | `https://app.mytriple.co.za` | Documented public portal URL |
+| `API_BASE_URL` | `https://mytriplea.co.za` | Baked into portal build as `VITE_API_BASE_URL` |
+| `API_HEALTH_URL` | `https://mytriplea.co.za/api/health` | Post-deploy health check |
+| `PORTAL_PUBLIC_URL` | `https://app.mytriplea.co.za` | Documented public portal URL |
 | `OWNER_APP_PUBLIC_URL` | `https://owner.mytriplea.co.za` | Documented owner app URL |
 | `DEPLOY_BACKUP_RETENTION` | `1` | API backups under `C:\WebApps\TripleA\_backups` |
 | `DEPLOY_ASPNETCORE_ENVIRONMENT` | `Staging` | Documented; set in published `web.config` |

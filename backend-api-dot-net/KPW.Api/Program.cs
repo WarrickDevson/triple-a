@@ -70,8 +70,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("StagingCors", policy =>
     {
         policy.WithOrigins(
+                "https://mytriplea.co.za",
                 "https://www.mytriplea.co.za",
-                "https://app.mytriple.co.za",
+                "https://app.mytriplea.co.za",
                 "https://owner.mytriplea.co.za")
             .AllowAnyHeader()
             .AllowAnyMethod();

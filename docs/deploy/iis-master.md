@@ -18,9 +18,9 @@ IIS sites (subdomain bindings)
 
 | Public URL | Physical folder | Content |
 |------------|-----------------|---------|
-| `https://www.mytriplea.co.za/` | `C:\WebApps\TripleA\` (site root) | Gateway (`site-landing/`) |
-| `https://www.mytriplea.co.za/api/` | `C:\WebApps\TripleA\api` | Published `KPW.Api` |
-| `https://app.mytriple.co.za/` | `C:\WebApps\TripleA\portal` | Vue physio portal (`dist/`) |
+| `https://mytriplea.co.za/` | `C:\WebApps\TripleA\` (site root) | Gateway (`site-landing/`) |
+| `https://mytriplea.co.za/api/` | `C:\WebApps\TripleA\api` | Published `KPW.Api` |
+| `https://app.mytriplea.co.za/` | `C:\WebApps\TripleA\portal` | Vue physio portal (`dist/`) |
 | `https://owner.mytriplea.co.za/` | `C:\WebApps\TripleA\app` | Flutter owner web (`build/web/`) |
 
 Portal and owner app are served on **their own subdomains** (not `/portal/` or `/app/` paths). Production builds use base path `/`.
@@ -89,8 +89,8 @@ If no runner is online, jobs remain **Queued** indefinitely.
 
 Create IIS sites/bindings before the first deploy:
 
-1. **www.mytriplea.co.za** — site physical path `C:\WebApps\TripleA\` (gateway files at root); child application `api` → `C:\WebApps\TripleA\api`
-2. **app.mytriple.co.za** — site physical path `C:\WebApps\TripleA\portal`
+1. **mytriplea.co.za** (and **www** redirect) — site physical path `C:\WebApps\TripleA\`; child application `api` → `C:\WebApps\TripleA\api`
+2. **app.mytriplea.co.za** — site physical path `C:\WebApps\TripleA\portal`
 3. **owner.mytriplea.co.za** — site physical path `C:\WebApps\TripleA\app`
 
 API app pool: **No Managed Code**. Portal and owner sites can use a static-friendly pool or share the API pool via repo variables.
@@ -131,9 +131,9 @@ Then copy `publish\iis\` contents to `C:\WebApps\TripleA\` (gateway at root; `ap
 
 ## Post-deploy checklist
 
-- [ ] `https://www.mytriplea.co.za/` loads gateway
-- [ ] `https://www.mytriplea.co.za/api/health` returns 200
-- [ ] `https://app.mytriple.co.za/` loads physio login
+- [ ] `https://mytriplea.co.za/` loads gateway
+- [ ] `https://mytriplea.co.za/api/health` returns 200
+- [ ] `https://app.mytriplea.co.za/` loads physio login
 - [ ] `https://owner.mytriplea.co.za/` loads owner login
 - [ ] `POST https://www.mytriplea.co.za/api/auth/login` returns tokens
 

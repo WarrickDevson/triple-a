@@ -21,13 +21,13 @@ class AppConfig {
       case 'staging':
         return const AppConfig(
           environment: AppEnvironment.staging,
-          apiBaseUrl: 'https://www.mytriplea.co.za',
+          apiBaseUrl: 'https://mytriplea.co.za',
           appName: 'Triple A (Staging)',
         );
       case 'production':
         return const AppConfig(
           environment: AppEnvironment.production,
-          apiBaseUrl: 'https://www.mytriplea.co.za',
+          apiBaseUrl: 'https://mytriplea.co.za',
           appName: 'Triple A',
         );
       case 'development':

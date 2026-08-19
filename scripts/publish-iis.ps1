@@ -133,7 +133,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "npm ci failed with exit code $LASTEXITCODE" }
     }
     $env:VITE_API_BASE_URL = $ApiBaseUrl
-    npm run build -- --base /
+    npm run build
     if ($LASTEXITCODE -ne 0) { throw "npm run build failed with exit code $LASTEXITCODE" }
 } finally {
     if ($null -eq $savedNodeEnv) {
@@ -161,7 +161,7 @@ try {
     flutter pub get
     if ($LASTEXITCODE -ne 0) { throw "flutter pub get failed with exit code $LASTEXITCODE" }
 
-    flutter build web --release --base-href / --dart-define=ENV=staging
+    flutter build web --release --base-href /app/ --dart-define=ENV=staging
     if ($LASTEXITCODE -ne 0) { throw "flutter build web failed with exit code $LASTEXITCODE" }
 } finally {
     Pop-Location
@@ -188,14 +188,14 @@ Write-Host ""
 Write-Host "Copy to IIS (C:\WebApps\TripleA\):"
 Write-Host "  $OutputRoot\index.html (+ styles.css, favicon.svg, web.config, landing.js)  ->  www site root"
 Write-Host "  $ApiOut     ->  ...\api"
-Write-Host "  $PortalOut  ->  ...\portal  (bind app.mytriplea.co.za)"
-Write-Host "  $AppOut     ->  ...\app     (bind owner.mytriplea.co.za)"
+Write-Host "  $PortalOut  ->  ...\portal"
+Write-Host "  $AppOut     ->  ...\app"
 Write-Host ""
 Write-Host "URLs after deploy:"
 Write-Host "  Gateway: https://mytriplea.co.za/"
 Write-Host "  API:     https://mytriplea.co.za/api/"
-Write-Host "  Portal:  https://app.mytriplea.co.za/"
-Write-Host "  App:     https://owner.mytriplea.co.za/"
+Write-Host "  Portal:  https://mytriplea.co.za/portal/"
+Write-Host "  App:     https://mytriplea.co.za/app/"
 Write-Host ""
 Write-Host "API app pool: set ASPNETCORE_ENVIRONMENT=Staging and GOOGLE_APPLICATION_CREDENTIALS."
 Write-Host "See backend-api-dot-net\docs\IIS_STAGING.md for full checklist."

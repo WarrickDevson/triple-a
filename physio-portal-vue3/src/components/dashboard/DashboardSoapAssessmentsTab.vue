@@ -8,8 +8,7 @@ import {
   ChevronRight,
   PawPrint,
   Share2,
-  Mic,
-  Sparkles
+  Mic
 } from '@lucide/vue'
 import type { SoapNote } from '../../types/soap'
 import { fetchSoapNotesByPet, downloadSoapPdf } from '../../api/soapNotes'

@@ -11,19 +11,19 @@ GitHub queues jobs
         ↓
 Self-hosted runner on IIS host
         ↓
-C:\WebApps\TripleA\ (www root) | api | portal | app
+C:\WebApps\TripleA\ (site root) | api | portal | app
         ↓
-IIS sites (subdomain bindings)
+IIS site TripleA (path-based applications)
 ```
 
 | Public URL | Physical folder | Content |
 |------------|-----------------|---------|
 | `https://mytriplea.co.za/` | `C:\WebApps\TripleA\` (site root) | Gateway (`site-landing/`) |
 | `https://mytriplea.co.za/api/` | `C:\WebApps\TripleA\api` | Published `KPW.Api` |
-| `https://app.mytriplea.co.za/` | `C:\WebApps\TripleA\portal` | Vue physio portal (`dist/`) |
-| `https://owner.mytriplea.co.za/` | `C:\WebApps\TripleA\app` | Flutter owner web (`build/web/`) |
+| `https://mytriplea.co.za/portal/` | `C:\WebApps\TripleA\portal` | Vue physio portal (`dist/`) |
+| `https://mytriplea.co.za/app/` | `C:\WebApps\TripleA\app` | Flutter owner web (`build/web/`) |
 
-Portal and owner app are served on **their own subdomains** (not `/portal/` or `/app/` paths). Production builds use base path `/`.
+One IIS site (`TripleA`). Host bindings (`mytriplea.co.za`, and existing aliases if any) all hit this site. Child applications `/api`, `/portal`, and `/app` select the folder. Portal is built with Vite `base: '/portal/'`. Owner web uses `--base-href /app/`.
 
 The **www** site physical path is `C:\WebApps\TripleA\`. Landing deploy mirrors only root files from `site-landing/` and excludes `api`, `portal`, `app`, and `_backups` so sibling folders are not deleted.
 
@@ -136,13 +136,15 @@ The runner also needs permission to **stop/start the KPW app pool** (same as Lan
 
 ## IIS layout
 
-Create IIS sites/bindings before the first deploy:
+Create one IIS site before the first deploy:
 
-1. **mytriplea.co.za** (and **www** redirect) — site physical path `C:\WebApps\TripleA\`; child application `api` → `C:\WebApps\TripleA\api`
-2. **app.mytriplea.co.za** — site physical path `C:\WebApps\TripleA\portal`
-3. **owner.mytriplea.co.za** — site physical path `C:\WebApps\TripleA\app`
+1. Site **TripleA** — physical path `C:\WebApps\TripleA\`; host `mytriplea.co.za` (optional extra hosts are aliases of the same site)
+2. Applications (children of TripleA):
+   - `api` → `C:\WebApps\TripleA\api`
+   - `portal` → `C:\WebApps\TripleA\portal`
+   - `app` → `C:\WebApps\TripleA\app`
 
-API app pool: **No Managed Code**. Portal and owner sites can use a static-friendly pool or share the API pool via repo variables.
+API app pool: **No Managed Code** (`Kpw`). Portal and app can share that pool.
 
 Gateway files (`site-landing/`) deploy via **deploy-landing** to `C:\WebApps\TripleA\` (no build step; static copy with excluded sibling folders).
 
@@ -182,8 +184,8 @@ Then copy `publish\iis\` contents to `C:\WebApps\TripleA\` (gateway at root; `ap
 
 - [ ] `https://mytriplea.co.za/` loads gateway
 - [ ] `https://mytriplea.co.za/api/health` returns 200
-- [ ] `https://app.mytriplea.co.za/` loads physio login
-- [ ] `https://owner.mytriplea.co.za/` loads owner login
-- [ ] `POST https://www.mytriplea.co.za/api/auth/login` returns tokens
+- [ ] `https://mytriplea.co.za/portal/` loads physio login
+- [ ] `https://mytriplea.co.za/app/` loads owner login
+- [ ] `POST https://mytriplea.co.za/api/auth/login` returns tokens
 
 Full staging notes: [`backend-api-dot-net/docs/IIS_STAGING.md`](../backend-api-dot-net/docs/IIS_STAGING.md).

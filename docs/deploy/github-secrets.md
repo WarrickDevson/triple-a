@@ -27,16 +27,16 @@ Repository variables override workflow defaults when set.
 | `LANDING_APP_POOL` | `KPW` | www site app pool for landing deploy |
 | `API_BASE_URL` | `https://mytriplea.co.za` | Baked into portal build as `VITE_API_BASE_URL` |
 | `API_HEALTH_URL` | `https://mytriplea.co.za/api/health` | Post-deploy health check |
-| `PORTAL_PUBLIC_URL` | `https://app.mytriplea.co.za` | Documented public portal URL |
-| `OWNER_APP_PUBLIC_URL` | `https://owner.mytriplea.co.za` | Documented owner app URL |
+| `PORTAL_PUBLIC_URL` | `https://mytriplea.co.za/portal` | Password-reset / invite links for physio |
+| `OWNER_APP_PUBLIC_URL` | `https://mytriplea.co.za/app` | Password-reset / invite links for owners |
 | `DEPLOY_BACKUP_RETENTION` | `1` | API backups under `C:\WebApps\TripleA\_backups` |
 | `DEPLOY_ASPNETCORE_ENVIRONMENT` | `Staging` | Documented; set in published `web.config` |
 | `FLUTTER_ROOT` | `C:\flutter` | Flutter SDK folder on the runner (not `\bin`) |
 
 ## Portal and app builds
 
-Portal: `API_BASE_URL` → `VITE_API_BASE_URL`, `vite build --base /`.
+Portal: `API_BASE_URL` → `VITE_API_BASE_URL`, Vite `base: '/portal/'`.
 
-Owner app: `--dart-define=ENV=staging`, `--base-href /`.
+Owner app: `--dart-define=ENV=staging`, `--base-href /app/`.
 
 No GitHub secrets are required for any deploy job.

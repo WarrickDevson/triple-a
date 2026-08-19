@@ -93,9 +93,7 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "https://mytriplea.co.za",
-                "https://www.mytriplea.co.za",
-                "https://app.mytriplea.co.za",
-                "https://owner.mytriplea.co.za")
+                "https://www.mytriplea.co.za")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();

@@ -1,17 +1,17 @@
 # IIS Staging — mytriplea.co.za
 
-Production-style staging uses **subdomains** (not path prefixes):
+Single IIS site with path-based applications (LandDiary-style):
 
 | Public URL | Physical folder | Content |
 |------------|-----------------|---------|
 | `https://mytriplea.co.za/` | `C:\WebApps\TripleA\` (site root) | Static gateway (`site-landing/`) — deployed by CI |
 | `https://mytriplea.co.za/api` | `C:\WebApps\TripleA\api` | Published `KPW.Api` |
-| `https://app.mytriplea.co.za/` | `C:\WebApps\TripleA\portal` | Vue physio portal (`dist/`) |
-| `https://owner.mytriplea.co.za/` | `C:\WebApps\TripleA\app` | Flutter owner web (`build/web/`) |
+| `https://mytriplea.co.za/portal` | `C:\WebApps\TripleA\portal` | Vue physio portal (`dist/`) |
+| `https://mytriplea.co.za/app` | `C:\WebApps\TripleA\app` | Flutter owner web (`build/web/`) |
 
-API routes are exposed as `/api/pets`, `/api/auth/login`, etc. Controllers use paths without the `api/` prefix; IIS supplies `/api` via the child application on **www**.
+API routes are `/api/pets`, `/api/auth/login`, etc. Controllers have no `api/` prefix; IIS application `/api` supplies it.
 
-Portal and owner apps are built with base path `/` for their respective subdomains.
+Portal is built with Vite `base: '/portal/'`. Owner web uses `--base-href /app/`.
 
 **Automated deploy:** push to `main` or run **Deploy Master to IIS** in GitHub Actions. See [`docs/deploy/iis-master.md`](../../docs/deploy/iis-master.md).
 
@@ -23,7 +23,7 @@ Portal and owner apps are built with base path `/` for their respective subdomai
 2. **[.NET 9 Hosting Bundle](https://dotnet.microsoft.com/download/dotnet/9.0)** (includes ASP.NET Core Module)
 3. **IIS URL Rewrite** module
 4. **SQL Server** (local on VPS or reachable instance)
-5. **HTTPS** certificates for `*.mytriplea.co.za` and `app.mytriplea.co.za`
+5. **HTTPS** certificate for `mytriplea.co.za`
 6. DNS **A records** for `www`, `owner`, and `app` → VPS public IP
 
 ---
@@ -94,15 +94,15 @@ Output:
 publish/iis/
   index.html, styles.css, favicon.svg, web.config  -> C:\WebApps\TripleA\ (www site root)
   api/      -> IIS application /api on www
-  portal/   -> app.mytriplea.co.za site root
-  app/      -> owner.mytriplea.co.za site root
+  portal/   -> IIS application /portal
+  app/      -> IIS application /app
 ```
 
 Copy each folder to `C:\WebApps\TripleA\` and bind to the matching IIS site. Optional: `-ApiBaseUrl https://mytriplea.co.za` (default).
 
 For production-like staging on the IIS host, prefer the GitHub Actions workflow (`.github/workflows/deploy-master.yml`) which copies directly to `C:\WebApps\TripleA\{api,portal,app}`.
 
-Source for the gateway page: [`site-landing/`](../../site-landing/) (no build step). Gateway links point to `https://owner.mytriplea.co.za` and `https://app.mytriplea.co.za`.
+Source for the gateway page: [`site-landing/`](../../site-landing/) (no build step). Gateway links point to `/app/` and `/portal/`.
 
 ---
 
@@ -146,7 +146,7 @@ Optional IIS app pool override (Advanced Settings → Environment Variables):
 
 ### IIS: API application
 
-1. **www.mytriplea.co.za** — site physical path `C:\WebApps\TripleA\` (gateway at root; CI **deploy-landing**)
+1. Site **TripleA** — physical path `C:\WebApps\TripleA\` (gateway at root; CI **deploy-landing**)
 2. Gateway files deploy automatically from `site-landing/` or via `.\scripts\publish-iis.ps1`
 3. Add **Application** alias `api`, physical path `C:\WebApps\TripleA\api`
 4. App pool: **No Managed Code**, .NET CLR version empty
@@ -161,16 +161,16 @@ cd physio-portal-vue3
 npm ci --include=dev
 $env:NODE_ENV = "development"
 $env:VITE_API_BASE_URL="https://mytriplea.co.za"
-npm run build -- --base /
+npm run build
 ```
 
-Copy `dist\*` to `C:\WebApps\TripleA\portal`. IIS site binding: **app.mytriplea.co.za**.
+Copy `dist\*` to `C:\WebApps\TripleA\portal`.
 
-`public/web.config` is included in the build for SPA routing at site root.
+`public/web.config` is included in the build for SPA routing under `/portal/`.
 
-### IIS: portal site
+### IIS: portal application
 
-- Host: `app.mytriplea.co.za`
+- Alias: `portal`
 - Physical path: `C:\WebApps\TripleA\portal`
 
 ---
@@ -180,14 +180,14 @@ Copy `dist\*` to `C:\WebApps\TripleA\portal`. IIS site binding: **app.mytriplea.
 ```powershell
 cd owner-app-flutter
 flutter pub get
-flutter build web --release --base-href / --dart-define=ENV=staging
+flutter build web --release --base-href /app/ --dart-define=ENV=staging
 ```
 
-Copy `build\web\*` to `C:\WebApps\TripleA\app` (includes `web.config` from `web/`). IIS site binding: **owner.mytriplea.co.za**.
+Copy `build\web\*` to `C:\WebApps\TripleA\app` (includes `web.config` from `web/`).
 
-### IIS: owner app site
+### IIS: owner app application
 
-- Host: `owner.mytriplea.co.za`
+- Alias: `app`
 - Physical path: `C:\WebApps\TripleA\app`
 
 ---
@@ -226,9 +226,9 @@ Copy `build\web\*` to `C:\WebApps\TripleA\app` (includes `web.config` from `web/
 After deploy:
 
 - [ ] `https://mytriplea.co.za/` loads gateway with Owner App and Physio Portal buttons
-- [ ] Gateway buttons navigate to `owner.mytriplea.co.za` and `app.mytriplea.co.za`
-- [ ] `https://app.mytriplea.co.za/` loads physio login
-- [ ] `https://owner.mytriplea.co.za/` loads owner login
+- [ ] Gateway buttons navigate to `/app/` and `/portal/`
+- [ ] `https://mytriplea.co.za/portal/` loads physio login
+- [ ] `https://mytriplea.co.za/app/` loads owner login
 - [ ] Physio login → dashboard, patients, appointments, messages, videos
 - [ ] Owner login → pets, exercises, tracking, upload video, messages, reminders
 - [ ] `https://mytriplea.co.za/api/health` returns 200
@@ -244,9 +244,9 @@ After deploy:
 |-------|--------|
 | 404 on `/` | Gateway files at www site physical path; `index.html` in `web.config` defaultDocument |
 | 404 on `/api/pets` | API app alias is `api` on www site; app pool running; `web.config` present |
-| 404 on portal routes | URL Rewrite installed; `web.config` in portal folder; site bound to `app.mytriplea.co.za` |
-| 404 on owner routes | Same for owner site at `owner.mytriplea.co.za` |
-| CORS errors | `ASPNETCORE_ENVIRONMENT=Staging`; origins include `app.mytriplea.co.za` and `owner.mytriplea.co.za` |
+| 404 on portal routes | URL Rewrite installed; `web.config` in portal folder rewrites to `/portal/index.html` |
+| 404 on owner routes | Same for `/app/` and `/app/index.html` |
+| CORS errors | `ASPNETCORE_ENVIRONMENT=Staging`; origin `https://mytriplea.co.za` |
 | 500 on API | Event Viewer / stdout logs; connection string; migrations applied |
 | EF: object already exists (Clinics) | DB has schema but no migration history — run [`baseline_ef_migrations.sql`](sql/baseline_ef_migrations.sql) then `dotnet ef database update` |
 | EF: Login failed for user kpw_app | Password in appsettings ≠ SQL login — sync via `ALTER LOGIN` or update appsettings (see SQL section above) |

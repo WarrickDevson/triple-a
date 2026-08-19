@@ -25,13 +25,13 @@ class AppConfig {
       case 'staging':
         return AppConfig(
           environment: AppEnvironment.staging,
-          apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : 'https://kpw.devson.co.za',
+          apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : 'https://mytriplea.co.za',
           appName: 'Triple A (Staging)',
         );
       case 'production':
         return AppConfig(
           environment: AppEnvironment.production,
-          apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : 'https://api.kpw.movewell',
+          apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : 'https://mytriplea.co.za',
           appName: 'Triple A',
         );
       case 'development':

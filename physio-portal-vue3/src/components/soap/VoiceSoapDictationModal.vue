@@ -50,7 +50,8 @@ const {
   pauseRecording,
   resumeRecording,
   resetRecording,
-  saveToOfflineQueue
+  saveToOfflineQueue,
+  loadClinicalSample
 } = useAudioRecorder()
 
 const transcriptionEngine = ref<'browser' | 'cloud'>('browser')

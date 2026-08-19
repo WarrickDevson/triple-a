@@ -72,7 +72,7 @@ public class ForgotPasswordCommandHandler : IRequestHandler<ForgotPasswordComman
 
             await _emailSender.SendAsync(
                 user.Email,
-                "Reset your KPW Companion password",
+                "Reset your Triple A password",
                 $"Use this link to reset your password (expires in 1 hour): {resetLink}",
                 cancellationToken);
         }

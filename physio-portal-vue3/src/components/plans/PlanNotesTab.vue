@@ -121,7 +121,7 @@ function handleSave() {
         <ul class="mt-2 space-y-1.5 text-xs text-navy/80 list-disc list-inside">
           <li>Perform exercises on non-slip rubber mats or carpeted floors</li>
           <li>Reward steady compliance with high-value low-calorie treats</li>
-          <li>Log daily session completion in the MoveWell owner app</li>
+          <li>Log daily session completion in the Triple A owner app</li>
         </ul>
       </div>
     </div>

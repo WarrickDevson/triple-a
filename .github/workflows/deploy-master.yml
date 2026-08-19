@@ -325,11 +325,6 @@ jobs:
       - name: Publish API
         run: dotnet publish "backend-api-dot-net/KPW.Api/KPW.Api.csproj" -c Release -o "artifacts/api" /p:EnvironmentName=Staging
 
-      - name: Apply API environment configuration
-        shell: powershell
-        run: |
-          ./infra/deploy/iis/set-api-iis-environment.ps1 -ApiPhysicalPath "artifacts/api"
-
       - name: Deploy API to IIS
         shell: powershell
         run: |

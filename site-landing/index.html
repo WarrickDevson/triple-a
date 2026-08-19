@@ -5,58 +5,551 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="KPW Companion — guided pet rehabilitation for owners and veterinary physiotherapists."
+      content="Triple A — guided pet rehabilitation for owners and veterinary physiotherapists. Better compliance. Better outcomes. Stronger bonds."
     />
-    <meta name="theme-color" content="#0C3C54" />
-    <meta property="og:title" content="KPW Companion" />
+    <meta name="theme-color" content="#0A1A2E" />
+    <meta property="og:title" content="Triple A — Animal Activity Assistant" />
     <meta
       property="og:description"
-      content="Guided rehabilitation for pets. Choose the owner app or physio portal to get started."
+      content="Rehabilitation that moves with your pet. Guided exercise programmes, progress tracking, and clinician feedback — in one place."
     />
     <meta property="og:type" content="website" />
-    <title>KPW Companion</title>
+    <meta property="og:url" content="https://www.mytriplea.co.za/" />
+    <title>Triple A — Animal Activity Assistant</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Source+Sans+3:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Triple A",
+        "alternateName": "Animal Activity Assistant",
+        "applicationCategory": "HealthApplication",
+        "operatingSystem": "Web, iOS, Android",
+        "description": "Guided pet rehabilitation platform connecting veterinary physiotherapists with pet owners for home exercise programmes, progress tracking, and clinician feedback.",
+        "url": "https://www.mytriplea.co.za/",
+        "offers": {
+          "@type": "Offer",
+          "availability": "https://schema.org/OnlineOnly"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Kruger's Pet Wellness"
+        }
+      }
+    </script>
   </head>
   <body>
-    <main class="page">
-      <div class="page__wash" aria-hidden="true"></div>
-      <div class="page__pattern" aria-hidden="true"></div>
+    <a class="skip-link" href="#main">Skip to content</a>
 
-      <section class="hero" aria-labelledby="brand-title">
-        <div class="hero__mark" aria-hidden="true">
-          <img src="/favicon.svg" alt="" width="52" height="52" />
+    <header class="site-header" id="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="/" aria-label="Triple A home">
+          <img class="brand__mark" src="/favicon.svg" alt="" width="36" height="36" />
+          <span class="brand__text">
+            <span class="brand__name">Triple A</span>
+            <span class="brand__tagline">Animal Activity Assistant</span>
+          </span>
+        </a>
+
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="site-nav"
+          aria-label="Open menu"
+        >
+          <span class="nav-toggle__bar" aria-hidden="true"></span>
+          <span class="nav-toggle__bar" aria-hidden="true"></span>
+          <span class="nav-toggle__bar" aria-hidden="true"></span>
+        </button>
+
+        <nav class="site-nav" id="site-nav" aria-label="Main">
+          <ul class="site-nav__links">
+            <li><a href="#how-it-works">How it works</a></li>
+            <li><a href="#for-owners">For owners</a></li>
+            <li><a href="#for-physios">For physios</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#faq">FAQ</a></li>
+          </ul>
+          <div class="site-nav__actions">
+            <a class="btn btn--ghost btn--sm" href="https://owner.mytriplea.co.za/">Owner app</a>
+            <a class="btn btn--primary btn--sm" href="https://app.mytriple.co.za/">Physio portal</a>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Hero -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero__bg" aria-hidden="true">
+          <div class="hero__mesh"></div>
+          <div class="hero__grain"></div>
         </div>
 
-        <h1 id="brand-title" class="hero__brand">KPW Companion</h1>
-        <p class="hero__headline">Rehabilitation that moves with your pet</p>
-        <p class="hero__support">
-          Guided exercise programmes, progress tracking, and clinician feedback — in one place.
-        </p>
+        <div class="container hero__grid">
+          <div class="hero__content reveal">
+            <p class="chip">Move • Play • Rehab • Thrive</p>
+            <h1 id="hero-title" class="hero__title">Rehabilitation that moves with your pet</h1>
+            <p class="hero__lead">
+              Guided exercise programmes, progress tracking, and clinician feedback — in one place.
+              Better compliance. Better outcomes. Stronger bonds.
+            </p>
+            <div class="hero__actions">
+              <a class="btn btn--primary btn--lg" href="https://owner.mytriplea.co.za/">
+                <svg class="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <rect x="5" y="2" width="14" height="20" rx="2" />
+                  <path d="M12 18h.01" stroke-linecap="round" />
+                </svg>
+                Open Owner App
+              </a>
+              <a class="btn btn--outline btn--lg" href="https://app.mytriple.co.za/">
+                <svg class="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <rect x="2" y="3" width="20" height="14" rx="2" />
+                  <path d="M8 21h8M12 17v4" stroke-linecap="round" />
+                </svg>
+                Open Physio Portal
+              </a>
+            </div>
+          </div>
 
-        <nav class="cta-group" aria-label="Choose your application">
-          <a class="cta cta--primary" href="/app/" aria-label="Open the KPW Companion owner app">
-            <svg class="cta__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <rect x="5" y="2" width="14" height="20" rx="2" />
-              <path d="M12 18h.01" stroke-linecap="round" />
-            </svg>
-            Open Owner App
-          </a>
-          <a class="cta cta--secondary" href="/portal/" aria-label="Open the KPW Companion physio portal">
-            <svg class="cta__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <rect x="2" y="3" width="20" height="14" rx="2" />
-              <path d="M8 21h8M12 17v4" stroke-linecap="round" />
-            </svg>
-            Open Physio Portal
-          </a>
-        </nav>
+          <div class="hero__visual reveal reveal--delay" aria-hidden="true">
+            <div class="device device--phone">
+              <div class="device__frame">
+                <div class="device__screen device__screen--owner">
+                  <div class="mock-header">
+                    <span class="mock-dot mock-dot--sage"></span>
+                    <span class="mock-title">Today's exercises</span>
+                  </div>
+                  <div class="mock-card mock-card--active">
+                    <span class="mock-label">Sit to stand</span>
+                    <span class="mock-meta">3 sets · 10 reps</span>
+                    <div class="mock-progress"><span style="width: 66%"></span></div>
+                  </div>
+                  <div class="mock-card">
+                    <span class="mock-label">Hip flexor stretch</span>
+                    <span class="mock-meta">Hold 30s · 3 reps</span>
+                  </div>
+                  <div class="mock-card">
+                    <span class="mock-label">Weight shifting</span>
+                    <span class="mock-meta">2 min guided</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="device device--laptop">
+              <div class="device__frame">
+                <div class="device__screen device__screen--portal">
+                  <div class="mock-sidebar">
+                    <span class="mock-nav-item mock-nav-item--active"></span>
+                    <span class="mock-nav-item"></span>
+                    <span class="mock-nav-item"></span>
+                    <span class="mock-nav-item"></span>
+                  </div>
+                  <div class="mock-main">
+                    <div class="mock-header mock-header--portal">
+                      <span class="mock-title">Patient progress</span>
+                    </div>
+                    <div class="mock-chart">
+                      <span class="mock-bar" style="height: 45%"></span>
+                      <span class="mock-bar" style="height: 62%"></span>
+                      <span class="mock-bar" style="height: 58%"></span>
+                      <span class="mock-bar" style="height: 78%"></span>
+                      <span class="mock-bar" style="height: 85%"></span>
+                      <span class="mock-bar" style="height: 72%"></span>
+                    </div>
+                    <div class="mock-row">
+                      <span class="mock-pill mock-pill--sage">Mobility improving</span>
+                      <span class="mock-pill">Video reviewed</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="device__base"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Care loop -->
+      <section class="section section--surface" id="how-it-works" aria-labelledby="loop-title">
+        <div class="container">
+          <header class="section__header reveal">
+            <p class="eyebrow">How it works</p>
+            <h2 id="loop-title" class="section__title">The care loop that keeps recovery on track</h2>
+            <p class="section__lead">
+              Triple A connects your clinic and your clients in a continuous rehabilitation cycle —
+              from prescription to daily practice to measurable progress.
+            </p>
+          </header>
+
+          <ol class="loop reveal">
+            <li class="loop__step">
+              <div class="loop__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                  <rect x="9" y="3" width="6" height="4" rx="1" />
+                  <path d="M9 12h6M9 16h4" stroke-linecap="round" />
+                </svg>
+              </div>
+              <h3 class="loop__title">Prescribe</h3>
+              <p class="loop__text">Physios build personalised rehab programmes from a clinical exercise library.</p>
+            </li>
+            <li class="loop__connector" aria-hidden="true"></li>
+            <li class="loop__step">
+              <div class="loop__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke-linecap="round" />
+                  <circle cx="12" cy="12" r="4" />
+                </svg>
+              </div>
+              <h3 class="loop__title">Guide</h3>
+              <p class="loop__text">Owners follow step-by-step exercises with video, reps, and safety cues at home.</p>
+            </li>
+            <li class="loop__connector" aria-hidden="true"></li>
+            <li class="loop__step">
+              <div class="loop__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path d="M3 3v18h18" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M7 14l4-4 4 3 5-6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              <h3 class="loop__title">Track</h3>
+              <p class="loop__text">Daily logs capture pain, mobility, energy, and appetite between appointments.</p>
+            </li>
+            <li class="loop__connector" aria-hidden="true"></li>
+            <li class="loop__step">
+              <div class="loop__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              <h3 class="loop__title">Feedback</h3>
+              <p class="loop__text">Video submissions and messaging let clinicians review form and adjust plans.</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- For owners -->
+      <section class="section" id="for-owners" aria-labelledby="owners-title">
+        <div class="container audience">
+          <div class="audience__content reveal">
+            <p class="eyebrow eyebrow--sage">For pet owners</p>
+            <h2 id="owners-title" class="section__title">Confidence between clinic visits</h2>
+            <p class="section__lead">
+              Home rehabilitation is hard when you're unsure what to do or whether it's working.
+              Triple A gives you a clear daily plan and a direct line to your pet's physio.
+            </p>
+            <ul class="feature-list">
+              <li>
+                <span class="feature-list__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
+                <span><strong>Guided exercise sessions</strong> with video, sets, reps, and rest timers</span>
+              </li>
+              <li>
+                <span class="feature-list__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
+                <span><strong>Daily wellness tracking</strong> for pain, lameness, mobility, energy, and appetite</span>
+              </li>
+              <li>
+                <span class="feature-list__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
+                <span><strong>Video upload</strong> so your physio can review form and provide feedback</span>
+              </li>
+              <li>
+                <span class="feature-list__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
+                <span><strong>Secure messaging</strong> and appointment reminders to stay on schedule</span>
+              </li>
+              <li>
+                <span class="feature-list__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
+                <span><strong>AI wellness assistant</strong> grounded in your clinic's approved education content</span>
+              </li>
+            </ul>
+            <a class="btn btn--primary" href="https://owner.mytriplea.co.za/">Get started in the owner app</a>
+          </div>
+          <div class="audience__visual reveal reveal--delay" aria-hidden="true">
+            <div class="card-stack">
+              <div class="card-stack__item card-stack__item--1">
+                <span class="card-stack__label">Pain level</span>
+                <div class="card-stack__meter"><span style="width: 35%"></span></div>
+                <span class="card-stack__value">Low · improving</span>
+              </div>
+              <div class="card-stack__item card-stack__item--2">
+                <span class="card-stack__label">Today's session</span>
+                <span class="card-stack__value card-stack__value--lg">Hip flexor stretch</span>
+                <span class="card-stack__meta">Hold 30s · 3 of 3 complete</span>
+              </div>
+              <div class="card-stack__item card-stack__item--3">
+                <span class="card-stack__label">Physio feedback</span>
+                <span class="card-stack__quote">"Great form on the sit-to-stands — keep the pace slow."</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- For physios -->
+      <section class="section section--muted" id="for-physios" aria-labelledby="physios-title">
+        <div class="container audience audience--reverse">
+          <div class="audience__content reveal">
+            <p class="eyebrow eyebrow--gold">For veterinary physiotherapists</p>
+            <h2 id="physios-title" class="section__title">Manage animal rehabilitation with confidence</h2>
+            <p class="section__lead">
+              Prescribe structured programmes, monitor compliance remotely, and intervene early —
+              all from a clinical portal built for rehabilitation workflows.
+            </p>
+            <ul class="feature-list">
+              <li>
+                <span class="feature-list__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
+                <span><strong>Patient roster</strong> with medical history, programmes, and progress at a glance</span>
+              </li>
+              <li>
+                <span class="feature-list__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
+                <span><strong>Exercise library</strong> with clinical templates, video, safety notes, and common mistakes</span>
+              </li>
+              <li>
+                <span class="feature-list__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
+                <span><strong>Treatment plans</strong> you build and assign — updated dynamically, no app-store delays</span>
+              </li>
+              <li>
+                <span class="feature-list__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
+                <span><strong>Progress charts and PDF reports</strong> for clinical records and owner communication</span>
+              </li>
+              <li>
+                <span class="feature-list__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                </span>
+                <span><strong>Appointments, video review, and messaging</strong> in one clinic workspace</span>
+              </li>
+            </ul>
+            <a class="btn btn--primary" href="https://app.mytriple.co.za/">Open the physio portal</a>
+          </div>
+          <div class="audience__visual reveal reveal--delay" aria-hidden="true">
+            <div class="portal-mock">
+              <div class="portal-mock__header">
+                <span class="portal-mock__title">Exercise library</span>
+                <span class="portal-mock__badge">24 templates</span>
+              </div>
+              <div class="portal-mock__grid">
+                <div class="portal-mock__card">
+                  <span class="portal-mock__card-title">Sit to stand</span>
+                  <span class="portal-mock__card-meta">Strength · Canine</span>
+                </div>
+                <div class="portal-mock__card">
+                  <span class="portal-mock__card-title">Hip flexor stretch</span>
+                  <span class="portal-mock__card-meta">Flexibility · Canine</span>
+                </div>
+                <div class="portal-mock__card portal-mock__card--highlight">
+                  <span class="portal-mock__card-title">Weight shifting</span>
+                  <span class="portal-mock__card-meta">Balance · Multi-species</span>
+                </div>
+                <div class="portal-mock__card">
+                  <span class="portal-mock__card-title">Cavaletti poles</span>
+                  <span class="portal-mock__card-meta">Coordination · Equine</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Feature bento -->
+      <section class="section" id="features" aria-labelledby="features-title">
+        <div class="container">
+          <header class="section__header reveal">
+            <p class="eyebrow">Platform features</p>
+            <h2 id="features-title" class="section__title">Everything rehabilitation needs</h2>
+            <p class="section__lead">
+              Built for the full rehab journey — from clinical prescription to owner compliance to measurable recovery.
+            </p>
+          </header>
+
+          <div class="bento reveal">
+            <article class="bento__card bento__card--wide">
+              <div class="bento__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <polygon points="5 3 19 12 5 21 5 3" stroke-linejoin="round" />
+                </svg>
+              </div>
+              <h3 class="bento__title">Interactive exercise engine</h3>
+              <p class="bento__text">
+                Dynamic programmes with step-by-step guidance, video demonstrations, sets and reps,
+                and session logging — updated by your physio without waiting for app updates.
+              </p>
+            </article>
+            <article class="bento__card">
+              <div class="bento__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path d="M3 3v18h18" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M7 14l4-4 4 3 5-6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              <h3 class="bento__title">Daily tracking</h3>
+              <p class="bento__text">
+                Pain, lameness, mobility, energy, appetite, and weight — captured daily and visible to your care team.
+              </p>
+            </article>
+            <article class="bento__card">
+              <div class="bento__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path d="M23 7l-7 5 7 5V7z" stroke-linejoin="round" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" />
+                </svg>
+              </div>
+              <h3 class="bento__title">Async video review</h3>
+              <p class="bento__text">
+                Owners record exercises at home; physios review form and leave feedback without scheduling a call.
+              </p>
+            </article>
+            <article class="bento__card">
+              <div class="bento__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              <h3 class="bento__title">Secure messaging</h3>
+              <p class="bento__text">
+                Pet-scoped conversations keep owners and clinicians connected between appointments.
+              </p>
+            </article>
+            <article class="bento__card">
+              <div class="bento__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path d="M12 2a4 4 0 0 1 4 4c0 1.5-.8 2.8-2 3.5V12h1a7 7 0 0 1 7 7h-2a5 5 0 0 0-5-5h-1v2.5A4 4 0 0 1 8 12a4 4 0 0 1 4-4z" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </div>
+              <h3 class="bento__title">AI wellness assistant</h3>
+              <p class="bento__text">
+                Answers grounded in your clinic's approved education — not open-web advice.
+              </p>
+            </article>
+            <article class="bento__card bento__card--wide">
+              <div class="bento__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path d="M12 10c-2 0-3.5 1.5-3.5 3.5S10 17 12 17s3.5-1.5 3.5-3.5S14 10 12 10z" />
+                  <path d="M5 8.5C5 5.5 8 3 12 3s7 2.5 7 5.5" stroke-linecap="round" />
+                  <path d="M4 20c1.5-3 4.5-5 8-5s6.5 2 8 5" stroke-linecap="round" />
+                </svg>
+              </div>
+              <h3 class="bento__title">Multi-species support</h3>
+              <p class="bento__text">
+                Dogs, cats, equine, and more — with species-aware exercise filters and clinical templates
+                designed for veterinary rehabilitation, not generic fitness.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="section section--surface" id="faq" aria-labelledby="faq-title">
+        <div class="container container--narrow">
+          <header class="section__header reveal">
+            <p class="eyebrow">FAQ</p>
+            <h2 id="faq-title" class="section__title">Common questions</h2>
+          </header>
+
+          <div class="faq reveal">
+            <details class="faq__item">
+              <summary class="faq__question">How do I get access to Triple A?</summary>
+              <p class="faq__answer">
+                Triple A is provided through participating veterinary physiotherapy clinics.
+                Owners receive an invite code from their clinic to create an account in the owner app.
+                Physiotherapists log in directly to the physio portal with credentials provided by their clinic.
+              </p>
+            </details>
+            <details class="faq__item">
+              <summary class="faq__question">Who is Triple A for?</summary>
+              <p class="faq__answer">
+                Triple A serves two audiences: pet owners following home rehabilitation programmes,
+                and veterinary physiotherapists who prescribe, monitor, and support recovery.
+                It is designed for clinical rehabilitation — not general pet fitness.
+              </p>
+            </details>
+            <details class="faq__item">
+              <summary class="faq__question">Why are there two apps?</summary>
+              <p class="faq__answer">
+                The owner app is optimised for daily exercise guidance, tracking, and communication on mobile.
+                The physio portal is a clinical workspace for managing patients, building programmes,
+                reviewing progress, and generating reports. Both connect to the same platform.
+              </p>
+            </details>
+            <details class="faq__item">
+              <summary class="faq__question">Is my data private and secure?</summary>
+              <p class="faq__answer">
+                Triple A is designed with POPIA (South Africa's data protection law) in mind.
+                Owner personal information and clinic data are handled securely, with access limited
+                to authorised clinic staff and the pet's assigned care team.
+              </p>
+            </details>
+            <details class="faq__item">
+              <summary class="faq__question">What species does Triple A support?</summary>
+              <p class="faq__answer">
+                The platform supports multiple species including dogs, cats, and equine patients.
+                Exercise templates can be filtered by species, and treatment plans are tailored
+                to each patient's clinical needs.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="cta-band" aria-labelledby="cta-title">
+        <div class="container cta-band__inner reveal">
+          <h2 id="cta-title" class="cta-band__title">Ready to start rehabilitating?</h2>
+          <p class="cta-band__lead">Choose the app that fits your role and get started today.</p>
+          <div class="cta-band__actions">
+            <a class="btn btn--primary btn--lg" href="https://owner.mytriplea.co.za/">Open Owner App</a>
+            <a class="btn btn--outline-light btn--lg" href="https://app.mytriple.co.za/">Open Physio Portal</a>
+          </div>
+        </div>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <div class="container site-footer__inner">
+        <div class="site-footer__brand">
+          <img src="/favicon.svg" alt="" width="32" height="32" />
+          <div>
+            <p class="site-footer__name">Triple A</p>
+            <p class="site-footer__motto">Move • Play • Rehab • Thrive</p>
+          </div>
+        </div>
+        <nav class="site-footer__nav" aria-label="Footer">
+          <a href="https://owner.mytriplea.co.za/">Owner app</a>
+          <a href="https://app.mytriple.co.za/">Physio portal</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+        <p class="site-footer__legal">
+          &copy; <span id="year"></span> Kruger's Pet Wellness. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
+    <script src="/landing.js" defer></script>
   </body>
 </html>

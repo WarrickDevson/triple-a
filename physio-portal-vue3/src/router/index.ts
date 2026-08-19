@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/auth'
 import PortalLayout from '../layouts/PortalLayout.vue'
 
 const router = createRouter({
-  history: createWebHistory('/portal/'),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/login',

@@ -69,7 +69,10 @@ builder.Services.AddCors(options =>
     });
     options.AddPolicy("StagingCors", policy =>
     {
-        policy.WithOrigins("https://kpw.devson.co.za")
+        policy.WithOrigins(
+                "https://www.mytriplea.co.za",
+                "https://app.mytriple.co.za",
+                "https://owner.mytriplea.co.za")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -120,6 +123,7 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
 
 app.Run();

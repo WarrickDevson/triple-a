@@ -332,6 +332,21 @@ jobs:
       - name: Publish API
         run: dotnet publish "backend-api-dot-net/KPW.Api/KPW.Api.csproj" -c Release -o "artifacts/api" /p:EnvironmentName=Staging
 
+      - name: Apply API environment configuration
+        shell: powershell
+        env:
+          DEPLOY_SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY || secrets.SendGrid__ApiKey || secrets.DEPLOY_SENDGRID_API_KEY || '' }}
+          DEPLOY_SENDGRID_PROVIDER: ${{ vars.SENDGRID_PROVIDER || vars.SendGrid__Provider || vars.DEPLOY_SENDGRID_PROVIDER || '' }}
+          DEPLOY_SENDGRID_FROM_EMAIL: ${{ vars.SENDGRID_FROM_EMAIL || vars.SendGrid__FromEmail || vars.DEPLOY_SENDGRID_FROM_EMAIL || '' }}
+          DEPLOY_SENDGRID_FROM_NAME: ${{ vars.SENDGRID_FROM_NAME || vars.SendGrid__FromName || vars.DEPLOY_SENDGRID_FROM_NAME || '' }}
+          DEPLOY_AI_APIKEY: ${{ secrets.GEMINI_API_KEY || secrets.Ai__ApiKey || secrets.AI_APIKEY || secrets.DEPLOY_AI_APIKEY || '' }}
+          DEPLOY_AI_PROVIDER: ${{ vars.AI_PROVIDER || vars.Ai__Provider || vars.DEPLOY_AI_PROVIDER || '' }}
+          DEPLOY_AI_MODEL: ${{ vars.AI_MODEL || vars.Ai__Model || vars.DEPLOY_AI_MODEL || '' }}
+          DEPLOY_DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING || secrets.ConnectionStrings__DefaultConnection || secrets.DEPLOY_DB_CONNECTION_STRING || '' }}
+          DEPLOY_JWT_KEY: ${{ secrets.JWT_KEY || secrets.Jwt__Key || secrets.DEPLOY_JWT_KEY || '' }}
+        run: |
+          ./infra/deploy/iis/set-api-iis-environment.ps1 -ApiPhysicalPath "artifacts/api"
+
       - name: Deploy API to IIS
         shell: powershell
         run: |

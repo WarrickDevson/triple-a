@@ -32,7 +32,15 @@ function Set-XmlEnvironmentVariable {
     if ($null -eq $node) {
         $envVars = $Document.SelectSingleNode("/configuration/location/system.webServer/aspNetCore/environmentVariables")
         if ($null -eq $envVars) {
-            throw "web.config is missing aspNetCore/environmentVariables section."
+            $aspNetCore = $Document.SelectSingleNode("/configuration/location/system.webServer/aspNetCore")
+            if ($null -eq $aspNetCore) {
+                $aspNetCore = $Document.SelectSingleNode("/configuration/system.webServer/aspNetCore")
+            }
+            if ($null -eq $aspNetCore) {
+                throw "web.config is missing aspNetCore section."
+            }
+            $envVars = $Document.CreateElement("environmentVariables")
+            [void]$aspNetCore.AppendChild($envVars)
         }
 
         $node = $Document.CreateElement("environmentVariable")

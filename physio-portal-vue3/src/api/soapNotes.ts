@@ -70,6 +70,15 @@ export async function deleteSoapNote(soapNoteId: number): Promise<boolean> {
   }
 }
 
+export async function toggleSoapNoteShare(soapNoteId: number, shareWithOwner: boolean): Promise<SoapNote> {
+  try {
+    const res = await apiClient.put<SoapNote>(`/api/soap-notes/${soapNoteId}/share`, { shareWithOwner })
+    return res.data
+  } catch {
+    throw new Error('Could not update sharing status.')
+  }
+}
+
 export async function fetchSharedReportsByPet(petId: number): Promise<SharedReport[]> {
   try {
     const res = await apiClient.get<SharedReport[]>(`/api/reports/pet/${petId}/shared`)

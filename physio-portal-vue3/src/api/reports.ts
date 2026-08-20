@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import type { SharedReport } from '../types/soap'
 
 export async function downloadPetReport(petId: number): Promise<void> {
   const response = await apiClient.get<Blob>(`/api/reports/pet/${petId}/download`, {
@@ -17,4 +18,33 @@ export async function downloadPetReport(petId: number): Promise<void> {
   link.click()
   link.remove()
   window.URL.revokeObjectURL(url)
+}
+
+export async function fetchSharedReports(petId: number): Promise<SharedReport[]> {
+  const res = await apiClient.get<SharedReport[]>(`/api/reports/pet/${petId}/shared`)
+  return res.data
+}
+
+export async function shareDocument(
+  petId: number,
+  payload: { title: string; reportType: string; summary?: string; soapNoteId?: number }
+): Promise<SharedReport> {
+  const res = await apiClient.post<SharedReport>(`/api/reports/pet/${petId}/share-document`, payload)
+  return res.data
+}
+
+export async function publishProgressReport(petId: number, title?: string): Promise<SharedReport> {
+  const res = await apiClient.post<SharedReport>(`/api/reports/pet/${petId}/publish-progress-report`, null, {
+    params: title ? { title } : undefined
+  })
+  return res.data
+}
+
+export async function deleteSharedReport(sharedReportId: number): Promise<boolean> {
+  try {
+    await apiClient.delete(`/api/reports/shared/${sharedReportId}`)
+    return true
+  } catch {
+    return false
+  }
 }

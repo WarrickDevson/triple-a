@@ -29,9 +29,9 @@ public class GeneratePetReportQueryHandler : IRequestHandler<GeneratePetReportQu
 
     public async Task<PetReportFileDto> Handle(GeneratePetReportQuery query, CancellationToken cancellationToken)
     {
-        if (_currentUserService.Role is not (UserRole.Physio or UserRole.SysAdmin))
+        if (_currentUserService.Role is not (UserRole.Physio or UserRole.SysAdmin or UserRole.Owner))
         {
-            throw new UnauthorizedAccessException("Only physiotherapists can download clinical reports.");
+            throw new UnauthorizedAccessException("You are not authorized to download clinical reports.");
         }
 
         await PetAuthorization.EnsureCanAccessPet(

@@ -8,6 +8,9 @@ class SharedReportModel {
   final String reportType;
   final String? summary;
   final DateTime sharedAtUtc;
+  final String? fileUrl;
+  final String? fileType;
+  final int? fileSizeBytes;
 
   SharedReportModel({
     required this.sharedReportId,
@@ -19,19 +22,57 @@ class SharedReportModel {
     required this.reportType,
     this.summary,
     required this.sharedAtUtc,
+    this.fileUrl,
+    this.fileType,
+    this.fileSizeBytes,
   });
 
+  bool get isSoapNote =>
+      reportType.toUpperCase().contains('SOAP') || soapNoteId != null;
+
+  bool get isClinicalReport =>
+      reportType.toUpperCase().contains('CLINICAL') ||
+      reportType.toUpperCase().contains('PROGRESS');
+
+  bool get isHomeProgram =>
+      reportType.toUpperCase().contains('PROGRAM') ||
+      reportType.toUpperCase().contains('CARE');
+
+  String get categoryLabel {
+    if (isSoapNote) return 'SOAP Assessment';
+    if (isClinicalReport) return 'Clinical Progress Report';
+    if (isHomeProgram) return 'Home Care Plan';
+    if (reportType.toUpperCase().contains('REFERRAL')) return 'Referral Letter';
+    if (reportType.toUpperCase().contains('IMAGING')) return 'Imaging & Diagnostics';
+    if (reportType.toUpperCase().contains('CONSENT')) return 'Consent Form';
+    if (reportType.toUpperCase().contains('DISCHARGE')) return 'Discharge Summary';
+    return 'Clinical Document';
+  }
+
   factory SharedReportModel.fromJson(Map<String, dynamic> json) {
+    final id = json['sharedReportId'] ?? json['SharedReportId'] ?? json['id'] ?? 0;
+    final petIdVal = json['petId'] ?? json['PetId'] ?? 0;
+    final soapNoteIdVal = json['soapNoteId'] ?? json['SoapNoteId'];
+    final physioIdVal = json['sharedByPhysioId'] ?? json['SharedByPhysioId'] ?? 0;
+    final physioNameVal = json['sharedByPhysioName'] ?? json['SharedByPhysioName'] ?? 'Clinician';
+    final titleVal = json['title'] ?? json['Title'] ?? 'Clinical Document';
+    final reportTypeVal = json['reportType'] ?? json['ReportType'] ?? 'SOAP_SESSION';
+    final summaryVal = json['summary'] ?? json['Summary'] as String?;
+    final sharedAtStr = json['sharedAtUtc'] ?? json['SharedAtUtc'] ?? json['sharedAt'] ?? '';
+
     return SharedReportModel(
-      sharedReportId: json['sharedReportId'] as int,
-      petId: json['petId'] as int,
-      soapNoteId: json['soapNoteId'] as int?,
-      sharedByPhysioId: json['sharedByPhysioId'] as int? ?? 0,
-      sharedByPhysioName: json['sharedByPhysioName'] as String? ?? 'Clinician',
-      title: json['title'] as String? ?? 'Clinical Session Report',
-      reportType: json['reportType'] as String? ?? 'SOAP_SESSION',
-      summary: json['summary'] as String?,
-      sharedAtUtc: DateTime.tryParse(json['sharedAtUtc'] as String? ?? '') ?? DateTime.now(),
+      sharedReportId: (id as num).toInt(),
+      petId: (petIdVal as num).toInt(),
+      soapNoteId: soapNoteIdVal != null ? (soapNoteIdVal as num).toInt() : null,
+      sharedByPhysioId: (physioIdVal as num).toInt(),
+      sharedByPhysioName: physioNameVal.toString(),
+      title: titleVal.toString(),
+      reportType: reportTypeVal.toString(),
+      summary: summaryVal?.toString(),
+      sharedAtUtc: DateTime.tryParse(sharedAtStr.toString()) ?? DateTime.now(),
+      fileUrl: (json['fileUrl'] ?? json['FileUrl']) as String?,
+      fileType: (json['fileType'] ?? json['FileType']) as String?,
+      fileSizeBytes: (json['fileSizeBytes'] ?? json['FileSizeBytes']) as int?,
     );
   }
 }

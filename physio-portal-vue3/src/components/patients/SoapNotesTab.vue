@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Plus, Download, ChevronDown, ChevronUp, FileText, CheckCircle2, MessageSquareQuote, Pencil, Trash2, Mic } from '@lucide/vue'
+import { Plus, Download, ChevronDown, ChevronUp, FileText, CheckCircle2, MessageSquareQuote, Pencil, Trash2, Mic, Share2 } from '@lucide/vue'
 import type { SoapNote, OwnerSubjectiveNote } from '../../types/soap'
-import { fetchSoapNotesByPet, deleteSoapNote, downloadSoapPdf, fetchOwnerSubjectiveNotes } from '../../api/soapNotes'
+import { fetchSoapNotesByPet, deleteSoapNote, downloadSoapPdf, fetchOwnerSubjectiveNotes, toggleSoapNoteShare } from '../../api/soapNotes'
 import CreateSoapNoteModal from './CreateSoapNoteModal.vue'
 import VoiceSoapDictationModal from '../soap/VoiceSoapDictationModal.vue'
 
@@ -93,6 +93,20 @@ function formatDate(dateStr: string) {
 function handleDownloadPdf(soapNoteId: number) {
   downloadSoapPdf(soapNoteId)
 }
+
+async function handleToggleShare(note: SoapNote) {
+  const newShare = !note.isSharedWithOwner
+  try {
+    const updated = await toggleSoapNoteShare(note.soapNoteId, newShare)
+    note.isSharedWithOwner = updated.isSharedWithOwner
+    note.sharedAtUtc = updated.sharedAtUtc
+  } catch {
+    // Fallback toggle for local state
+    note.isSharedWithOwner = newShare
+    note.sharedAtUtc = newShare ? new Date().toISOString() : null
+  }
+}
+
 function handleSoapNoteEvent(e: any) {
   if (!e.detail?.petId || e.detail.petId === props.petId) {
     loadNotes()
@@ -226,8 +240,23 @@ onUnmounted(() => {
               </span>
             </div>
 
-            <!-- Action Buttons: PDF Report, Edit, Delete -->
+            <!-- Action Buttons: Share, PDF Report, Edit, Delete -->
             <div class="flex items-center gap-1.5" @click.stop>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-colors"
+                :class="
+                  note.isSharedWithOwner
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                    : 'border-neutral-grey/80 bg-surface text-neutral-muted hover:bg-neutral-grey/40 hover:text-navy'
+                "
+                :title="note.isSharedWithOwner ? 'Shared with Owner (click to unshare)' : 'Click to share with Owner'"
+                @click="handleToggleShare(note)"
+              >
+                <Share2 class="h-3.5 w-3.5" :class="note.isSharedWithOwner ? 'text-emerald-600' : 'text-neutral-muted'" />
+                <span>{{ note.isSharedWithOwner ? 'Shared' : 'Share' }}</span>
+              </button>
+
               <button
                 type="button"
                 class="inline-flex items-center gap-1.5 rounded-lg border border-neutral-grey/80 bg-surface px-2.5 py-1.5 text-xs font-bold text-navy hover:bg-neutral-grey/40"

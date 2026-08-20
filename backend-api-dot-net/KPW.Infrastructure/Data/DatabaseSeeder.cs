@@ -33,6 +33,8 @@ public static class DatabaseSeeder
         SeedMessageThreads(modelBuilder);
         SeedMessages(modelBuilder);
         SeedExerciseSessionLogs(modelBuilder);
+        SeedSoapNotes(modelBuilder);
+        SeedSharedReports(modelBuilder);
     }
 
     private static void SeedClinics(ModelBuilder modelBuilder)
@@ -869,5 +871,115 @@ public static class DatabaseSeeder
             new ExerciseSessionLog { ExerciseSessionLogId = 13, PetId = 1, ExerciseId = 1, RehabProgramId = 1, CompletedAt = anchorDay.AddDays(-1).AddHours(17), CreatedDate = SeedDate, ModifiedDate = SeedDate, IsActive = true },
             new ExerciseSessionLog { ExerciseSessionLogId = 14, PetId = 2, ExerciseId = 4, RehabProgramId = 2, CompletedAt = anchorDay.AddDays(-1).AddHours(7), CreatedDate = SeedDate, ModifiedDate = SeedDate, IsActive = true },
             new ExerciseSessionLog { ExerciseSessionLogId = 15, PetId = 2, ExerciseId = 4, RehabProgramId = 2, CompletedAt = anchorDay.AddDays(-1).AddHours(16), CreatedDate = SeedDate, ModifiedDate = SeedDate, IsActive = true });
+    }
+
+    private static void SeedSoapNotes(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SoapNote>().HasData(
+            new SoapNote
+            {
+                SoapNoteId = 1,
+                PetId = 1,
+                PhysioId = 2,
+                AppointmentId = 1,
+                SessionDate = new DateTime(2026, 7, 26, 10, 0, 0, DateTimeKind.Utc),
+                Subjective = "Owner reports Buddy is bearing more weight on the left hind limb. Morning stiffness has reduced from 6/10 to 3/10. No vocalisation of pain during morning walks.",
+                Objective = "Left stifle extension ROM measured at 135° (improved from 120°). Thigh circumference is 38 cm (R: 40 cm). Mild compensatory tension palpated in lumbar paraspinals. Minimal joint effusion.",
+                Action = "Performed 15 mins myofascial soft tissue release to lumbar region and gluteals. Applied Class IV laser therapy to left stifle (4 J/cm²). Completed 10 mins underwater treadmill at 1.2 mph with water at stifle level. 5 sets of controlled cavaletti rail walkovers.",
+                Plan = "Continue current home rehabilitation protocol: passive ROM 2x daily (10 reps), 3-leg standing balance disc for 30 seconds x 3 sets. Cold pack stifle for 10 mins after evening walk. Re-evaluate in 1 week.",
+                StiffnessScore = 3,
+                PainScore = 2,
+                LamenessScore = 1,
+                CustomMetricsJson = "{\"metrics\":[{\"Name\":\"Stifle Extension ROM\",\"Value\":135,\"MinScale\":0,\"MaxScale\":180,\"UnitOrDescriptor\":\"deg\"},{\"Name\":\"Thigh Circumference\",\"Value\":38,\"MinScale\":10,\"MaxScale\":80,\"UnitOrDescriptor\":\"cm\"}]}",
+                IsSharedWithOwner = true,
+                SharedAtUtc = new DateTime(2026, 7, 26, 11, 0, 0, DateTimeKind.Utc),
+                CreatedDate = new DateTime(2026, 7, 26, 10, 30, 0, DateTimeKind.Utc),
+                ModifiedDate = new DateTime(2026, 7, 26, 10, 30, 0, DateTimeKind.Utc),
+                IsActive = true
+            },
+            new SoapNote
+            {
+                SoapNoteId = 2,
+                PetId = 2,
+                PhysioId = 2,
+                AppointmentId = 2,
+                SessionDate = new DateTime(2026, 7, 25, 14, 0, 0, DateTimeKind.Utc),
+                Subjective = "Owner notes Luna is enthusiastic for walks but tires after 15 minutes. Occasional hopping gait over uneven terrain.",
+                Objective = "Right hip extension limited to 140°. Bilateral gluteal asymmetry noted. Pain score on deep extension 3/10. Good core engagement on dynamic testing.",
+                Action = "Targeted dry needling to right gluteus medius and iliopsoas. Heat pack therapy followed by active weight shifting exercises on wobble cushion. 12 mins hydrotherapy.",
+                Plan = "Implement sit-to-stand exercises (10 reps x 2 sets daily). Short frequent flat walks (15 mins max). Next clinical review in 10 days.",
+                StiffnessScore = 4,
+                PainScore = 3,
+                LamenessScore = 2,
+                CustomMetricsJson = "{\"metrics\":[{\"Name\":\"Hip Extension ROM\",\"Value\":140,\"MinScale\":0,\"MaxScale\":180,\"UnitOrDescriptor\":\"deg\"}]}",
+                IsSharedWithOwner = true,
+                SharedAtUtc = new DateTime(2026, 7, 25, 15, 0, 0, DateTimeKind.Utc),
+                CreatedDate = new DateTime(2026, 7, 25, 14, 30, 0, DateTimeKind.Utc),
+                ModifiedDate = new DateTime(2026, 7, 25, 14, 30, 0, DateTimeKind.Utc),
+                IsActive = true
+            }
+        );
+    }
+
+    private static void SeedSharedReports(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<SharedReport>().HasData(
+            new SharedReport
+            {
+                SharedReportId = 1,
+                PetId = 1,
+                SoapNoteId = 1,
+                SharedByPhysioId = 2,
+                Title = "SOAP Session Report - Jul 26, 2026",
+                ReportType = "SOAP_SESSION",
+                Summary = "Left stifle extension ROM improved to 135°. Continue PROM 2x daily, balance disc standing, and cold pack after walks.",
+                SharedAtUtc = new DateTime(2026, 7, 26, 11, 0, 0, DateTimeKind.Utc),
+                CreatedDate = new DateTime(2026, 7, 26, 11, 0, 0, DateTimeKind.Utc),
+                ModifiedDate = new DateTime(2026, 7, 26, 11, 0, 0, DateTimeKind.Utc),
+                IsActive = true
+            },
+            new SharedReport
+            {
+                SharedReportId = 2,
+                PetId = 1,
+                SoapNoteId = null,
+                SharedByPhysioId = 2,
+                Title = "Comprehensive Clinical Progress Report",
+                ReportType = "CLINICAL_REPORT",
+                Summary = "Overall post-op recovery is on track. Pain scores reduced by 50% over past 4 weeks with steady muscle rebuilding.",
+                SharedAtUtc = new DateTime(2026, 7, 27, 9, 0, 0, DateTimeKind.Utc),
+                CreatedDate = new DateTime(2026, 7, 27, 9, 0, 0, DateTimeKind.Utc),
+                ModifiedDate = new DateTime(2026, 7, 27, 9, 0, 0, DateTimeKind.Utc),
+                IsActive = true
+            },
+            new SharedReport
+            {
+                SharedReportId = 3,
+                PetId = 1,
+                SoapNoteId = null,
+                SharedByPhysioId = 2,
+                Title = "Veterinary Referral Letter & Initial Radiographs",
+                ReportType = "REFERRAL_LETTER",
+                Summary = "Pre-operative surgical referral letter and stifle joint diagnostic radiographs from referring orthopedic surgeon.",
+                SharedAtUtc = new DateTime(2026, 7, 20, 8, 30, 0, DateTimeKind.Utc),
+                CreatedDate = new DateTime(2026, 7, 20, 8, 30, 0, DateTimeKind.Utc),
+                ModifiedDate = new DateTime(2026, 7, 20, 8, 30, 0, DateTimeKind.Utc),
+                IsActive = true
+            },
+            new SharedReport
+            {
+                SharedReportId = 4,
+                PetId = 2,
+                SoapNoteId = 2,
+                SharedByPhysioId = 2,
+                Title = "SOAP Session Report - Jul 25, 2026",
+                ReportType = "SOAP_SESSION",
+                Summary = "Right hip mobility assessment. Sit-to-stand exercises prescribed and flat walks recommended.",
+                SharedAtUtc = new DateTime(2026, 7, 25, 15, 0, 0, DateTimeKind.Utc),
+                CreatedDate = new DateTime(2026, 7, 25, 15, 0, 0, DateTimeKind.Utc),
+                ModifiedDate = new DateTime(2026, 7, 25, 15, 0, 0, DateTimeKind.Utc),
+                IsActive = true
+            }
+        );
     }
 }

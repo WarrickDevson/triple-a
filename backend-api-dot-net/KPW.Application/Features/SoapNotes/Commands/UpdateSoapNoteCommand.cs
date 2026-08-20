@@ -1,7 +1,9 @@
 using System.Text.Json;
 using KPW.Application.DTOs.SoapNotes;
+using KPW.Application.Features.Pets;
 using KPW.Application.Interfaces;
 using KPW.Domain.Entities;
+using KPW.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,9 +24,9 @@ public class UpdateSoapNoteCommandHandler : IRequestHandler<UpdateSoapNoteComman
 
     public async Task<SoapNoteDto> Handle(UpdateSoapNoteCommand command, CancellationToken cancellationToken)
     {
-        if (!_currentUserService.UserId.HasValue)
+        if (_currentUserService.Role is not (UserRole.Physio or UserRole.SysAdmin))
         {
-            throw new UnauthorizedAccessException("User is not authenticated.");
+            throw new UnauthorizedAccessException("Only physiotherapists can update clinical assessment notes.");
         }
 
         var note = await _dbContext.Set<SoapNote>()
@@ -35,6 +37,8 @@ public class UpdateSoapNoteCommandHandler : IRequestHandler<UpdateSoapNoteComman
         {
             throw new KeyNotFoundException($"SOAP note with ID {command.SoapNoteId} not found.");
         }
+
+        await PetAuthorization.EnsureCanAccessPet(_dbContext, _currentUserService, note.PetId, cancellationToken);
 
         var req = command.Request;
         if (req.SessionDate.HasValue) note.SessionDate = req.SessionDate.Value;
@@ -71,13 +75,33 @@ public class UpdateSoapNoteCommandHandler : IRequestHandler<UpdateSoapNoteComman
             {
                 PetId = note.PetId,
                 SoapNoteId = note.SoapNoteId,
-                SharedByPhysioId = _currentUserService.UserId.Value,
+                SharedByPhysioId = _currentUserService.UserId!.Value,
                 Title = $"SOAP Session Report - {note.SessionDate:MMM dd, yyyy}",
                 ReportType = "SOAP_SESSION",
                 Summary = !string.IsNullOrWhiteSpace(note.Plan) ? note.Plan : note.Subjective,
                 SharedAtUtc = DateTime.UtcNow
             };
             _dbContext.Set<SharedReport>().Add(sharedReport);
+        }
+        else if (!req.ShareWithOwner && note.IsSharedWithOwner)
+        {
+            note.IsSharedWithOwner = false;
+            note.SharedAtUtc = null;
+
+            var existingReports = await _dbContext.Set<SharedReport>()
+                .Where(r => r.SoapNoteId == note.SoapNoteId)
+                .ToListAsync(cancellationToken);
+            _dbContext.Set<SharedReport>().RemoveRange(existingReports);
+        }
+        else if (req.ShareWithOwner && note.IsSharedWithOwner)
+        {
+            var existingReport = await _dbContext.Set<SharedReport>()
+                .FirstOrDefaultAsync(r => r.SoapNoteId == note.SoapNoteId, cancellationToken);
+            if (existingReport != null)
+            {
+                existingReport.Title = $"SOAP Session Report - {note.SessionDate:MMM dd, yyyy}";
+                existingReport.Summary = !string.IsNullOrWhiteSpace(note.Plan) ? note.Plan : note.Subjective;
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

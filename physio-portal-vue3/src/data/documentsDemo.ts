@@ -17,6 +17,8 @@ export interface DocumentItem {
   fileType?: string
   fileDataUrl?: string
   contentSummary?: string
+  isSharedWithOwner?: boolean
+  sharedAt?: string
 }
 
 export const DOCUMENT_CATEGORIES: DocumentCategory[] = [

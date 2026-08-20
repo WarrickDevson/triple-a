@@ -80,6 +80,15 @@ public record OwnerSubjectiveNoteDto(
     int? EnergyObserved,
     bool IsReviewed);
 
+public record ShareDocumentRequestDto(
+    string Title,
+    string ReportType,
+    string? Summary,
+    int? SoapNoteId = null);
+
+public record ToggleSoapNoteShareRequestDto(
+    bool ShareWithOwner);
+
 public record CreateOwnerSubjectiveNoteRequestDto(
     string Notes,
     int? PainObserved,

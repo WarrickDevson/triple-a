@@ -107,6 +107,27 @@ public class SoapNotesController : ControllerBase
         return NoContent();
     }
 
+    [HttpPut("{id:int}/share")]
+    public async Task<ActionResult<SoapNoteDto>> ToggleShare(
+        int id,
+        [FromBody] ToggleSoapNoteShareRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new ToggleSoapNoteShareCommand(id, request.ShareWithOwner), cancellationToken);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
     [HttpGet("{id:int}/pdf")]
     public async Task<IActionResult> DownloadPdf(int id, CancellationToken cancellationToken)
     {

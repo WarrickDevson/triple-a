@@ -1,7 +1,9 @@
 using System.Text.Json;
 using KPW.Application.DTOs.SoapNotes;
+using KPW.Application.Features.Pets;
 using KPW.Application.Interfaces;
 using KPW.Domain.Entities;
+using KPW.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,10 +24,12 @@ public class CreateSoapNoteCommandHandler : IRequestHandler<CreateSoapNoteComman
 
     public async Task<SoapNoteDto> Handle(CreateSoapNoteCommand command, CancellationToken cancellationToken)
     {
-        if (!_currentUserService.UserId.HasValue)
+        if (_currentUserService.Role is not (UserRole.Physio or UserRole.SysAdmin))
         {
-            throw new UnauthorizedAccessException("User is not authenticated.");
+            throw new UnauthorizedAccessException("Only physiotherapists can record clinical assessment notes.");
         }
+
+        await PetAuthorization.EnsureCanAccessPet(_dbContext, _currentUserService, command.PetId, cancellationToken);
 
         var pet = await _dbContext.Set<Pet>()
             .FirstOrDefaultAsync(p => p.PetId == command.PetId, cancellationToken);
@@ -54,7 +58,7 @@ public class CreateSoapNoteCommandHandler : IRequestHandler<CreateSoapNoteComman
         var note = new SoapNote
         {
             PetId = command.PetId,
-            PhysioId = _currentUserService.UserId.Value,
+            PhysioId = _currentUserService.UserId!.Value,
             AppointmentId = req.AppointmentId,
             SessionDate = req.SessionDate ?? DateTime.UtcNow,
             Subjective = req.Subjective ?? string.Empty,
@@ -90,7 +94,7 @@ public class CreateSoapNoteCommandHandler : IRequestHandler<CreateSoapNoteComman
             {
                 PetId = command.PetId,
                 SoapNote = note,
-                SharedByPhysioId = _currentUserService.UserId.Value,
+                SharedByPhysioId = _currentUserService.UserId!.Value,
                 Title = $"SOAP Session Report - {note.SessionDate:MMM dd, yyyy}",
                 ReportType = "SOAP_SESSION",
                 Summary = !string.IsNullOrWhiteSpace(note.Plan) ? note.Plan : note.Subjective,

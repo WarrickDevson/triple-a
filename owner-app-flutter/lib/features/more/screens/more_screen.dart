@@ -14,6 +14,7 @@ import '../../tracking/screens/tracking_screen.dart';
 import '../../videos/screens/video_inbox_screen.dart';
 import '../../videos/screens/video_upload_screen.dart';
 import '../../pets/providers/pets_provider.dart';
+import '../../pets/screens/saved_reports_screen.dart';
 
 class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
@@ -32,6 +33,24 @@ class MoreScreen extends ConsumerWidget {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => TrackingScreen(petId: pet.petId, petName: pet.petName),
+      ),
+    );
+  }
+
+  Future<void> _openDocuments(BuildContext context, WidgetRef ref) async {
+    await ref.read(petsProvider.notifier).loadPets();
+    if (!context.mounted) return;
+    final pets = ref.read(petsProvider).pets;
+    if (pets.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add a pet first to view clinical documents.')),
+      );
+      return;
+    }
+    final pet = pets.first;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SavedReportsScreen(pet: pet),
       ),
     );
   }
@@ -95,6 +114,12 @@ class MoreScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
+            _MoreTile(
+              icon: Icons.folder_shared_outlined,
+              title: 'Clinical Documents & Reports',
+              subtitle: 'SOAP assessments, medical records & PDF files',
+              onTap: () => _openDocuments(context, ref),
+            ),
             _MoreTile(
               icon: Icons.event_outlined,
               title: 'Appointments',

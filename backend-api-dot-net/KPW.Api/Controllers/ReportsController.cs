@@ -49,4 +49,54 @@ public class ReportsController : ControllerBase
             return Unauthorized(new { message = ex.Message });
         }
     }
+
+    [HttpPost("pet/{petId:int}/share-document")]
+    public async Task<ActionResult<KPW.Application.DTOs.SoapNotes.SharedReportDto>> ShareDocument(
+        int petId,
+        [FromBody] KPW.Application.DTOs.SoapNotes.ShareDocumentRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new KPW.Application.Features.Reports.Commands.ShareDocumentCommand(petId, request), cancellationToken);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("pet/{petId:int}/publish-progress-report")]
+    public async Task<ActionResult<KPW.Application.DTOs.SoapNotes.SharedReportDto>> PublishProgressReport(
+        int petId,
+        [FromQuery] string? title,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new KPW.Application.Features.Reports.Commands.PublishProgressReportCommand(petId, title), cancellationToken);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("shared/{sharedReportId:int}")]
+    public async Task<IActionResult> DeleteSharedReport(int sharedReportId, CancellationToken cancellationToken)
+    {
+        var success = await _mediator.Send(new KPW.Application.Features.Reports.Commands.DeleteSharedReportCommand(sharedReportId), cancellationToken);
+        if (!success) return NotFound();
+        return NoContent();
+    }
 }

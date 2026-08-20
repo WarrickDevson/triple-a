@@ -60,6 +60,20 @@ export const useDocumentsStore = defineStore('documents', () => {
     }
   }
 
+  function toggleDocumentShare(id: number, share?: boolean) {
+    const target = documents.value.find((d) => d.id === id)
+    if (target) {
+      target.isSharedWithOwner = share !== undefined ? share : !target.isSharedWithOwner
+      target.sharedAt = target.isSharedWithOwner ? new Date().toISOString().slice(0, 10) : undefined
+      persistDocuments()
+      showToast(
+        target.isSharedWithOwner
+          ? `Document "${target.name}" is now shared with ${target.ownerName || 'the owner'}.`
+          : `Document "${target.name}" is no longer shared.`,
+      )
+    }
+  }
+
   function openPreview(doc: DocumentItem) {
     selectedDocument.value = doc
     isPreviewOpen.value = true
@@ -154,6 +168,7 @@ End of Document — Triple A Veterinary Rehabilitation Portal
     notificationMessage,
     addDocument,
     deleteDocument,
+    toggleDocumentShare,
     openPreview,
     closePreview,
     openUpload,

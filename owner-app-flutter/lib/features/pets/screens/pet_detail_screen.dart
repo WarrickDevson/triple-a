@@ -273,8 +273,8 @@ class _OverviewTab extends ConsumerWidget {
                 ),
               ),
               _QuickAction(
-                icon: Icons.picture_as_pdf_outlined,
-                label: 'Saved Reports',
+                icon: Icons.folder_shared_outlined,
+                label: 'Documents',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => SavedReportsScreen(pet: pet)),
                 ),

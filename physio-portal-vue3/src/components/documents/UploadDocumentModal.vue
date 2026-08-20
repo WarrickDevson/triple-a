@@ -5,6 +5,7 @@ import BaseButton from '../BaseButton.vue'
 import { DOCUMENT_CATEGORIES, type DocumentCategory } from '../../data/documentsDemo'
 import { useDocumentsStore } from '../../store/documents'
 import { usePatientsStore } from '../../store/patients'
+import { shareDocument } from '../../api/reports'
 
 const props = defineProps<{
   open: boolean
@@ -21,6 +22,7 @@ const title = ref('')
 const petName = ref('')
 const ownerName = ref('')
 const category = ref<DocumentCategory>('Clinical Notes')
+const shareWithOwner = ref(true)
 
 const selectedFile = ref<File | null>(null)
 const fileDataUrl = ref<string>('')
@@ -45,6 +47,7 @@ function resetForm() {
   petName.value = ''
   ownerName.value = ''
   category.value = 'Clinical Notes'
+  shareWithOwner.value = true
   selectedFile.value = null
   fileDataUrl.value = ''
   errorMessage.value = ''
@@ -124,7 +127,20 @@ function submitUpload() {
     sizeKb,
     fileType,
     fileDataUrl: fileDataUrl.value || undefined,
+    isSharedWithOwner: shareWithOwner.value,
+    sharedAt: shareWithOwner.value ? today : undefined,
   })
+
+  const foundPet = patientsStore.patients.find(
+    (p) => p.petName.toLowerCase() === petName.value.trim().toLowerCase(),
+  )
+  if (foundPet && shareWithOwner.value) {
+    shareDocument(foundPet.petId, {
+      title: title.value.trim(),
+      reportType: category.value === 'Home Programs' ? 'HOME_PROGRAM' : 'CLINICAL_DOCUMENT',
+      summary: `Uploaded document: ${title.value.trim()} (${category.value})`,
+    }).catch(() => undefined)
+  }
 
   isSubmitting.value = false
   emit('close')
@@ -242,6 +258,19 @@ function submitUpload() {
             placeholder="e.g. Sarah Mitchell"
             class="w-full rounded-lg border border-neutral-grey bg-surface px-3 py-2 text-sm outline-none focus:border-sage"
           />
+        </div>
+
+        <!-- Share with Owner Toggle -->
+        <div class="flex items-center gap-2 rounded-xl border border-sage/40 bg-sage-muted/30 p-3">
+          <input
+            id="share-doc-owner"
+            v-model="shareWithOwner"
+            type="checkbox"
+            class="h-4 w-4 rounded text-sage focus:ring-sage border-neutral-grey"
+          />
+          <label for="share-doc-owner" class="text-xs font-semibold text-navy cursor-pointer select-none">
+            Share this document with the Pet Owner in the Owner App
+          </label>
         </div>
 
         <div v-if="errorMessage" class="rounded-lg bg-red-50 p-2.5 text-xs font-medium text-red-700">

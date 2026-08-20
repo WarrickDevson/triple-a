@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Download, Eye, Plus, Trash2 } from '@lucide/vue'
+import { Download, Eye, Plus, Trash2, Share2, CheckCircle2 } from '@lucide/vue'
 import {
   categoryCount,
   DOCUMENT_CATEGORIES,
@@ -93,6 +93,10 @@ const filtered = computed(() => {
                     <span v-if="doc.fileDataUrl" class="rounded bg-sage-muted px-1.5 py-0.5 text-[10px] font-bold text-sage">
                       Uploaded File
                     </span>
+                    <span v-if="doc.isSharedWithOwner" class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                      <CheckCircle2 class="h-3 w-3 text-emerald-600" />
+                      Shared
+                    </span>
                   </div>
                 </td>
                 <td class="px-4 py-3 text-neutral-muted">
@@ -110,6 +114,15 @@ const filtered = computed(() => {
                 <td class="px-4 py-3 text-neutral-muted">{{ formatFileSize(doc.sizeKb) }}</td>
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      class="rounded-lg p-2 transition-colors"
+                      :class="doc.isSharedWithOwner ? 'text-emerald-600 hover:bg-emerald-50' : 'text-neutral-muted hover:bg-neutral-grey/40 hover:text-navy'"
+                      :title="doc.isSharedWithOwner ? 'Shared with Owner (click to unshare)' : 'Click to share with Owner'"
+                      @click="documentsStore.toggleDocumentShare(doc.id)"
+                    >
+                      <Share2 class="h-4 w-4" />
+                    </button>
                     <button
                       type="button"
                       class="rounded-lg p-2 text-sage hover:bg-sage-muted transition-colors"

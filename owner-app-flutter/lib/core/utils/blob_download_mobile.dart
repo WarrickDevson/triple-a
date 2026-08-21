@@ -1,8 +1,17 @@
-import 'dart:convert';
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 
-void downloadBlobFile(List<int> bytes, String fileName, {String mimeType = 'application/pdf'}) {
-  final base64Data = base64Encode(bytes);
-  final uri = Uri.parse('data:$mimeType;base64,$base64Data');
-  launchUrl(uri, mode: LaunchMode.externalApplication);
+Future<bool> downloadBlobFile(List<int> bytes, String fileName, {String mimeType = 'application/pdf'}) async {
+  try {
+    final saveResult = await FilePicker.platform.saveFile(
+      dialogTitle: 'Save File ($fileName)',
+      fileName: fileName,
+      bytes: Uint8List.fromList(bytes),
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'],
+    );
+    return saveResult != null;
+  } catch (_) {
+    return false;
+  }
 }

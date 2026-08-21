@@ -144,8 +144,7 @@ class SharedReportsNotifier extends StateNotifier<SharedReportsState> {
       if (response.data != null && response.data!.isNotEmpty) {
         final safeName = petName.replaceAll(' ', '_');
         final fileName = '${safeName}_SOAP_Report_$soapNoteId.pdf';
-        FileDownloadUtil.downloadBytes(response.data!, fileName);
-        return true;
+        return await FileDownloadUtil.downloadBytes(response.data!, fileName);
       }
     } catch (_) {
       // Failed to download from server
@@ -163,8 +162,7 @@ class SharedReportsNotifier extends StateNotifier<SharedReportsState> {
       if (response.data != null && response.data!.isNotEmpty) {
         final safeName = petName.replaceAll(' ', '_');
         final fileName = '${safeName}_Clinical_Report.pdf';
-        FileDownloadUtil.downloadBytes(response.data!, fileName);
-        return true;
+        return await FileDownloadUtil.downloadBytes(response.data!, fileName);
       }
     } catch (_) {
       // Failed to download from server

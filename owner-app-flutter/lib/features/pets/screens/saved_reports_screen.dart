@@ -6,6 +6,7 @@ import '../../../core/widgets/section_card.dart';
 import '../models/pet.dart';
 import '../models/shared_report_model.dart';
 import '../providers/shared_reports_provider.dart';
+import 'shared_document_detail_screen.dart';
 import 'soap_note_detail_screen.dart';
 
 class SavedReportsScreen extends ConsumerStatefulWidget {
@@ -78,16 +79,26 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
     }
   }
 
-  void _openSoapDetail(int? soapNoteId) {
-    if (soapNoteId == null) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => SoapNoteDetailScreen(
-          pet: widget.pet,
-          soapNoteId: soapNoteId,
+  void _openDocumentDetail(SharedReportModel report) {
+    if (report.isSoapNote && report.soapNoteId != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SoapNoteDetailScreen(
+            pet: widget.pet,
+            soapNoteId: report.soapNoteId!,
+          ),
         ),
-      ),
-    );
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => SharedDocumentDetailScreen(
+            pet: widget.pet,
+            report: report,
+          ),
+        ),
+      );
+    }
   }
 
   List<SharedReportModel> _filterReports(List<SharedReportModel> reports) {
@@ -364,21 +375,21 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  if (report.isSoapNote) ...[
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.navy,
-                        side: const BorderSide(color: AppColors.neutralGrey),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () => _openSoapDetail(report.soapNoteId),
-                      icon: const Icon(Icons.visibility_outlined, size: 16),
-                      label: const Text(
-                        'View Details',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-                      ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.navy,
+                      side: const BorderSide(color: AppColors.neutralGrey),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
+                    onPressed: () => _openDocumentDetail(report),
+                    icon: const Icon(Icons.visibility_outlined, size: 16),
+                    label: const Text(
+                      'View Details',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                    ),
+                  ),
+                  if (report.isSoapNote) ...[
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.sage,
@@ -404,7 +415,7 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
                       onPressed: _downloadPetClinicalReport,
                       icon: const Icon(Icons.download_rounded, size: 16),
                       label: const Text(
-                        'Download Clinical Report',
+                        'Download Report',
                         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),
@@ -416,14 +427,10 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Opening document: ${report.title}')),
-                        );
-                      },
+                      onPressed: () => _openDocumentDetail(report),
                       icon: const Icon(Icons.file_download_outlined, size: 16),
                       label: const Text(
-                        'Open File',
+                        'Download File',
                         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),

@@ -29,21 +29,29 @@ public class SendGridEmailSender : IEmailSender
 
     public async Task SendAsync(string toEmail, string subject, string body, CancellationToken cancellationToken = default)
     {
-        var apiKey = !string.IsNullOrWhiteSpace(_options.ApiKey)
-            ? _options.ApiKey
-            : (Environment.GetEnvironmentVariable("SENDGRID_API_KEY") ?? Environment.GetEnvironmentVariable("SendGrid__ApiKey"));
+        var rawKey = Environment.GetEnvironmentVariable("SENDGRID_API_KEY") 
+            ?? Environment.GetEnvironmentVariable("SendGrid__ApiKey") 
+            ?? Environment.GetEnvironmentVariable("DEPLOY_SENDGRID_API_KEY")
+            ?? _options.ApiKey;
 
-        var provider = !string.IsNullOrWhiteSpace(_options.Provider)
-            ? _options.Provider
-            : (Environment.GetEnvironmentVariable("SENDGRID_PROVIDER") ?? Environment.GetEnvironmentVariable("SendGrid__Provider") ?? "Logging");
+        var apiKey = rawKey?.Trim().Trim('"', '\'', ' ', '\r', '\n');
 
-        var fromEmail = !string.IsNullOrWhiteSpace(_options.FromEmail) && _options.FromEmail != "noreply@movewell.co.za"
-            ? _options.FromEmail
-            : (Environment.GetEnvironmentVariable("SENDGRID_FROM_EMAIL") ?? Environment.GetEnvironmentVariable("SendGrid__FromEmail") ?? _options.FromEmail);
+        var rawProvider = Environment.GetEnvironmentVariable("SENDGRID_PROVIDER") 
+            ?? Environment.GetEnvironmentVariable("SendGrid__Provider") 
+            ?? _options.Provider;
+        var provider = !string.IsNullOrWhiteSpace(rawProvider) ? rawProvider.Trim() : "Logging";
 
-        var fromName = !string.IsNullOrWhiteSpace(_options.FromName) && _options.FromName != "MoveWell"
-            ? _options.FromName
-            : (Environment.GetEnvironmentVariable("SENDGRID_FROM_NAME") ?? Environment.GetEnvironmentVariable("SendGrid__FromName") ?? _options.FromName);
+        var rawFromEmail = Environment.GetEnvironmentVariable("SENDGRID_FROM_EMAIL") 
+            ?? Environment.GetEnvironmentVariable("SendGrid__FromEmail") 
+            ?? Environment.GetEnvironmentVariable("DEPLOY_SENDGRID_FROM_EMAIL")
+            ?? _options.FromEmail;
+        var fromEmail = !string.IsNullOrWhiteSpace(rawFromEmail) ? rawFromEmail.Trim().Trim('"', '\'', ' ', '\r', '\n') : "noreply@mytriplea.co.za";
+
+        var rawFromName = Environment.GetEnvironmentVariable("SENDGRID_FROM_NAME") 
+            ?? Environment.GetEnvironmentVariable("SendGrid__FromName") 
+            ?? Environment.GetEnvironmentVariable("DEPLOY_SENDGRID_FROM_NAME")
+            ?? _options.FromName;
+        var fromName = !string.IsNullOrWhiteSpace(rawFromName) ? rawFromName.Trim().Trim('"', '\'', ' ', '\r', '\n') : "Triple A";
 
         var isSendGridMode = provider.Equals("SendGrid", StringComparison.OrdinalIgnoreCase) || !string.IsNullOrWhiteSpace(apiKey);
         var hasApiKey = !string.IsNullOrWhiteSpace(apiKey);
@@ -93,6 +101,13 @@ public class SendGridEmailSender : IEmailSender
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
             request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
+            _logger.LogInformation(
+                "Dispatching email via SendGrid: from '{FromEmail}' ({FromName}) to '{ToEmail}' with subject '{Subject}'",
+                fromEmail,
+                fromName,
+                toEmail,
+                subject);
+
             var response = await _httpClient.SendAsync(request, cancellationToken);
 
             if (response.IsSuccessStatusCode)
@@ -103,9 +118,11 @@ public class SendGridEmailSender : IEmailSender
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogError(
-                    "Failed to send email via SendGrid. StatusCode: {StatusCode}, Error: {ErrorBody}",
+                    "Failed to send email via SendGrid. StatusCode: {StatusCode}, Error: {ErrorBody}. Logging message body to fallback logger.",
                     response.StatusCode,
                     errorBody);
+
+                await _fallbackSender.SendAsync(toEmail, subject, body, cancellationToken);
 
                 throw new InvalidOperationException($"Failed to send email via SendGrid (Status {response.StatusCode}): {errorBody}");
             }

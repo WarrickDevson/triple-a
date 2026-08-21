@@ -103,7 +103,7 @@ async function handleResend() {
             Empower your clinical animal rehabilitation.
           </h2>
           <p class="mt-4 text-sm leading-relaxed text-white/70">
-            Join MoveWell to build custom rehab plans, track patient progress, and communicate directly with pet owners.
+            Join Triple A to build custom rehab plans, track patient progress, and communicate directly with pet owners.
           </p>
         </div>
 
@@ -147,7 +147,7 @@ async function handleResend() {
             </div>
             <div v-if="!hasInviteCode" class="flex items-start gap-2">
               <Building2 class="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-              <span>Because you created a new clinic without an invite code, your account will be reviewed by a MoveWell Administrator once email verification is complete.</span>
+              <span>Because you created a new clinic without an invite code, your account will be reviewed by a Triple A Administrator once email verification is complete.</span>
             </div>
           </div>
 
@@ -158,58 +158,53 @@ async function handleResend() {
           <div class="space-y-3 pt-2">
             <BaseButton
               variant="secondary"
-              class="w-full h-11 text-sm"
-              :disabled="resendLoading"
+              block
+              :loading="resendLoading"
               @click="handleResend"
             >
-              {{ resendLoading ? 'Sending...' : 'Resend Verification Email' }}
+              Resend Verification Email
             </BaseButton>
 
-            <RouterLink
-              to="/login"
-              class="block text-center text-sm font-semibold text-sage hover:underline pt-2"
-            >
-              Back to Login
+            <RouterLink to="/login" class="block text-center text-xs text-neutral-muted hover:text-navy">
+              ← Back to Login
             </RouterLink>
           </div>
         </div>
 
         <!-- Registration form -->
         <div v-else>
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sage">{{ brand.name }}</p>
-              <h1 class="mt-2 text-3xl font-bold text-navy">Physio Sign Up</h1>
-              <p class="mt-2 text-sm text-neutral-muted">
-                Create your practitioner account to manage your practice and patients.
-              </p>
+          <div class="mb-8">
+            <div class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sage-light/20 text-forest mb-4">
+              <UserPlus class="h-5 w-5" />
             </div>
-            <div
-              class="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-neutral-grey bg-surface text-sage sm:flex"
-            >
-              <UserPlus class="h-5 w-5" :stroke-width="1.75" />
-            </div>
+            <h1 class="text-2xl font-bold text-navy sm:text-3xl">Physio Sign Up</h1>
+            <p class="mt-1 text-sm text-neutral-muted">
+              Create your practitioner account to manage your practice and patients.
+            </p>
           </div>
 
+          <!-- Store error banner -->
           <div
             v-if="auth.error"
-            class="mt-6 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-700"
+            class="mb-6 rounded-xl border border-coral/30 bg-coral/10 p-4 text-xs font-medium text-coral-dark"
           >
             {{ auth.error }}
           </div>
 
-          <form class="mt-6 space-y-4" @submit.prevent="onSubmit">
+          <form class="space-y-4" @submit.prevent="onSubmit">
             <div class="grid grid-cols-2 gap-3">
               <BaseInput
                 id="firstName"
                 v-model="form.firstName"
                 label="First Name"
+                autocomplete="given-name"
                 required
               />
               <BaseInput
                 id="lastName"
                 v-model="form.lastName"
                 label="Last Name"
+                autocomplete="family-name"
                 required
               />
             </div>
@@ -234,7 +229,7 @@ async function handleResend() {
               id="clinicName"
               v-model="form.clinicName"
               label="Clinic Name (Optional)"
-              placeholder="e.g. MoveWell Rehab Centre"
+              placeholder="e.g. Cape Town Animal Physio"
             />
 
             <div>
@@ -242,7 +237,7 @@ async function handleResend() {
                 id="inviteCode"
                 v-model="form.inviteCode"
                 label="Clinic / Admin Invite Code (Optional)"
-                placeholder="e.g. MW-123456"
+                placeholder="e.g. TA-123456"
               />
               <p class="mt-1 text-[11px] text-neutral-muted">
                 Entering a valid invite code provides instant account approval upon email verification.

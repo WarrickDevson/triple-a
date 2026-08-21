@@ -67,7 +67,7 @@ const recentLogs = [
     <div class="portal-card overflow-hidden">
       <div class="flex items-center justify-between border-b border-neutral-grey/60 px-4 py-3 bg-surface/50">
         <h3 class="text-sm font-bold text-navy">Recent Owner Session Submissions</h3>
-        <span class="text-xs font-semibold text-neutral-muted">Logged via MoveWell App</span>
+        <span class="text-xs font-semibold text-neutral-muted">Logged via Triple A App</span>
       </div>
 
       <div class="divide-y divide-neutral-grey/40">

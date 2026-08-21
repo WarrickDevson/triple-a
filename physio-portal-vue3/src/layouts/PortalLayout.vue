@@ -114,6 +114,14 @@ function openVoiceSessionReview(notif: VoiceSessionNotification) {
               <span class="h-2 w-2 rounded-full bg-purple-600 animate-ping"></span>
               Processing SOAP with AI
             </span>
+            <button
+              type="button"
+              class="text-neutral-muted hover:text-navy text-xs p-0.5"
+              title="Dismiss banner"
+              @click.stop="voiceSessionStore.clearActiveJob()"
+            >
+              <X class="h-3.5 w-3.5" />
+            </button>
           </div>
           <p class="text-xs font-bold text-navy truncate mt-0.5">
             {{ voiceSessionStore.activeJob.petName }}

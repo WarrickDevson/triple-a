@@ -38,6 +38,8 @@ export const useVoiceSessionStore = defineStore('voiceSession', () => {
     structuredNote: StructuredSoapNote
   } | null>(null)
 
+  let notifTimeoutId: ReturnType<typeof setTimeout> | null = null
+
   async function processVoiceSession(
     audioBlob: Blob,
     petId: number,
@@ -53,7 +55,7 @@ export const useVoiceSessionStore = defineStore('voiceSession', () => {
       status: 'processing',
       recordedAt: new Date().toISOString()
     }
-    activeJob.value = job
+    activeJob.value = { ...job }
 
     try {
       const res = await processSessionAudioBlob(audioBlob, petName, species, petId)
@@ -86,6 +88,9 @@ export const useVoiceSessionStore = defineStore('voiceSession', () => {
         console.warn('Auto-save of background note failed, will keep draft available:', saveErr)
       }
 
+      // Immediately clear processing loading indicator
+      activeJob.value = null
+
       // Trigger user-friendly floating notification banner
       activeNotification.value = {
         id: jobId,
@@ -97,20 +102,43 @@ export const useVoiceSessionStore = defineStore('voiceSession', () => {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
 
+      // Auto-dismiss notification toast after 10 seconds
+      if (notifTimeoutId) clearTimeout(notifTimeoutId)
+      notifTimeoutId = setTimeout(() => {
+        if (activeNotification.value?.id === jobId) {
+          activeNotification.value = null
+        }
+      }, 10000)
+
       return job
     } catch (err: any) {
       console.error('Background voice session processing failed:', err)
       job.status = 'error'
       job.errorMessage = err.response?.data?.message || err.message || 'Failed to process voice session with AI.'
+      activeJob.value = { ...job }
+
+      // Auto-clear error toast after 8 seconds
+      setTimeout(() => {
+        if (activeJob.value?.id === jobId && activeJob.value?.status === 'error') {
+          activeJob.value = null
+        }
+      }, 8000)
+
       return job
     }
   }
 
   function dismissNotification() {
+    if (notifTimeoutId) clearTimeout(notifTimeoutId)
     activeNotification.value = null
   }
 
+  function clearActiveJob() {
+    activeJob.value = null
+  }
+
   function triggerReviewFromNotification(notif: VoiceSessionNotification) {
+    if (notifTimeoutId) clearTimeout(notifTimeoutId)
     pendingReviewNote.value = {
       petId: notif.petId,
       petName: notif.petName,
@@ -130,6 +158,7 @@ export const useVoiceSessionStore = defineStore('voiceSession', () => {
     activeNotification,
     pendingReviewNote,
     processVoiceSession,
+    clearActiveJob,
     dismissNotification,
     triggerReviewFromNotification,
     clearPendingReview

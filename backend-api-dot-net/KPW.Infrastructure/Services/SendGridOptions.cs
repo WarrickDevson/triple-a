@@ -17,10 +17,10 @@ public class SendGridOptions
     /// <summary>
     /// Verified sender email address configured in your SendGrid account.
     /// </summary>
-    public string FromEmail { get; set; } = "noreply@movewell.co.za";
+    public string FromEmail { get; set; } = "noreply@mytriplea.co.za";
 
     /// <summary>
     /// Verified sender display name.
     /// </summary>
-    public string FromName { get; set; } = "MoveWell";
+    public string FromName { get; set; } = "Triple A";
 }

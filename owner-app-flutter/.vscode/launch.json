@@ -12,6 +12,16 @@
         "--web-port=8068",
         "--web-hostname=localhost"
       ]
+    },
+    {
+      "name": "Owner App (Android Mobile · Dev)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_dev.dart",
+      "args": [
+        "--dart-define=ENV=development",
+        "--dart-define=API_BASE_URL=http://localhost:5057"
+      ]
     }
   ]
 }

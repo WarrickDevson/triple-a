@@ -79,6 +79,20 @@ flutter run
 
 Ensure the app’s API base URL targets your local or staging API.
 
+### 4. Publishing to Google Play Console
+
+To build a signed release bundle with interactive version selection:
+
+```powershell
+.\scripts\publish-app.ps1
+```
+
+Or specify the increment directly:
+```powershell
+.\scripts\publish-app.ps1 -Increment patch    # 1.0.1+2 -> 1.0.2+3
+.\scripts\publish-app.ps1 -Increment minor    # 1.0.1+2 -> 1.1.0+3
+```
+
 ## Documentation
 
 | Doc | Purpose |

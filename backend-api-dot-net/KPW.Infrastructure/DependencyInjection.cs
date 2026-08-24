@@ -41,8 +41,26 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
+            var rawConnectionString = configuration.GetConnectionString("DefaultConnection");
+            if (string.IsNullOrWhiteSpace(rawConnectionString))
+            {
+                rawConnectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+                    ?? Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
+                    ?? Environment.GetEnvironmentVariable("DEFAULT_CONNECTION")
+                    ?? Environment.GetEnvironmentVariable("DEPLOY_DB_CONNECTION_STRING");
+            }
+
+            var connectionString = rawConnectionString?.Trim().Trim('"', '\'');
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new InvalidOperationException(
+                    "Database connection string 'DefaultConnection' is not configured. " +
+                    "Please set DB_CONNECTION_STRING or ConnectionStrings__DefaultConnection in .env or via environment variables.");
+            }
+
             options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection"),
+                connectionString,
                 sqlOptions =>
                 {
                     sqlOptions.EnableRetryOnFailure(

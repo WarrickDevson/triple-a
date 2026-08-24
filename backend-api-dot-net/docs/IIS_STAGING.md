@@ -30,15 +30,15 @@ Portal is built with Vite `base: '/portal/'`. Owner web uses `--base-href /app/`
 
 ## 1. SQL database
 
-Create database and login (if not already done) using [`docs/sql/create_kpw_app_login.sql`](sql/create_kpw_app_login.sql) on **sql.devson.co.za**, then **use the same password** in the script and in all three appsettings files (`appsettings.json`, `appsettings.Development.json`, `appsettings.Staging.json`).
+Create database and login (if not already done) using [`docs/sql/create_kpw_app_login.sql`](sql/create_kpw_app_login.sql) on **sql.devson.co.za**, then set the connection string in your local `.env` (or in GitHub Secrets / IIS environment variables for deployments).
 
-If `dotnet ef database update` fails with **Login failed for user 'kpw_app'**, the password in appsettings does not match the SQL login. Fix one side:
+If `dotnet ef database update` fails with **Login failed for user 'kpw_app'**, the password in `.env` does not match the SQL login. Fix one side:
 
 - **Reset SQL login** (run as sysadmin on `sql.devson.co.za`):
   ```sql
-  ALTER LOGIN [kpw_app] WITH PASSWORD = N'<password from appsettings>';
+  ALTER LOGIN [kpw_app] WITH PASSWORD = N'<password>';
   ```
-- **Or** update appsettings to match whatever password was set when `create_kpw_app_login.sql` was run.
+- **Or** update `.env` to match whatever password was set when `create_kpw_app_login.sql` was run.
 
 Test credentials in SSMS or Azure Data Studio before running EF again. You can also pass a connection string explicitly:
 ```powershell

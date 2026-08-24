@@ -1,26 +1,29 @@
-# GitHub Actions variables (Triple A)
+# GitHub Actions Secrets & Variables (Triple A)
 
-Configure under **Settings → Secrets and variables → Actions** for the `triple-a` repository.
+Configure under **Settings → Secrets and variables → Actions** in the `triple-a` GitHub repository.
 
-**This project does not use GitHub Actions secrets.** The API deploy is `dotnet publish` → robocopy. Configuration and the GCP credentials JSON are included in publish output from [`backend-api-dot-net/KPW.Api/`](../../backend-api-dot-net/KPW.Api/) (same as local publish).
+---
 
-## API configuration (publish output)
+## 1. GitHub Actions Secrets (Encrypted)
 
-| Item | Source |
-|------|--------|
-| `appsettings.json`, `appsettings.Staging.json` | Published with the API (`/p:EnvironmentName=Staging`) |
-| `web.config` | Published with the API |
-| `devson-development-6d4da133b74e.json` | Published when present next to the project on the build machine (see `KPW.Api.csproj` `CopyToPublishDirectory`) |
+These secrets are used by the auto-deploy workflow (`.github/workflows/deploy-master.yml`) to inject production/staging environment variables into `web.config` via `infra/deploy/iis/set-api-iis-environment.ps1`.
 
-No workflow step patches connection strings, JWT, or credentials. Ensure the GCP JSON exists on the runner under `backend-api-dot-net/KPW.Api/` before API jobs run (gitignored; same as local dev).
+| Secret Name | Description / Example |
+|:---|:---|
+| `DB_CONNECTION_STRING` | Complete SQL Server connection string:<br>`Server=sql.devson.co.za;Database=KPW_MoveWell;User Id=kpw_app;Password=...;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Packet Size=4096;Connection Timeout=60;` |
+| `JWT_KEY` | 256-bit symmetric signing key for JWT authentication (e.g. `rnm%80^!cwtAfU*TYe3wzEutDCEYdYrS`) |
+| `SENDGRID_API_KEY` | SendGrid API key (starts with `SG.`) |
+| `GEMINI_API_KEY` | *(Optional)* Google Gemini API key for AI audio transcription & assistant |
 
-## Variables (optional)
+---
+
+## 2. GitHub Actions Variables (Configuration)
 
 Repository variables override workflow defaults when set.
 
-| Name | Default | Purpose |
-|------|---------|---------|
-| `IIS_SITE_NAME` | `KPW` | Documentation / future IIS automation |
+| Variable Name | Default | Purpose |
+|:---|:---|:---|
+| `IIS_SITE_NAME` | `KPW` | Documentation / IIS site name |
 | `API_APP_POOL` | `KPW` | API app pool name for deploy script |
 | `PORTAL_APP_POOL` | `KPW` | Portal site app pool name |
 | `APP_APP_POOL` | `KPW` | Owner app site app pool name |
@@ -30,13 +33,17 @@ Repository variables override workflow defaults when set.
 | `PORTAL_PUBLIC_URL` | `https://mytriplea.co.za/portal` | Password-reset / invite links for physio |
 | `OWNER_APP_PUBLIC_URL` | `https://mytriplea.co.za/app` | Password-reset / invite links for owners |
 | `DEPLOY_BACKUP_RETENTION` | `1` | API backups under `C:\WebApps\TripleA\_backups` |
-| `DEPLOY_ASPNETCORE_ENVIRONMENT` | `Staging` | Documented; set in published `web.config` |
-| `FLUTTER_ROOT` | `C:\flutter` | Flutter SDK folder on the runner (not `\bin`) |
+| `DEPLOY_ASPNETCORE_ENVIRONMENT` | `Staging` | Set in published `web.config` |
+| `SENDGRID_PROVIDER` | `SendGrid` | Email delivery provider (`SendGrid` or `Logging`) |
+| `SENDGRID_FROM_EMAIL` | `noreply@mytriplea.co.za` | Verified sender email address |
+| `SENDGRID_FROM_NAME` | `Triple A` | Sender display name |
+| `FLUTTER_ROOT` | `C:\flutter` | Flutter SDK folder on the runner |
 
-## Portal and app builds
+---
 
-Portal: `API_BASE_URL` → `VITE_API_BASE_URL`, Vite `base: '/portal/'`.
+## 3. Local Development (`.env`)
 
-Owner app: `--dart-define=ENV=staging`, `--base-href /app/`.
+For local development, copy `.env.example` to `.env` in the root repository folder. The `.NET` API will automatically load this `.env` file upon startup.
 
-No GitHub secrets are required for any deploy job.
+> [!CAUTION]
+> Never commit `.env` or files containing plain-text passwords / API keys to git. `.env` is listed in `.gitignore`.

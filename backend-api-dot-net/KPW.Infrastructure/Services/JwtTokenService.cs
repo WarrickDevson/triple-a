@@ -21,7 +21,25 @@ public class JwtTokenService : IJwtTokenService
     public string GenerateAccessToken(User user)
     {
         var jwtSettings = _configuration.GetSection("Jwt");
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!));
+        var rawKey = jwtSettings["Key"]
+            ?? Environment.GetEnvironmentVariable("Jwt__Key")
+            ?? Environment.GetEnvironmentVariable("JWT_KEY")
+            ?? Environment.GetEnvironmentVariable("DEPLOY_JWT_KEY");
+
+        if (string.IsNullOrWhiteSpace(rawKey))
+        {
+            throw new InvalidOperationException("JWT signing key is not configured. Please set JWT_KEY in .env or via environment variables.");
+        }
+
+        var issuer = !string.IsNullOrWhiteSpace(jwtSettings["Issuer"])
+            ? jwtSettings["Issuer"]
+            : (Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "KPW.MoveWell");
+
+        var audience = !string.IsNullOrWhiteSpace(jwtSettings["Audience"])
+            ? jwtSettings["Audience"]
+            : (Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "KPW.MoveWell.Clients");
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(rawKey.Trim().Trim('"', '\'')));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>
@@ -34,8 +52,8 @@ public class JwtTokenService : IJwtTokenService
         };
 
         var token = new JwtSecurityToken(
-            issuer: jwtSettings["Issuer"],
-            audience: jwtSettings["Audience"],
+            issuer: issuer,
+            audience: audience,
             claims: claims,
             expires: DateTime.UtcNow.AddHours(1),
             signingCredentials: credentials);

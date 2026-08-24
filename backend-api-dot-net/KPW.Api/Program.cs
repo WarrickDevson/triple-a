@@ -20,6 +20,7 @@ const string GcpCredentialsFileName = "devson-development-6d4da133b74e.json";
 var builder = WebApplication.CreateBuilder(args);
 
 LoadDotEnv(builder.Environment.ContentRootPath);
+builder.Configuration.AddEnvironmentVariables();
 ConfigureGoogleApplicationCredentials(builder.Environment.ContentRootPath);
 
 builder.Host.UseSerilog((context, services, configuration) =>
@@ -42,15 +43,28 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         var jwtSettings = builder.Configuration.GetSection("Jwt");
+        var jwtKey = jwtSettings["Key"]
+            ?? Environment.GetEnvironmentVariable("Jwt__Key")
+            ?? Environment.GetEnvironmentVariable("JWT_KEY")
+            ?? Environment.GetEnvironmentVariable("DEPLOY_JWT_KEY");
+
+        if (string.IsNullOrWhiteSpace(jwtKey))
+        {
+            throw new InvalidOperationException("JWT signing key is not configured. Please set JWT_KEY in .env or via environment variables.");
+        }
+
+        var issuer = !string.IsNullOrWhiteSpace(jwtSettings["Issuer"]) ? jwtSettings["Issuer"] : (Environment.GetEnvironmentVariable("JWT_ISSUER") ?? "KPW.MoveWell");
+        var audience = !string.IsNullOrWhiteSpace(jwtSettings["Audience"]) ? jwtSettings["Audience"] : (Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? "KPW.MoveWell.Clients");
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings["Issuer"],
-            ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!)),
+            ValidIssuer = issuer,
+            ValidAudience = audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.Zero
         };
 
@@ -353,6 +367,54 @@ static void LoadDotEnv(string contentRootPath)
                 if (!string.IsNullOrWhiteSpace(key))
                 {
                     Environment.SetEnvironmentVariable(key, value);
+
+                    // Map common alias names to standard ASP.NET Core configuration keys
+                    if (key.Equals("DB_CONNECTION_STRING", StringComparison.OrdinalIgnoreCase) ||
+                        key.Equals("DEFAULT_CONNECTION", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", value);
+                    }
+                    else if (key.Equals("JWT_KEY", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("Jwt__Key", value);
+                    }
+                    else if (key.Equals("JWT_ISSUER", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("Jwt__Issuer", value);
+                    }
+                    else if (key.Equals("JWT_AUDIENCE", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("Jwt__Audience", value);
+                    }
+                    else if (key.Equals("SENDGRID_API_KEY", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("SendGrid__ApiKey", value);
+                    }
+                    else if (key.Equals("SENDGRID_PROVIDER", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("SendGrid__Provider", value);
+                    }
+                    else if (key.Equals("SENDGRID_FROM_EMAIL", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("SendGrid__FromEmail", value);
+                    }
+                    else if (key.Equals("SENDGRID_FROM_NAME", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("SendGrid__FromName", value);
+                    }
+                    else if (key.Equals("AI_API_KEY", StringComparison.OrdinalIgnoreCase) ||
+                             key.Equals("GEMINI_API_KEY", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("Ai__ApiKey", value);
+                    }
+                    else if (key.Equals("AI_PROVIDER", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("Ai__Provider", value);
+                    }
+                    else if (key.Equals("AI_MODEL", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("Ai__Model", value);
+                    }
                 }
             }
         }

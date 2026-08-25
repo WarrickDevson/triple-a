@@ -299,6 +299,35 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function fetchAdminUsers(query?: string, role?: string) {
+    loading.value = true
+    error.value = null
+    try {
+      return await authApi.fetchAdminUsers(query, role)
+    } catch (err: any) {
+      error.value = err?.response?.data?.message || 'Failed to load users.'
+      return []
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function purgeUserData(userId: number, payload?: { purgeMediaAndLogs?: boolean; adminNotes?: string }) {
+    loading.value = true
+    error.value = null
+    message.value = null
+    try {
+      const data = await authApi.purgeUserData(userId, payload)
+      message.value = data.message
+      return true
+    } catch (err: any) {
+      error.value = err?.response?.data?.message || 'Failed to purge user data.'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   function logout() {
     accessToken.value = null
     refreshToken.value = null
@@ -331,6 +360,8 @@ export const useAuthStore = defineStore('auth', () => {
     rejectPhysio,
     markEmailVerified,
     sendAdminInvite,
+    fetchAdminUsers,
+    purgeUserData,
     logout,
   }
 })

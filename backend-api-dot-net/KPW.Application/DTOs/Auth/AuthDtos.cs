@@ -96,4 +96,34 @@ public record UpdateProfileRequestDto(
     string? PhoneNumber = null,
     string? ClinicName = null);
 
+public record DataDeletionRequestDto(
+    string Email,
+    string? RequestType = null,
+    string? Reason = null,
+    string? AdditionalNotes = null);
+
+public record DataDeletionResponseDto(
+    bool Success,
+    string Message,
+    string RequestReference);
+
+public record AdminUserSummaryDto(
+    int UserId,
+    string Email,
+    string FirstName,
+    string LastName,
+    string? PhoneNumber,
+    string UserRole,
+    int? ClinicId,
+    string? ClinicName,
+    bool IsActive,
+    bool IsApproved,
+    int PetCount,
+    DateTime CreatedDate);
+
+public record AdminPurgeUserRequestDto(
+    bool PurgeMediaAndLogs = true,
+    string? AdminNotes = null);
+
+
 

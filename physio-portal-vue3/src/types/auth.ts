@@ -64,6 +64,27 @@ export interface SendAdminInviteRequest {
   clinicName?: string
 }
 
+export interface AdminUserSummary {
+  userId: number
+  email: string
+  firstName: string
+  lastName: string
+  phoneNumber?: string
+  userRole: string
+  clinicId: number | null
+  clinicName?: string | null
+  isActive: boolean
+  isApproved: boolean
+  petCount: number
+  createdDate: string
+}
+
+export interface AdminPurgeUserRequest {
+  purgeMediaAndLogs?: boolean
+  adminNotes?: string
+}
+
+
 export interface ForgotPasswordRequest {
   email: string
 }

@@ -15,6 +15,8 @@ import '../../videos/screens/video_inbox_screen.dart';
 import '../../videos/screens/video_upload_screen.dart';
 import '../../pets/providers/pets_provider.dart';
 import '../../pets/screens/saved_reports_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'data_deletion_screen.dart';
 
 class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
@@ -172,6 +174,22 @@ class MoreScreen extends ConsumerWidget {
               subtitle: 'Update your account password',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+              ),
+            ),
+            _MoreTile(
+              icon: Icons.shield_outlined,
+              title: 'Privacy Policy',
+              subtitle: 'POPIA compliance and data protection',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+              ),
+            ),
+            _MoreTile(
+              icon: Icons.person_remove_outlined,
+              title: 'Account & Data Deletion',
+              subtitle: 'Request deletion of your account and personal records',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const DataDeletionScreen()),
               ),
             ),
             const SizedBox(height: 8),

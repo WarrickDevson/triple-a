@@ -357,6 +357,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<Map<String, dynamic>?> requestDataDeletion({
+    required String email,
+    required String requestType,
+    String? reason,
+    String? additionalNotes,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/auth/request-data-deletion',
+        data: {
+          'email': email,
+          'requestType': requestType,
+          'reason': reason,
+          'additionalNotes': additionalNotes,
+        },
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return {'success': true, 'message': 'Request submitted successfully.'};
+    } on DioException catch (e) {
+      final message = e.response?.data is Map
+          ? (e.response?.data['message'] as String?) ?? 'Failed to submit request.'
+          : 'Failed to submit request.';
+      return {'success': false, 'message': message};
+    } catch (_) {
+      return {'success': false, 'message': 'An unexpected error occurred.'};
+    }
+  }
+
   Future<void> logout() async {
     _tokenStorage.accessToken = null;
     _tokenStorage.refreshToken = null;

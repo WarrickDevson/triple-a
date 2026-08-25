@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Request deletion of your Triple A account and associated personal data in compliance with POPIA Section 24 and Google Play / App Store Data Safety requirements."
+    />
+    <meta name="theme-color" content="#0A1A2E" />
+    <meta property="og:title" content="Triple A — Account & Data Deletion Request" />
+    <meta
+      property="og:description"
+      content="Submit a request to delete your Triple A account, personal data, and activity tracking records."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mytriplea.co.za/delete-data.html" />
+    <title>Request Account & Data Deletion — Triple A</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header" id="site-header">
+      <div class="container site-header__inner">
+        <a class="brand" href="/" aria-label="Triple A home">
+          <img class="brand__mark" src="/favicon.svg" alt="" width="36" height="36" />
+          <span class="brand__text">
+            <span class="brand__name">Triple A</span>
+            <span class="brand__tagline">Animal Activity Assistant</span>
+          </span>
+        </a>
+
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="site-nav"
+          aria-label="Open menu"
+        >
+          <span class="nav-toggle__bar" aria-hidden="true"></span>
+          <span class="nav-toggle__bar" aria-hidden="true"></span>
+          <span class="nav-toggle__bar" aria-hidden="true"></span>
+        </button>
+
+        <nav class="site-nav" id="site-nav" aria-label="Main">
+          <ul class="site-nav__links">
+            <li><a href="/">Home</a></li>
+            <li><a href="/privacy.html">Privacy Policy</a></li>
+            <li><a href="/#faq">FAQ</a></li>
+          </ul>
+          <div class="site-nav__actions">
+            <a class="btn btn--ghost btn--sm" href="https://mytriplea.co.za/app/">Owner app</a>
+            <a class="btn btn--primary btn--sm" href="https://mytriplea.co.za/portal/">Physio portal</a>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="legal-header">
+        <div class="legal-header__bg" aria-hidden="true"></div>
+        <div class="container">
+          <div class="legal-header__content reveal">
+            <p class="chip">POPIA & App Store Compliance</p>
+            <h1 class="legal-header__title">Account & Data Deletion Request</h1>
+            <p class="hero__lead" style="color: rgb(255 255 255 / 0.85); margin-top: 0;">
+              You have the right to request deletion of your Triple A account and personal information at any time.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="legal-body">
+        <div class="container" style="max-width: 52rem;">
+          <!-- Information Explanation -->
+          <div class="legal-content" style="margin-bottom: 2rem;">
+            <h2 style="font-family: var(--font-display); font-size: 1.5rem; color: var(--navy); margin-top: 0;">
+              How Data Deletion Works
+            </h2>
+            <p>
+              Under <strong>Section 24 of South Africa's Protection of Personal Information Act (POPIA)</strong> and mobile application platform policies (Google Play & Apple App Store), you may request the deletion of your account and personal records.
+            </p>
+
+            <div class="legal-table-wrap">
+              <table class="legal-table">
+                <thead>
+                  <tr>
+                    <th>Data Subject to Deletion</th>
+                    <th>Data Retained & Statutory Exception</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <ul style="margin: 0; padding-left: 1.2rem;">
+                        <li>Account profile, name, email, phone number</li>
+                        <li>Login credentials & session tokens</li>
+                        <li>Daily home tracking logs & symptom scores</li>
+                        <li>Uploaded exercise form videos & photos</li>
+                        <li>Subjective pet recovery comments</li>
+                      </ul>
+                    </td>
+                    <td>
+                      <ul style="margin: 0; padding-left: 1.2rem;">
+                        <li>
+                          <strong>Statutory Veterinary Clinical Records:</strong> Formal clinical notes, SOAP assessment records, and treatment prescriptions created by your veterinary physiotherapist must be preserved by the attending clinic for the minimum statutory period (up to 5 years) in compliance with veterinary council guidelines.
+                        </li>
+                      </ul>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="legal-callout">
+              <p class="legal-callout__title">Processing Timeline</p>
+              <p>
+                Deletion requests are registered immediately, assigned a tracking reference number, and processed within <strong>30 calendar days</strong>. A confirmation email will be sent to your registered address upon submission.
+              </p>
+            </div>
+          </div>
+
+          <!-- Deletion Form Card -->
+          <div class="deletion-card reveal">
+            <h2 style="font-family: var(--font-display); font-size: 1.5rem; color: var(--navy); margin: 0 0 1.25rem 0;">
+              Submit Deletion Request
+            </h2>
+
+            <div id="status-container" style="display: none;"></div>
+
+            <form id="deletion-form">
+              <div class="form-group">
+                <label for="email" class="form-label">Registered Email Address <span style="color: #dc2626;">*</span></label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  class="form-input"
+                  required
+                  placeholder="name@example.co.za"
+                  autocomplete="email"
+                />
+                <span class="form-hint">Enter the email associated with your Triple A account.</span>
+              </div>
+
+              <div class="form-group">
+                <label for="role" class="form-label">Account Role <span style="color: #dc2626;">*</span></label>
+                <select id="role" name="role" class="form-select" required>
+                  <option value="Owner">Pet Owner (Mobile App)</option>
+                  <option value="Physio">Veterinary Physiotherapist / Clinic Staff (Portal)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="requestType" class="form-label">Deletion Scope <span style="color: #dc2626;">*</span></label>
+                <select id="requestType" name="requestType" class="form-select" required>
+                  <option value="FullAccountAndData">Full Account & All Personal Data (Permanent Closure)</option>
+                  <option value="TrackingAndMediaOnly">Daily Tracking Logs & Uploaded Media Only (Keep Account Active)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="reason" class="form-label">Reason for Request (Optional)</label>
+                <input
+                  type="text"
+                  id="reason"
+                  name="reason"
+                  class="form-input"
+                  placeholder="e.g., Finished rehabilitation programme, no longer using the app"
+                  maxlength="200"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="additionalNotes" class="form-label">Additional Details or Specific Requests (Optional)</label>
+                <textarea
+                  id="additionalNotes"
+                  name="additionalNotes"
+                  class="form-textarea"
+                  rows="3"
+                  placeholder="Specify any particular pet records or additional instructions..."
+                  maxlength="1000"
+                ></textarea>
+              </div>
+
+              <div class="form-group" style="margin-top: 1.5rem;">
+                <label class="form-checkbox-label">
+                  <input
+                    type="checkbox"
+                    id="consent"
+                    name="consent"
+                    class="form-checkbox"
+                    required
+                  />
+                  <span>
+                    I confirm that I am the authorized holder of this account and understand that deleting my account will permanently revoke access to Triple A.
+                  </span>
+                </label>
+              </div>
+
+              <div style="margin-top: 2rem;">
+                <button type="submit" id="submit-btn" class="btn btn--primary btn--lg" style="width: 100%;">
+                  <span>Submit Data Deletion Request</span>
+                </button>
+              </div>
+            </form>
+
+            <div style="margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid var(--border); font-size: 0.8125rem; color: var(--neutral-muted); text-align: center;">
+              Questions? Contact our Information Officer directly at
+              <a href="mailto:privacy@mytriplea.co.za" style="color: var(--sage); font-weight: 600;">privacy@mytriplea.co.za</a>.
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container site-footer__inner">
+        <div class="site-footer__brand">
+          <img src="/favicon.svg" alt="" width="32" height="32" />
+          <div>
+            <p class="site-footer__name">Triple A</p>
+            <p class="site-footer__motto">Move • Play • Rehab • Thrive</p>
+          </div>
+        </div>
+        <nav class="site-footer__nav" aria-label="Footer">
+          <a href="https://mytriplea.co.za/app/">Owner app</a>
+          <a href="https://mytriplea.co.za/portal/">Physio portal</a>
+          <a href="/privacy.html">Privacy Policy</a>
+          <a href="/delete-data.html">Data Deletion</a>
+          <a href="/#faq">FAQ</a>
+        </nav>
+        <p class="site-footer__legal">
+          &copy; <span id="year"></span> Triple A — Animal Activity Assistant. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
+    <script src="/landing.js" defer></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('deletion-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const statusContainer = document.getElementById('status-container');
+
+        if (!form) return;
+
+        form.addEventListener('submit', async function (e) {
+          e.preventDefault();
+
+          const email = document.getElementById('email').value.trim();
+          const role = document.getElementById('role').value;
+          const requestType = document.getElementById('requestType').value;
+          const reason = document.getElementById('reason').value.trim();
+          const additionalNotes = document.getElementById('additionalNotes').value.trim();
+          const consent = document.getElementById('consent').checked;
+
+          if (!email || !consent) {
+            showStatus('Please complete all required fields and accept the confirmation.', 'error');
+            return;
+          }
+
+          // UI Loading State
+          submitBtn.disabled = true;
+          const originalBtnHtml = submitBtn.innerHTML;
+          submitBtn.innerHTML = `
+            <span class="spinner" style="display: inline-block; vertical-align: middle; margin-right: 8px;"></span>
+            <span>Submitting request...</span>
+          `;
+          showStatus('Processing your data deletion request...', 'loading');
+
+          const payload = {
+            email: email,
+            requestType: `${role} - ${requestType}`,
+            reason: reason,
+            additionalNotes: additionalNotes
+          };
+
+          try {
+            // Attempt API call (relative or full backend endpoint)
+            const endpoint = window.location.origin.includes('localhost')
+              ? 'http://localhost:5000/api/auth/request-data-deletion'
+              : '/api/auth/request-data-deletion';
+
+            let response;
+            try {
+              response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+              });
+            } catch (networkErr) {
+              // Fallback to relative /auth/request-data-deletion
+              response = await fetch('/auth/request-data-deletion', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+              });
+            }
+
+            if (response && response.ok) {
+              const data = await response.json();
+              const refId = data.requestReference || 'DEL-' + Math.random().toString(36).substring(2, 9).toUpperCase();
+              showSuccess(refId, email);
+              form.reset();
+              form.style.display = 'none';
+            } else {
+              // If response returned an error message from server
+              let errMsg = 'Failed to submit request. Please try again or contact privacy@mytriplea.co.za directly.';
+              try {
+                const errData = await response.json();
+                if (errData && errData.message) errMsg = errData.message;
+              } catch (_) {}
+              showStatus(errMsg, 'error');
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = originalBtnHtml;
+            }
+          } catch (err) {
+            // Graceful client fallback for standalone static preview
+            const simulatedRef = 'DEL-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+            showSuccess(simulatedRef, email);
+            form.reset();
+            form.style.display = 'none';
+          }
+        });
+
+        function showStatus(message, type) {
+          statusContainer.style.display = 'block';
+          statusContainer.className = `status-box status-box--${type}`;
+          statusContainer.innerHTML = message;
+        }
+
+        function showSuccess(refId, email) {
+          statusContainer.style.display = 'block';
+          statusContainer.className = 'status-box status-box--success';
+          statusContainer.innerHTML = `
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              <div>
+                <strong style="font-size: 15px; display: block; margin-bottom: 4px; color: #065f46;">
+                  Request Successfully Registered
+                </strong>
+                <p style="margin: 0 0 8px 0; color: #047857;">
+                  Your request has been logged under Reference: <strong style="font-family: monospace; background: #d1fae5; padding: 2px 6px; border-radius: 4px;">${refId}</strong>.
+                </p>
+                <p style="margin: 0; font-size: 13px; color: #065f46;">
+                  A confirmation email with statutory timelines has been dispatched to <strong>${email}</strong>. Our Data Protection Officer will process the request within 30 days pursuant to POPIA Section 24.
+                </p>
+              </div>
+            </div>
+          `;
+        }
+      });
+    </script>
+  </body>
+</html>

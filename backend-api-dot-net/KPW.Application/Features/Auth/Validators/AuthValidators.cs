@@ -87,3 +87,15 @@ public class UpdateProfileRequestValidator : AbstractValidator<UpdateProfileRequ
         RuleFor(x => x.ClinicName).MaximumLength(200);
     }
 }
+
+public class DataDeletionRequestValidator : AbstractValidator<DataDeletionRequestDto>
+{
+    public DataDeletionRequestValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
+        RuleFor(x => x.RequestType).MaximumLength(100);
+        RuleFor(x => x.Reason).MaximumLength(500);
+        RuleFor(x => x.AdditionalNotes).MaximumLength(2000);
+    }
+}
+

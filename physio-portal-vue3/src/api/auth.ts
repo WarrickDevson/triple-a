@@ -1,5 +1,7 @@
 import { apiClient } from './client'
 import type {
+  AdminPurgeUserRequest,
+  AdminUserSummary,
   AuthResponse,
   AuthUser,
   ChangePasswordRequest,
@@ -94,3 +96,18 @@ export async function sendAdminInvite(payload: SendAdminInviteRequest): Promise<
   const { data } = await apiClient.post<MessageResponse>('/api/admin/send-physio-invite', payload)
   return data
 }
+
+export async function fetchAdminUsers(query?: string, role?: string): Promise<AdminUserSummary[]> {
+  const params = new URLSearchParams()
+  if (query) params.append('query', query)
+  if (role) params.append('role', role)
+  const qs = params.toString() ? `?${params.toString()}` : ''
+  const { data } = await apiClient.get<AdminUserSummary[]>(`/api/admin/users${qs}`)
+  return data
+}
+
+export async function purgeUserData(userId: number, payload?: AdminPurgeUserRequest): Promise<MessageResponse> {
+  const { data } = await apiClient.post<MessageResponse>(`/api/admin/users/${userId}/purge`, payload || {})
+  return data
+}
+

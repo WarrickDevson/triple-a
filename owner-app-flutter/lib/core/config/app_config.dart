@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 enum AppEnvironment {
   development,
   staging,
@@ -41,10 +39,7 @@ class AppConfig {
         );
       case 'development':
       default:
-        String defaultDevUrl = 'http://localhost:5057';
-        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-          defaultDevUrl = 'http://10.0.2.2:5057';
-        }
+        const defaultDevUrl = 'http://localhost:5057';
         return AppConfig(
           environment: AppEnvironment.development,
           apiBaseUrl: customBaseUrl.isNotEmpty ? customBaseUrl : defaultDevUrl,

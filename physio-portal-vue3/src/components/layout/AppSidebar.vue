@@ -147,6 +147,11 @@ function displayRole(role?: string) {
       >
         Sign Out
       </button>
+      <div class="mt-3 flex items-center justify-center gap-2 text-[10px] text-white/40">
+        <a href="https://mytriplea.co.za/privacy.html" target="_blank" class="hover:text-white/70 transition-colors">Privacy</a>
+        <span>&bull;</span>
+        <a href="https://mytriplea.co.za/delete-data.html" target="_blank" class="hover:text-white/70 transition-colors">Data Deletion</a>
+      </div>
     </div>
   </aside>
 </template>

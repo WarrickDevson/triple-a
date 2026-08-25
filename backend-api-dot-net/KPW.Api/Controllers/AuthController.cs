@@ -221,4 +221,24 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = ex.Message });
         }
     }
+
+    [HttpPost("request-data-deletion")]
+    [AllowAnonymous]
+    public async Task<ActionResult<DataDeletionResponseDto>> RequestDataDeletion(
+        [FromBody] DataDeletionRequestDto request,
+        [FromServices] IValidator<DataDeletionRequestDto> validator,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(request, cancellationToken);
+        try
+        {
+            var result = await _mediator.Send(new RequestDataDeletionCommand(request), cancellationToken);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }
+

@@ -244,4 +244,128 @@ public class AdminController : ControllerBase
 
         return Ok(new MessageResponseDto("Physio invitation email sent successfully."));
     }
+
+    [HttpGet("users")]
+    public async Task<ActionResult<List<AdminUserSummaryDto>>> GetUsers(
+        [FromQuery] string? query,
+        [FromQuery] string? role,
+        CancellationToken cancellationToken)
+    {
+        if (!IsSysAdmin())
+        {
+            return Forbid();
+        }
+
+        var usersQuery = _dbContext.Set<User>()
+            .AsNoTracking()
+            .Include(u => u.Clinic)
+            .Include(u => u.Pets)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            usersQuery = usersQuery.Where(u => u.UserRole == role);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            var q = query.Trim().ToLower();
+            usersQuery = usersQuery.Where(u =>
+                u.Email.ToLower().Contains(q) ||
+                u.FirstName.ToLower().Contains(q) ||
+                u.LastName.ToLower().Contains(q));
+        }
+
+        var users = await usersQuery
+            .OrderByDescending(u => u.CreatedDate)
+            .Select(u => new AdminUserSummaryDto(
+                u.UserId,
+                u.Email,
+                u.FirstName,
+                u.LastName,
+                u.PhoneNumber,
+                u.UserRole,
+                u.ClinicId,
+                u.Clinic != null ? u.Clinic.ClinicName : null,
+                u.IsActive,
+                u.IsApproved,
+                u.Pets.Count,
+                u.CreatedDate))
+            .ToListAsync(cancellationToken);
+
+        return Ok(users);
+    }
+
+    [HttpPost("users/{userId:int}/purge")]
+    public async Task<ActionResult<MessageResponseDto>> PurgeUserData(
+        int userId,
+        [FromBody] AdminPurgeUserRequestDto? request,
+        CancellationToken cancellationToken)
+    {
+        if (!IsSysAdmin())
+        {
+            return Forbid();
+        }
+
+        var user = await _dbContext.Set<User>()
+            .Include(u => u.Pets)
+                .ThenInclude(p => p.DailyTrackingLogs)
+            .Include(u => u.Pets)
+                .ThenInclude(p => p.VideoSubmissions)
+            .Include(u => u.Pets)
+                .ThenInclude(p => p.OwnerSubjectiveNotes)
+            .Include(u => u.Pets)
+                .ThenInclude(p => p.ExerciseSessionLogs)
+            .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
+
+        if (user is null)
+        {
+            return NotFound(new { message = "User not found." });
+        }
+
+        var purgeLogsAndMedia = request?.PurgeMediaAndLogs ?? true;
+        var originalEmail = user.Email;
+
+        // 1. Anonymize user identity
+        user.Email = $"deleted_user_{user.UserId}_{Guid.NewGuid().ToString("N")[..6]}@deleted.triplea.local";
+        user.FirstName = "[Deleted]";
+        user.LastName = "[User]";
+        user.PhoneNumber = null;
+        user.PasswordHash = string.Empty;
+        user.RefreshTokenHash = null;
+        user.RefreshTokenExpiresAt = null;
+        user.EmailVerificationTokenHash = null;
+        user.EmailVerificationTokenExpiresAt = null;
+        user.IsActive = false;
+        user.IsApproved = false;
+
+        // 2. Purge personal activity logs and media submissions if requested
+        if (purgeLogsAndMedia && user.Pets.Any())
+        {
+            foreach (var pet in user.Pets)
+            {
+                pet.PetName = "[Deleted Pet]";
+                if (pet.DailyTrackingLogs.Any())
+                {
+                    _dbContext.Set<DailyTrackingLog>().RemoveRange(pet.DailyTrackingLogs);
+                }
+                if (pet.VideoSubmissions.Any())
+                {
+                    _dbContext.Set<VideoSubmission>().RemoveRange(pet.VideoSubmissions);
+                }
+                if (pet.OwnerSubjectiveNotes.Any())
+                {
+                    _dbContext.Set<OwnerSubjectiveNote>().RemoveRange(pet.OwnerSubjectiveNotes);
+                }
+                if (pet.ExerciseSessionLogs.Any())
+                {
+                    _dbContext.Set<ExerciseSessionLog>().RemoveRange(pet.ExerciseSessionLogs);
+                }
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new MessageResponseDto($"User data for {originalEmail} (ID: {userId}) was successfully purged in compliance with POPIA."));
+    }
 }

@@ -21,7 +21,7 @@ import EditProfileModal from '../components/profile/EditProfileModal.vue'
 const auth = useAuthStore()
 const router = useRouter()
 
-const activeTab = ref<'profile' | 'clinic' | 'notifications' | 'security'>('profile')
+const activeTab = ref<'profile' | 'clinic' | 'notifications' | 'security' | 'privacy'>('profile')
 const showStubModal = ref(false)
 const showInviteModal = ref(false)
 const showEditProfileModal = ref(false)
@@ -106,6 +106,7 @@ function logout() {
           { id: 'clinic', label: 'Clinic' },
           { id: 'notifications', label: 'Notifications' },
           { id: 'security', label: 'Security' },
+          { id: 'privacy', label: 'Privacy & Legal' },
         ] as const"
         :key="tab.id"
         type="button"
@@ -237,7 +238,7 @@ function logout() {
       </form>
     </section>
 
-    <section v-else class="portal-card p-6">
+    <section v-else-if="activeTab === 'security'" class="portal-card p-6">
       <h2 class="text-sm font-bold text-navy">Security</h2>
       <p class="mt-2 text-sm text-neutral-muted">Update your password or sign out.</p>
       <form class="mt-4 space-y-3 max-w-md" @submit.prevent="submitChangePassword">
@@ -270,6 +271,61 @@ function logout() {
         <BaseButton variant="danger" size="sm" @click="logout">Sign out</BaseButton>
       </div>
     </section>
+
+    <section v-else-if="activeTab === 'privacy'" class="portal-card p-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-navy">Privacy & POPIA Compliance</h2>
+        <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 border border-emerald-200">
+          POPIA Compliant
+        </span>
+      </div>
+      <p class="mt-2 text-sm text-neutral-muted">
+        Triple A processes personal information and patient rehabilitation records in accordance with South Africa's Protection of Personal Information Act (POPIA Act No. 4 of 2013).
+      </p>
+
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        <div class="rounded-xl border border-navy/10 bg-neutral-light/50 p-4">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-navy">Privacy Policy</h3>
+          <p class="mt-1 text-xs text-neutral-muted">
+            Read our full POPIA data handling terms, the 8 conditions of lawful processing, and clinical record retention policies.
+          </p>
+          <a
+            href="https://mytriplea.co.za/privacy.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-sage hover:underline"
+          >
+            Open Privacy Policy &rarr;
+          </a>
+        </div>
+
+        <div class="rounded-xl border border-navy/10 bg-neutral-light/50 p-4">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-navy">Account & Data Deletion</h3>
+          <p class="mt-1 text-xs text-neutral-muted">
+            Submit a data deletion request under POPIA Section 24 or view statutory veterinary record retention requirements.
+          </p>
+          <a
+            href="https://mytriplea.co.za/delete-data.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-sage hover:underline"
+          >
+            Data Deletion Portal &rarr;
+          </a>
+        </div>
+      </div>
+
+      <div class="mt-6 rounded-xl border border-navy/10 p-4">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-navy">Information Officer</h3>
+        <p class="mt-1 text-xs text-neutral-muted">
+          For clinical data queries, subject access requests, or regulatory questions:
+        </p>
+        <p class="mt-2 text-xs font-medium text-navy">
+          Email: <a href="mailto:privacy@mytriplea.co.za" class="text-sage font-bold hover:underline">privacy@mytriplea.co.za</a>
+        </p>
+      </div>
+    </section>
+
   </div>
 
   <InviteOwnerModal v-if="showInviteModal" @close="showInviteModal = false" />

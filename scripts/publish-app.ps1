@@ -16,8 +16,8 @@
 .PARAMETER ApiBaseUrl
   Production API URL passed to --dart-define=API_BASE_URL. Default: 'https://mytriplea.co.za'
 
-.PARAMETER Clean
-  Runs 'flutter clean' before building. Default is true.
+.PARAMETER NoClean
+  Skips 'flutter clean' before building.
 
 .PARAMETER OpenFolder
   Opens the build outputs folder in Windows Explorer after build finishes.
@@ -33,7 +33,7 @@
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet("patch", "minor", "major", "build", "prompt")]
+    [ValidateSet("patch", "minor", "major", "build", "none", "keep", "prompt")]
     [string] $Increment = "prompt",
 
     [string] $CustomVersion = "",
@@ -73,7 +73,7 @@ $currentVersionStr = "$major.$minor.$patch+$build"
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "   Triple A — Flutter Google Play Bundle Publisher          " -ForegroundColor Cyan
+Write-Host "   Triple A -- Flutter Google Play Bundle Publisher         " -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host "Current App Version: " -NoNewline
 Write-Host "$major.$minor.$patch (Build $build)" -ForegroundColor Yellow
@@ -96,18 +96,20 @@ if ($CustomVersion) {
     $buildOpt = "$major.$minor.$patch+$($build + 1)"
 
     Write-Host "Select version increment:" -ForegroundColor White
+    Write-Host "  [0] Keep current -> $currentVersionStr  (Build without changing version)" -ForegroundColor Green
     Write-Host "  [1] Patch        -> $patchOpt  (Bug fixes / debugging)" -ForegroundColor Cyan
     Write-Host "  [2] Minor        -> $minorOpt  (New features)" -ForegroundColor Cyan
     Write-Host "  [3] Major        -> $majorOpt  (Breaking / major release)" -ForegroundColor Cyan
     Write-Host "  [4] Build only   -> $buildOpt  (Same version name, increment build)" -ForegroundColor Cyan
     Write-Host "  [5] Custom       -> Enter manually" -ForegroundColor Cyan
-    Write-Host "  [0] Cancel" -ForegroundColor Red
+    Write-Host "  [q] Cancel" -ForegroundColor Red
     Write-Host ""
 
-    $choice = Read-Host "Choose option [1-5, default 1]"
+    $choice = Read-Host "Choose option [0-5, default 1]"
     if (-not $choice) { $choice = "1" }
 
     switch ($choice) {
+        "0" { $nextVersion = $currentVersionStr }
         "1" { $nextVersion = $patchOpt }
         "2" { $nextVersion = $minorOpt }
         "3" { $nextVersion = $majorOpt }
@@ -119,7 +121,7 @@ if ($CustomVersion) {
                 exit 1
             }
         }
-        "0" {
+        "q" {
             Write-Host "Build cancelled." -ForegroundColor Yellow
             exit 0
         }
@@ -130,6 +132,8 @@ if ($CustomVersion) {
     }
 } else {
     switch ($Increment) {
+        "none"  { $nextVersion = $currentVersionStr }
+        "keep"  { $nextVersion = $currentVersionStr }
         "patch" { $nextVersion = "$major.$minor.$($patch + 1)+$($build + 1)" }
         "minor" { $nextVersion = "$major.$($minor + 1).0+$($build + 1)" }
         "major" { $nextVersion = "$($major + 1).0.0+$($build + 1)" }
@@ -151,21 +155,24 @@ try {
     if (-not $NoClean) {
         Write-Host ""
         Write-Host "--> Running 'flutter clean'..." -ForegroundColor Cyan
-        & flutter clean
-        if ($LASTEXITCODE -ne 0) { throw "flutter clean failed" }
+        try { & flutter clean } catch {}
     }
 
     Write-Host ""
     Write-Host "--> Running 'flutter pub get'..." -ForegroundColor Cyan
     & flutter pub get
-    if ($LASTEXITCODE -ne 0) { throw "flutter pub get failed" }
+
+    $packageConfig = Join-Path $FlutterDir ".dart_tool\package_config.json"
+    if (-not (Test-Path $packageConfig)) {
+        throw "flutter pub get failed to resolve packages."
+    }
 
     Write-Host ""
     Write-Host "--> Building Android App Bundle (.aab) for release..." -ForegroundColor Cyan
     Write-Host "    API Base URL: $ApiBaseUrl" -ForegroundColor DarkGray
     & flutter build appbundle --release --dart-define="API_BASE_URL=$ApiBaseUrl"
     
-    # Flutter may return exit code 1 if NDK symbol stripping warning occurs, check if file exists
+    # Check if bundle output exists
     $bundlePath = Join-Path $FlutterDir "build\app\outputs\bundle\release\app-release.aab"
     if (-not (Test-Path $bundlePath)) {
         throw "Build completed but bundle file was not found at $bundlePath"
@@ -178,12 +185,9 @@ try {
     Write-Host "============================================================" -ForegroundColor Green
     Write-Host "  SUCCESS! Release App Bundle Built Successfully           " -ForegroundColor Green
     Write-Host "============================================================" -ForegroundColor Green
-    Write-Host "File:    " -NoNewline
-    Write-Host "$($bundleItem.FullName)" -ForegroundColor Yellow
-    Write-Host "Version: " -NoNewline
-    Write-Host "$nextVersion" -ForegroundColor Yellow
-    Write-Host "Size:    " -NoNewline
-    Write-Host "$bundleSizeMb MB" -ForegroundColor Yellow
+    Write-Host "File:    $($bundleItem.FullName)" -ForegroundColor Yellow
+    Write-Host "Version: $nextVersion" -ForegroundColor Yellow
+    Write-Host "Size:    $bundleSizeMb MB" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Next steps in Google Play Console:" -ForegroundColor Cyan
     Write-Host "  1. Open: https://play.google.com/console"

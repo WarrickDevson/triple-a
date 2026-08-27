@@ -1,3 +1,4 @@
+using System.Text.Json;
 using KPW.Application.DTOs.Progress;
 using KPW.Application.DTOs.Reports;
 using KPW.Application.Features.Pets;
@@ -18,7 +19,10 @@ public record GeneratePetReportQuery(
     string? MaintenancePlan = null,
     string? VeterinarianNotes = null,
     string? OwnerInstructions = null,
-    int? SoapNoteId = null) : IRequest<PetReportFileDto>;
+    int? SoapNoteId = null,
+    DateOnly? PeriodFrom = null,
+    DateOnly? PeriodTo = null,
+    IReadOnlyList<ReferencedReportSessionDto>? ReferencedSessions = null) : IRequest<PetReportFileDto>;
 
 public class GeneratePetReportQueryHandler : IRequestHandler<GeneratePetReportQuery, PetReportFileDto>
 {
@@ -139,6 +143,49 @@ public class GeneratePetReportQueryHandler : IRequestHandler<GeneratePetReportQu
             ? "Dr. S. Devson, Lead Veterinary Physiotherapist"
             : "Triple A Veterinary Physiotherapy Team";
 
+        // Load referenced sessions
+        var referencedSessions = query.ReferencedSessions?.ToList() ?? new List<ReferencedReportSessionDto>();
+        if (referencedSessions.Count == 0)
+        {
+            // Default to loading recent appointments and SOAP sessions for patient
+            var pastAppointments = await _dbContext.Set<Appointment>()
+                .AsNoTracking()
+                .Where(a => a.PetId == query.PetId)
+                .OrderByDescending(a => a.ScheduledDateTime)
+                .Take(4)
+                .ToListAsync(cancellationToken);
+
+            foreach (var appt in pastAppointments)
+            {
+                referencedSessions.Add(new ReferencedReportSessionDto(
+                    appt.ScheduledDateTime,
+                    "Physiotherapy Consultation",
+                    appt.ClinicianNotes ?? appt.ClientNotes ?? "Routine evaluation and physical therapy.",
+                    null));
+            }
+
+            var pastSoapNotes = await _dbContext.Set<SoapNote>()
+                .AsNoTracking()
+                .Where(s => s.PetId == query.PetId)
+                .OrderByDescending(s => s.SessionDate)
+                .Take(4)
+                .ToListAsync(cancellationToken);
+
+            foreach (var soap in pastSoapNotes)
+            {
+                if (!referencedSessions.Any(r => r.Date.Date == soap.SessionDate.Date))
+                {
+                    referencedSessions.Add(new ReferencedReportSessionDto(
+                        soap.SessionDate,
+                        "Clinical SOAP Evaluation",
+                        $"Assessment: {soap.Action}. Plan: {soap.Plan}",
+                        null));
+                }
+            }
+
+            referencedSessions = referencedSessions.OrderByDescending(r => r.Date).Take(5).ToList();
+        }
+
         var report = new PetClinicalReportDto(
             pet.PetId,
             pet.PetName,
@@ -166,7 +213,10 @@ public class GeneratePetReportQueryHandler : IRequestHandler<GeneratePetReportQu
             InitialMobilityScore: mobilityLogs.FirstOrDefault()?.MobilityScore,
             FinalMobilityScore: mobilityLogs.LastOrDefault()?.MobilityScore,
             InitialLamenessScore: lamenessLogs.FirstOrDefault()?.LamenessScore,
-            FinalLamenessScore: lamenessLogs.LastOrDefault()?.LamenessScore);
+            FinalLamenessScore: lamenessLogs.LastOrDefault()?.LamenessScore,
+            PeriodFrom: query.PeriodFrom,
+            PeriodTo: query.PeriodTo,
+            ReferencedSessions: referencedSessions);
 
         var pdfBytes = _pdfGenerator.Generate(report);
         var fileName = normalizedType switch

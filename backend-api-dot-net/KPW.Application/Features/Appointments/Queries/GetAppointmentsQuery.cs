@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KPW.Application.Features.Appointments.Queries;
 
-public record GetAppointmentsQuery(DateTime? From, DateTime? To) : IRequest<IReadOnlyList<AppointmentDto>>;
+public record GetAppointmentsQuery(DateTime? From, DateTime? To, int? PetId = null) : IRequest<IReadOnlyList<AppointmentDto>>;
 
 public class GetAppointmentsQueryHandler : IRequestHandler<GetAppointmentsQuery, IReadOnlyList<AppointmentDto>>
 {
@@ -29,14 +29,19 @@ public class GetAppointmentsQueryHandler : IRequestHandler<GetAppointmentsQuery,
             throw new UnauthorizedAccessException();
         }
 
-        var from = request.From ?? DateTime.UtcNow.Date;
-        var to = request.To ?? from.AddDays(30);
+        var from = request.From ?? (request.PetId.HasValue ? DateTime.UtcNow.AddYears(-2) : DateTime.UtcNow.Date);
+        var to = request.To ?? (request.PetId.HasValue ? DateTime.UtcNow.AddMonths(3) : from.AddDays(30));
 
         var query = _dbContext.Set<Appointment>()
             .Include(a => a.Physio)
             .Include(a => a.Owner)
             .Include(a => a.Pet)
             .Where(a => a.ScheduledDateTime >= from && a.ScheduledDateTime <= to);
+
+        if (request.PetId.HasValue)
+        {
+            query = query.Where(a => a.PetId == request.PetId.Value);
+        }
 
         if (_currentUserService.Role == UserRole.Owner)
         {

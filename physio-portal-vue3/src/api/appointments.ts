@@ -5,9 +5,9 @@ import type {
   UpdateAppointmentStatusRequest,
 } from '../types/appointment'
 
-export async function fetchAppointments(from?: string, to?: string): Promise<Appointment[]> {
+export async function fetchAppointments(from?: string, to?: string, petId?: number): Promise<Appointment[]> {
   const { data } = await apiClient.get<Appointment[]>('/api/appointments', {
-    params: { from, to },
+    params: { from, to, petId },
   })
   return data
 }

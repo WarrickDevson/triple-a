@@ -63,20 +63,26 @@ public class CreateReportCommandHandler : IRequestHandler<CreateReportCommand, S
                 _ => $"Clinical Progress Report - {pet.PetName} ({DateTime.UtcNow:MMM dd, yyyy})"
             };
 
-        var summary = req.Summary?.Trim();
-        if (string.IsNullOrWhiteSpace(summary))
+        var summary = req.Summary?.Trim() ?? string.Empty;
+
+        var periodText = (req.PeriodFrom.HasValue && req.PeriodTo.HasValue)
+            ? $"[Period: {req.PeriodFrom:dd MMM yyyy} – {req.PeriodTo:dd MMM yyyy}]\n"
+            : req.PeriodFrom.HasValue
+                ? $"[Period from: {req.PeriodFrom:dd MMM yyyy}]\n"
+                : string.Empty;
+
+        if (!string.IsNullOrEmpty(periodText) && !summary.StartsWith("[Period", StringComparison.OrdinalIgnoreCase))
         {
-            var latestDiag = pet.MedicalHistories.OrderByDescending(m => m.CreatedDate).FirstOrDefault()?.Diagnosis;
-            var activeProg = pet.RehabPrograms.FirstOrDefault(r => r.IsActive);
-            summary = normalizedType switch
-            {
-                "DISCHARGE_SUMMARY" => $"End-of-care discharge summary for {pet.PetName}. Rehab goals successfully achieved. Prescribed home maintenance program provided.",
-                "OWNER_HOME_PROGRAM" => $"Prescribed home exercise rehabilitation plan for {pet.PetName}. Guided routine for daily home execution.",
-                "SOAP_SESSION" => $"Clinical evaluation record and session notes for {pet.PetName}.",
-                _ => $"Comprehensive rehabilitation progress summary for {pet.PetName}." +
-                     (latestDiag != null ? $" Diagnosis: {latestDiag}." : "") +
-                     (activeProg != null ? $" Active Plan: {activeProg.ProgramTitle}." : "")
-            };
+            summary = $"{periodText}{summary}";
+        }
+
+        if (req.ReferencedSessions is { Count: > 0 } && !summary.Contains("Referenced Sessions:", StringComparison.OrdinalIgnoreCase))
+        {
+            var sessionsSummary = string.Join("\n", req.ReferencedSessions.Select(s =>
+                $"• {s.Date:dd MMM yyyy} ({s.SessionType}): {(string.IsNullOrWhiteSpace(s.SessionNotes) ? "Session completed." : s.SessionNotes)}" +
+                (!string.IsNullOrWhiteSpace(s.ClinicianComment) ? $" [Clinician Note: {s.ClinicianComment}]" : string.Empty)));
+
+            summary = $"{summary}\n\nReferenced Sessions:\n{sessionsSummary}";
         }
 
         var sharedReport = new SharedReport
@@ -88,7 +94,7 @@ public class CreateReportCommandHandler : IRequestHandler<CreateReportCommand, S
             ReportType = normalizedType,
             Summary = summary,
             SharedAtUtc = DateTime.UtcNow,
-            IsActive = true
+            IsActive = req.ShareWithOwner
         };
 
         _dbContext.Set<SharedReport>().Add(sharedReport);

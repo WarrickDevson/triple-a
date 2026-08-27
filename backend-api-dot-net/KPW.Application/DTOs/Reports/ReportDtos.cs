@@ -15,6 +15,12 @@ public record RehabProgramReportDto(
     DateOnly? EndDate,
     IReadOnlyList<RehabProgramExerciseReportDto> Exercises);
 
+public record ReferencedReportSessionDto(
+    DateTime Date,
+    string SessionType,
+    string? SessionNotes = null,
+    string? ClinicianComment = null);
+
 public record PetClinicalReportDto(
     int PetId,
     string PetName,
@@ -43,6 +49,9 @@ public record PetClinicalReportDto(
     int? FinalMobilityScore = null,
     int? InitialLamenessScore = null,
     int? FinalLamenessScore = null,
+    DateOnly? PeriodFrom = null,
+    DateOnly? PeriodTo = null,
+    IReadOnlyList<ReferencedReportSessionDto>? ReferencedSessions = null,
     IReadOnlyList<SoapNoteDto>? RecentSoapNotes = null);
 
 public record PetReportFileDto(byte[] Content, string FileName);
@@ -57,5 +66,8 @@ public record CreateReportRequestDto(
     string? MaintenancePlan = null,
     string? VeterinarianNotes = null,
     string? OwnerInstructions = null,
+    DateOnly? PeriodFrom = null,
+    DateOnly? PeriodTo = null,
+    IReadOnlyList<ReferencedReportSessionDto>? ReferencedSessions = null,
     int? SoapNoteId = null,
     bool ShareWithOwner = true);

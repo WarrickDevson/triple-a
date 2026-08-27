@@ -49,10 +49,28 @@ public class ReportsController : ControllerBase
         [FromQuery] string? veterinarianNotes,
         [FromQuery] string? ownerInstructions,
         [FromQuery] int? soapNoteId,
+        [FromQuery] DateOnly? periodFrom,
+        [FromQuery] DateOnly? periodTo,
+        [FromQuery] string? sessionsJson,
         CancellationToken cancellationToken)
     {
         try
         {
+            IReadOnlyList<ReferencedReportSessionDto>? referencedSessions = null;
+            if (!string.IsNullOrWhiteSpace(sessionsJson))
+            {
+                try
+                {
+                    referencedSessions = System.Text.Json.JsonSerializer.Deserialize<List<ReferencedReportSessionDto>>(
+                        sessionsJson,
+                        new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                }
+                catch
+                {
+                    // Ignore malformed JSON and allow query fallback
+                }
+            }
+
             var query = new GeneratePetReportQuery(
                 petId,
                 type,
@@ -62,7 +80,10 @@ public class ReportsController : ControllerBase
                 maintenancePlan,
                 veterinarianNotes,
                 ownerInstructions,
-                soapNoteId);
+                soapNoteId,
+                periodFrom,
+                periodTo,
+                referencedSessions);
 
             var result = await _mediator.Send(query, cancellationToken);
             return File(result.Content, "application/pdf", result.FileName);

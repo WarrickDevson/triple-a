@@ -97,11 +97,21 @@ public class QuestPetReportPdfGenerator : IPetReportPdfGenerator
                         .FontSize(8.5f).FontColor(NeutralMuted);
                 });
 
-                row.ConstantItem(120).AlignRight().Column(col =>
+                row.ConstantItem(150).AlignRight().Column(col =>
                 {
                     col.Item().Text($"Date: {DateTime.UtcNow:yyyy-MM-dd}").FontSize(8.5f).FontColor(NeutralMuted);
                     col.Item().Text($"Patient: {report.PetName}").FontSize(9).Bold().FontColor(PrimaryDark);
                     col.Item().Text($"ID: #{report.PetId}").FontSize(8).FontColor(NeutralMuted);
+                    if (report.PeriodFrom.HasValue || report.PeriodTo.HasValue)
+                    {
+                        var periodText = (report.PeriodFrom.HasValue && report.PeriodTo.HasValue)
+                            ? $"Period: {report.PeriodFrom.Value:dd MMM yyyy} – {report.PeriodTo.Value:dd MMM yyyy}"
+                            : report.PeriodFrom.HasValue
+                                ? $"Period from: {report.PeriodFrom.Value:dd MMM yyyy}"
+                                : $"Period through: {report.PeriodTo!.Value:dd MMM yyyy}";
+
+                        col.Item().PaddingTop(2).Text(periodText).FontSize(7.5f).Bold().FontColor(AccentSage);
+                    }
                 });
             });
 
@@ -197,6 +207,9 @@ public class QuestPetReportPdfGenerator : IPetReportPdfGenerator
 
                 inner.Item().PaddingTop(4).Text(report.NarrativeSummary).FontSize(9);
             }));
+
+            // Referenced Clinical Sessions & Appointment Notes
+            ComposeReferencedSessions(column, report.ReferencedSessions);
 
             // Tracking Log History
             column.Item().Element(c => ComposeSection(c, "Daily Tracking & Recovery Log History", inner =>
@@ -339,6 +352,9 @@ public class QuestPetReportPdfGenerator : IPetReportPdfGenerator
                 });
             }));
 
+            // Referenced Clinical Sessions & Appointment Notes
+            ComposeReferencedSessions(column, report.ReferencedSessions);
+
             // Long-Term Home Maintenance Plan
             column.Item().Element(c => ComposeSection(c, "Long-Term Home Maintenance Protocol", inner =>
             {
@@ -469,6 +485,45 @@ public class QuestPetReportPdfGenerator : IPetReportPdfGenerator
                 ).FontSize(8.5f).Italic();
             }));
         });
+    }
+
+    private static void ComposeReferencedSessions(ColumnDescriptor column, IReadOnlyList<ReferencedReportSessionDto>? sessions)
+    {
+        if (sessions is null || sessions.Count == 0) return;
+
+        column.Item().Element(c => ComposeSection(c, "Referenced Clinical Sessions & Appointment Notes", inner =>
+        {
+            inner.Item().Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.ConstantColumn(75);
+                    columns.ConstantColumn(105);
+                    columns.RelativeColumn(3);
+                    columns.RelativeColumn(3);
+                });
+
+                table.Header(header =>
+                {
+                    header.Cell().Background(AccentSageLight).Padding(3.5f).Text("Date").Bold().FontSize(8);
+                    header.Cell().Background(AccentSageLight).Padding(3.5f).Text("Session Type").Bold().FontSize(8);
+                    header.Cell().Background(AccentSageLight).Padding(3.5f).Text("Clinical Findings").Bold().FontSize(8);
+                    header.Cell().Background(AccentSageLight).Padding(3.5f).Text("Clinician Comments").Bold().FontSize(8);
+                });
+
+                foreach (var session in sessions)
+                {
+                    table.Cell().BorderBottom(1).BorderColor(NeutralGrey).Padding(3.5f)
+                        .Text(session.Date.ToString("yyyy-MM-dd")).FontSize(7.5f);
+                    table.Cell().BorderBottom(1).BorderColor(NeutralGrey).Padding(3.5f)
+                        .Text(session.SessionType).FontSize(7.5f).SemiBold();
+                    table.Cell().BorderBottom(1).BorderColor(NeutralGrey).Padding(3.5f)
+                        .Text(session.SessionNotes ?? "—").FontSize(7.5f);
+                    table.Cell().BorderBottom(1).BorderColor(NeutralGrey).Padding(3.5f)
+                        .Text(session.ClinicianComment ?? "—").FontSize(7.5f).Italic();
+                }
+            });
+        }));
     }
 
     private static void ComposeSection(IContainer container, string title, Action<ColumnDescriptor> content)

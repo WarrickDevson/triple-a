@@ -127,6 +127,44 @@ public class GenerateSharedReportPdfQueryHandler : IRequestHandler<GenerateShare
             ? $"{sharedReport.SharedByPhysio.FirstName} {sharedReport.SharedByPhysio.LastName}".Trim()
             : "Clinician";
 
+        var pastAppointments = await _dbContext.Set<Appointment>()
+            .AsNoTracking()
+            .Where(a => a.PetId == pet.PetId)
+            .OrderByDescending(a => a.ScheduledDateTime)
+            .Take(4)
+            .ToListAsync(cancellationToken);
+
+        var pastSoapNotes = await _dbContext.Set<SoapNote>()
+            .AsNoTracking()
+            .Where(s => s.PetId == pet.PetId)
+            .OrderByDescending(s => s.SessionDate)
+            .Take(4)
+            .ToListAsync(cancellationToken);
+
+        var referencedSessions = new List<ReferencedReportSessionDto>();
+        foreach (var appt in pastAppointments)
+        {
+            referencedSessions.Add(new ReferencedReportSessionDto(
+                appt.ScheduledDateTime,
+                "Physiotherapy Consultation",
+                appt.ClinicianNotes ?? appt.ClientNotes ?? "Physical therapy evaluation and treatment.",
+                null));
+        }
+
+        foreach (var soap in pastSoapNotes)
+        {
+            if (!referencedSessions.Any(r => r.Date.Date == soap.SessionDate.Date))
+            {
+                referencedSessions.Add(new ReferencedReportSessionDto(
+                    soap.SessionDate,
+                    "Clinical SOAP Evaluation",
+                    $"Assessment: {soap.Action}. Plan: {soap.Plan}",
+                    null));
+            }
+        }
+
+        referencedSessions = referencedSessions.OrderByDescending(r => r.Date).Take(5).ToList();
+
         var reportDto = new PetClinicalReportDto(
             pet.PetId,
             pet.PetName,
@@ -150,7 +188,8 @@ public class GenerateSharedReportPdfQueryHandler : IRequestHandler<GenerateShare
             InitialMobilityScore: mobilityLogs.FirstOrDefault()?.MobilityScore,
             FinalMobilityScore: mobilityLogs.LastOrDefault()?.MobilityScore,
             InitialLamenessScore: lamenessLogs.FirstOrDefault()?.LamenessScore,
-            FinalLamenessScore: lamenessLogs.LastOrDefault()?.LamenessScore);
+            FinalLamenessScore: lamenessLogs.LastOrDefault()?.LamenessScore,
+            ReferencedSessions: referencedSessions);
 
         var pdfBytes = _pdfGenerator.Generate(reportDto);
         var fileName = typeKey switch

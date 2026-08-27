@@ -125,6 +125,9 @@ async function handleSaveAndDownload(payload: CreateReportPayload) {
       dischargeStatus: payload.dischargeStatus,
       maintenancePlan: payload.maintenancePlan,
       veterinarianNotes: payload.veterinarianNotes,
+      periodFrom: payload.periodFrom,
+      periodTo: payload.periodTo,
+      referencedSessions: payload.referencedSessions,
       patient: targetPatient,
     })
   } catch (err: any) {

@@ -75,6 +75,16 @@ export interface SharedReport {
   species?: string
   breed?: string
   isActive?: boolean
+  periodFrom?: string
+  periodTo?: string
+  referencedSessions?: ReferencedReportSession[]
+}
+
+export interface ReferencedReportSession {
+  date: string
+  sessionType: string
+  sessionNotes?: string
+  clinicianComment?: string
 }
 
 export interface CreateReportPayload {
@@ -89,6 +99,9 @@ export interface CreateReportPayload {
   ownerInstructions?: string
   soapNoteId?: number
   shareWithOwner?: boolean
+  periodFrom?: string
+  periodTo?: string
+  referencedSessions?: ReferencedReportSession[]
 }
 
 export interface OwnerSubjectiveNote {

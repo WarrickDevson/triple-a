@@ -12,6 +12,9 @@ export interface DownloadReportOptions {
   veterinarianNotes?: string
   ownerInstructions?: string
   soapNoteId?: number
+  periodFrom?: string
+  periodTo?: string
+  referencedSessions?: import('../types/soap').ReferencedReportSession[]
   patient?: Pet | null
 }
 
@@ -35,6 +38,11 @@ export async function downloadPetReport(petId: number, options?: DownloadReportO
   if (options?.veterinarianNotes) params.veterinarianNotes = options.veterinarianNotes
   if (options?.ownerInstructions) params.ownerInstructions = options.ownerInstructions
   if (options?.soapNoteId) params.soapNoteId = options.soapNoteId
+  if (options?.periodFrom) params.periodFrom = options.periodFrom
+  if (options?.periodTo) params.periodTo = options.periodTo
+  if (options?.referencedSessions && options.referencedSessions.length > 0) {
+    params.sessionsJson = JSON.stringify(options.referencedSessions)
+  }
 
   const response = await apiClient.get<Blob>(`/api/reports/pet/${petId}/download`, {
     params,
@@ -184,6 +192,9 @@ export async function createReport(payload: CreateReportPayload, patient?: Pet |
     species: patient?.species || 'Canine',
     breed: patient?.breed ?? undefined,
     isActive: payload.shareWithOwner !== false,
+    periodFrom: payload.periodFrom,
+    periodTo: payload.periodTo,
+    referencedSessions: payload.referencedSessions,
   }
 
   // Also push into demo dataset so it survives page re-filtering

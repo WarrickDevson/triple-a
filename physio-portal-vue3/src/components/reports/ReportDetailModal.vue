@@ -118,6 +118,55 @@ const isShared = computed(() => {
           </div>
         </div>
 
+        <!-- Care Period Banner if present -->
+        <div v-if="report.periodFrom || report.periodTo" class="rounded-xl border border-sage/30 bg-sage-muted/30 px-3.5 py-2 flex items-center justify-between text-xs">
+          <span class="font-bold text-navy flex items-center gap-1.5">
+            <Calendar class="h-3.5 w-3.5 text-sage" />
+            Treatment Period Covered:
+          </span>
+          <span class="font-semibold text-sage">
+            {{ report.periodFrom ? new Date(report.periodFrom).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : 'Initial' }}
+            –
+            {{ report.periodTo ? new Date(report.periodTo).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : 'Current' }}
+          </span>
+        </div>
+
+        <!-- Referenced Sessions Table if present -->
+        <div v-if="report.referencedSessions && report.referencedSessions.length > 0" class="space-y-2">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-navy flex items-center gap-1.5">
+            <Clock class="h-3.5 w-3.5 text-sage" />
+            Referenced Clinical Sessions ({{ report.referencedSessions.length }})
+          </h4>
+          <div class="rounded-xl border border-neutral-grey/80 overflow-hidden text-xs">
+            <table class="w-full text-left border-collapse">
+              <thead class="bg-surface border-b border-neutral-grey/80 text-[11px] font-bold text-neutral-muted">
+                <tr>
+                  <th class="p-2.5">Date</th>
+                  <th class="p-2.5">Session Type</th>
+                  <th class="p-2.5">Clinical Notes</th>
+                  <th class="p-2.5">Clinician Comment</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-neutral-grey/60">
+                <tr v-for="(sess, idx) in report.referencedSessions" :key="idx" class="hover:bg-surface/50">
+                  <td class="p-2.5 font-bold text-navy whitespace-nowrap">
+                    {{ new Date(sess.date).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) }}
+                  </td>
+                  <td class="p-2.5 font-semibold text-sage">
+                    {{ sess.sessionType }}
+                  </td>
+                  <td class="p-2.5 text-neutral-muted">
+                    {{ sess.sessionNotes || '—' }}
+                  </td>
+                  <td class="p-2.5 italic text-navy font-medium">
+                    {{ sess.clinicianComment || '—' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Clinical Summary & Findings -->
         <div class="space-y-2">
           <h4 class="text-xs font-bold uppercase tracking-wider text-navy flex items-center gap-1.5">

@@ -26,11 +26,12 @@ public class AppointmentsController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<AppointmentDto>>> GetAll(
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
+        [FromQuery] int? petId,
         CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _mediator.Send(new GetAppointmentsQuery(from, to), cancellationToken);
+            var result = await _mediator.Send(new GetAppointmentsQuery(from, to, petId), cancellationToken);
             return Ok(result);
         }
         catch (UnauthorizedAccessException ex)

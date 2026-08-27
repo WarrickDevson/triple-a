@@ -32,7 +32,8 @@ class SharedReportModel {
 
   bool get isClinicalReport =>
       reportType.toUpperCase().contains('CLINICAL') ||
-      reportType.toUpperCase().contains('PROGRESS');
+      reportType.toUpperCase().contains('PROGRESS') ||
+      reportType.toUpperCase().contains('DISCHARGE');
 
   bool get isHomeProgram =>
       reportType.toUpperCase().contains('PROGRAM') ||
@@ -40,12 +41,12 @@ class SharedReportModel {
 
   String get categoryLabel {
     if (isSoapNote) return 'SOAP Assessment';
+    if (reportType.toUpperCase().contains('DISCHARGE')) return 'Discharge Summary';
     if (isClinicalReport) return 'Clinical Progress Report';
     if (isHomeProgram) return 'Home Care Plan';
     if (reportType.toUpperCase().contains('REFERRAL')) return 'Referral Letter';
     if (reportType.toUpperCase().contains('IMAGING')) return 'Imaging & Diagnostics';
     if (reportType.toUpperCase().contains('CONSENT')) return 'Consent Form';
-    if (reportType.toUpperCase().contains('DISCHARGE')) return 'Discharge Summary';
     return 'Clinical Document';
   }
 

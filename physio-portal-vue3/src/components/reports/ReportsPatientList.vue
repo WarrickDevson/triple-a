@@ -28,8 +28,8 @@ const filteredPatients = computed(() => {
 </script>
 
 <template>
-  <section class="portal-card flex h-full flex-col overflow-hidden">
-    <div class="border-b border-neutral-grey/80 p-4">
+  <section class="portal-card flex h-[620px] xl:h-[calc(100vh-11.5rem)] flex-col overflow-hidden">
+    <div class="border-b border-neutral-grey/80 p-4 shrink-0 bg-white">
       <h2 class="text-sm font-bold text-navy">Select Patient</h2>
       <div class="relative mt-3">
         <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-muted" />
@@ -42,7 +42,7 @@ const filteredPatients = computed(() => {
       </div>
     </div>
     <div v-if="loading" class="p-6 text-sm text-neutral-muted">Loading patients...</div>
-    <ul v-else class="flex-1 overflow-y-auto">
+    <ul v-else class="flex-1 overflow-y-auto overscroll-contain custom-scrollbar">
       <li v-for="patient in filteredPatients" :key="patient.petId">
         <button
           type="button"

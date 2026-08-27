@@ -42,9 +42,9 @@ const filteredReports = computed(() => {
 </script>
 
 <template>
-  <section class="portal-card flex h-full flex-col overflow-hidden">
+  <section class="portal-card flex h-[620px] xl:h-[calc(100vh-11.5rem)] flex-col overflow-hidden">
     <!-- Header -->
-    <div class="border-b border-neutral-grey/80 p-4 space-y-3">
+    <div class="border-b border-neutral-grey/80 p-4 space-y-3 shrink-0 bg-white">
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-bold text-navy flex items-center gap-1.5">
           <FileText class="h-4 w-4 text-sage" />
@@ -100,7 +100,10 @@ const filteredReports = computed(() => {
       Loading clinic reports...
     </div>
 
-    <ul v-else-if="filteredReports.length > 0" class="flex-1 overflow-y-auto divide-y divide-neutral-grey/60">
+    <ul
+      v-else-if="filteredReports.length > 0"
+      class="flex-1 overflow-y-auto divide-y divide-neutral-grey/60 overscroll-contain custom-scrollbar"
+    >
       <li
         v-for="report in filteredReports"
         :key="report.sharedReportId"

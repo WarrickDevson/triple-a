@@ -236,30 +236,36 @@ async function handleDeleteReport(reportId: number) {
     </div>
 
     <!-- 3-Column Layout: Patient List | Generator Cards | Existing Reports List -->
-    <div class="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)_340px]">
-      <ReportsPatientList
-        :patients="patientsStore.patients"
-        :selected-pet-id="selectedPetId"
-        :loading="patientsStore.loading"
-        @select="selectedPetId = $event"
-      />
+    <div class="grid gap-4 items-start xl:grid-cols-[260px_minmax(0,1fr)_340px]">
+      <div class="xl:sticky xl:top-4">
+        <ReportsPatientList
+          :patients="patientsStore.patients"
+          :selected-pet-id="selectedPetId"
+          :loading="patientsStore.loading"
+          @select="selectedPetId = $event"
+        />
+      </div>
 
-      <ReportTypesPanel
-        :patient="selectedPatient"
-        :downloading="downloading"
-        @customize="openCreateModal($event)"
-        @quick-download="handleQuickDownload($event)"
-        @open-new="openCreateModal('progress')"
-      />
+      <div>
+        <ReportTypesPanel
+          :patient="selectedPatient"
+          :downloading="downloading"
+          @customize="openCreateModal($event)"
+          @quick-download="handleQuickDownload($event)"
+          @open-new="openCreateModal('progress')"
+        />
+      </div>
 
-      <RecentReportsPanel
-        :reports="recentReports"
-        :selected-pet-id="selectedPetId"
-        :loading="reportsLoading"
-        @view="handleViewReport"
-        @download="handleDownloadExistingReport"
-        @create-new="openCreateModal('progress')"
-      />
+      <div class="xl:sticky xl:top-4">
+        <RecentReportsPanel
+          :reports="recentReports"
+          :selected-pet-id="selectedPetId"
+          :loading="reportsLoading"
+          @view="handleViewReport"
+          @download="handleDownloadExistingReport"
+          @create-new="openCreateModal('progress')"
+        />
+      </div>
     </div>
 
     <!-- Create Report Modal -->

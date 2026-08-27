@@ -169,6 +169,24 @@ class SharedReportsNotifier extends StateNotifier<SharedReportsState> {
     }
     return false;
   }
+
+  Future<bool> downloadSharedReport(int sharedReportId, String petName, String title) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        '/api/reports/shared/$sharedReportId/download',
+        options: Options(responseType: ResponseType.bytes),
+      );
+
+      if (response.data != null && response.data!.isNotEmpty) {
+        final safeTitle = title.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+        final fileName = '${petName.replaceAll(' ', '_')}_$safeTitle.pdf';
+        return await FileDownloadUtil.downloadBytes(response.data!, fileName);
+      }
+    } catch (_) {
+      // Failed to download from server
+    }
+    return false;
+  }
 }
 
 final sharedReportsProvider = StateNotifierProvider<SharedReportsNotifier, SharedReportsState>((ref) {

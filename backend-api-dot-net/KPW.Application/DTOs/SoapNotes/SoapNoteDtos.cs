@@ -67,7 +67,12 @@ public record SharedReportDto(
     string Title,
     string ReportType,
     string? Summary,
-    DateTime SharedAtUtc);
+    DateTime SharedAtUtc,
+    string? PetName = null,
+    string? OwnerName = null,
+    string? Species = null,
+    string? Breed = null,
+    bool IsActive = true);
 
 public record OwnerSubjectiveNoteDto(
     int OwnerSubjectiveNoteId,

@@ -101,7 +101,8 @@ builder.Services.AddCors(options =>
                 })
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowCredentials()
+            .WithExposedHeaders("Content-Disposition");
     });
     options.AddPolicy("StagingCors", policy =>
     {
@@ -110,7 +111,8 @@ builder.Services.AddCors(options =>
                 "https://www.mytriplea.co.za")
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowCredentials()
+            .WithExposedHeaders("Content-Disposition");
     });
 });
 

@@ -78,6 +78,19 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
     }
   }
 
+  void _downloadSharedReport(SharedReportModel report) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Downloading ${report.title}...'), duration: const Duration(seconds: 1)),
+    );
+    final success = await ref
+        .read(sharedReportsProvider.notifier)
+        .downloadSharedReport(report.sharedReportId, widget.pet.petName, report.title);
+
+    if (!success && mounted) {
+      _downloadPetClinicalReport();
+    }
+  }
+
   void _openSoapDetail(int? soapNoteId) {
     if (soapNoteId == null) return;
     Navigator.of(context).push(
@@ -401,7 +414,7 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: _downloadPetClinicalReport,
+                      onPressed: () => _downloadSharedReport(report),
                       icon: const Icon(Icons.download_rounded, size: 16),
                       label: const Text(
                         'Download Clinical Report',
@@ -416,14 +429,10 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Opening document: ${report.title}')),
-                        );
-                      },
+                      onPressed: () => _downloadSharedReport(report),
                       icon: const Icon(Icons.file_download_outlined, size: 16),
                       label: const Text(
-                        'Open File',
+                        'Download PDF',
                         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),

@@ -1,3 +1,6 @@
+using KPW.Application.DTOs.Reports;
+using KPW.Application.DTOs.SoapNotes;
+using KPW.Application.Features.Reports.Commands;
 using KPW.Application.Features.Reports.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -18,12 +21,50 @@ public class ReportsController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpGet("pet/{petId:int}/download")]
-    public async Task<IActionResult> DownloadPetReport(int petId, CancellationToken cancellationToken)
+    [HttpGet]
+    [HttpGet("recent")]
+    public async Task<ActionResult<IReadOnlyList<SharedReportDto>>> GetRecentReports(
+        [FromQuery] int? petId,
+        CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _mediator.Send(new GeneratePetReportQuery(petId), cancellationToken);
+            var result = await _mediator.Send(new GetRecentClinicReportsQuery(petId), cancellationToken);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("pet/{petId:int}/download")]
+    public async Task<IActionResult> DownloadPetReport(
+        int petId,
+        [FromQuery] string? type,
+        [FromQuery] string? customTitle,
+        [FromQuery] string? summary,
+        [FromQuery] string? dischargeStatus,
+        [FromQuery] string? maintenancePlan,
+        [FromQuery] string? veterinarianNotes,
+        [FromQuery] string? ownerInstructions,
+        [FromQuery] int? soapNoteId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var query = new GeneratePetReportQuery(
+                petId,
+                type,
+                customTitle,
+                summary,
+                dischargeStatus,
+                maintenancePlan,
+                veterinarianNotes,
+                ownerInstructions,
+                soapNoteId);
+
+            var result = await _mediator.Send(query, cancellationToken);
             return File(result.Content, "application/pdf", result.FileName);
         }
         catch (UnauthorizedAccessException ex)
@@ -36,8 +77,51 @@ public class ReportsController : ControllerBase
         }
     }
 
+    [HttpGet("shared/{sharedReportId:int}/download")]
+    public async Task<IActionResult> DownloadSharedReport(
+        int sharedReportId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new GenerateSharedReportPdfQuery(sharedReportId), cancellationToken);
+            return File(result.Content, "application/pdf", result.FileName);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("create")]
+    [HttpPost("generate")]
+    public async Task<ActionResult<SharedReportDto>> CreateReport(
+        [FromBody] CreateReportRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new CreateReportCommand(request), cancellationToken);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
     [HttpGet("pet/{petId:int}/shared")]
-    public async Task<ActionResult<IReadOnlyList<KPW.Application.DTOs.SoapNotes.SharedReportDto>>> GetSharedReports(int petId, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<SharedReportDto>>> GetSharedReports(
+        int petId,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -51,14 +135,14 @@ public class ReportsController : ControllerBase
     }
 
     [HttpPost("pet/{petId:int}/share-document")]
-    public async Task<ActionResult<KPW.Application.DTOs.SoapNotes.SharedReportDto>> ShareDocument(
+    public async Task<ActionResult<SharedReportDto>> ShareDocument(
         int petId,
-        [FromBody] KPW.Application.DTOs.SoapNotes.ShareDocumentRequestDto request,
+        [FromBody] ShareDocumentRequestDto request,
         CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _mediator.Send(new KPW.Application.Features.Reports.Commands.ShareDocumentCommand(petId, request), cancellationToken);
+            var result = await _mediator.Send(new ShareDocumentCommand(petId, request), cancellationToken);
             return Ok(result);
         }
         catch (UnauthorizedAccessException ex)
@@ -72,14 +156,14 @@ public class ReportsController : ControllerBase
     }
 
     [HttpPost("pet/{petId:int}/publish-progress-report")]
-    public async Task<ActionResult<KPW.Application.DTOs.SoapNotes.SharedReportDto>> PublishProgressReport(
+    public async Task<ActionResult<SharedReportDto>> PublishProgressReport(
         int petId,
         [FromQuery] string? title,
         CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _mediator.Send(new KPW.Application.Features.Reports.Commands.PublishProgressReportCommand(petId, title), cancellationToken);
+            var result = await _mediator.Send(new PublishProgressReportCommand(petId, title), cancellationToken);
             return Ok(result);
         }
         catch (UnauthorizedAccessException ex)
@@ -93,9 +177,11 @@ public class ReportsController : ControllerBase
     }
 
     [HttpDelete("shared/{sharedReportId:int}")]
-    public async Task<IActionResult> DeleteSharedReport(int sharedReportId, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteSharedReport(
+        int sharedReportId,
+        CancellationToken cancellationToken)
     {
-        var success = await _mediator.Send(new KPW.Application.Features.Reports.Commands.DeleteSharedReportCommand(sharedReportId), cancellationToken);
+        var success = await _mediator.Send(new DeleteSharedReportCommand(sharedReportId), cancellationToken);
         if (!success) return NotFound();
         return NoContent();
     }

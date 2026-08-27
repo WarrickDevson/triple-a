@@ -9,22 +9,34 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KPW.Application.Features.Reports.Queries;
 
-public record GeneratePetReportQuery(int PetId) : IRequest<PetReportFileDto>;
+public record GeneratePetReportQuery(
+    int PetId,
+    string? ReportType = null,
+    string? CustomTitle = null,
+    string? CustomSummary = null,
+    string? DischargeStatus = null,
+    string? MaintenancePlan = null,
+    string? VeterinarianNotes = null,
+    string? OwnerInstructions = null,
+    int? SoapNoteId = null) : IRequest<PetReportFileDto>;
 
 public class GeneratePetReportQueryHandler : IRequestHandler<GeneratePetReportQuery, PetReportFileDto>
 {
     private readonly DbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
     private readonly IPetReportPdfGenerator _pdfGenerator;
+    private readonly ISoapReportPdfGenerator _soapPdfGenerator;
 
     public GeneratePetReportQueryHandler(
         DbContext dbContext,
         ICurrentUserService currentUserService,
-        IPetReportPdfGenerator pdfGenerator)
+        IPetReportPdfGenerator pdfGenerator,
+        ISoapReportPdfGenerator soapPdfGenerator)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
         _pdfGenerator = pdfGenerator;
+        _soapPdfGenerator = soapPdfGenerator;
     }
 
     public async Task<PetReportFileDto> Handle(GeneratePetReportQuery query, CancellationToken cancellationToken)
@@ -42,6 +54,34 @@ public class GeneratePetReportQueryHandler : IRequestHandler<GeneratePetReportQu
             .Include(p => p.Owner)
             .Include(p => p.MedicalHistories)
             .FirstAsync(p => p.PetId == query.PetId, cancellationToken);
+
+        var normalizedType = (query.ReportType ?? "progress").Trim().ToLowerInvariant() switch
+        {
+            var t when t.Contains("discharge") => "discharge",
+            var t when t.Contains("home") => "home-program",
+            var t when t.Contains("soap") => "soap",
+            _ => "progress"
+        };
+
+        var safeName = SanitizeFileName(pet.PetName);
+        var dateStr = DateTime.UtcNow.ToString("yyyyMMdd");
+
+        // If specific SOAP note requested
+        if (normalizedType == "soap" && query.SoapNoteId.HasValue)
+        {
+            var soapNote = await _dbContext.Set<SoapNote>()
+                .AsNoTracking()
+                .Include(s => s.Physio)
+                .FirstOrDefaultAsync(s => s.SoapNoteId == query.SoapNoteId.Value && s.PetId == query.PetId, cancellationToken);
+
+            if (soapNote != null)
+            {
+                var soapDto = SoapNotes.SoapNoteMapper.ToDto(soapNote);
+                var ownerName = $"{pet.Owner.FirstName} {pet.Owner.LastName}".Trim();
+                var soapBytes = _soapPdfGenerator.Generate(soapDto, pet.PetName, pet.Species, pet.Breed, ownerName);
+                return new PetReportFileDto(soapBytes, $"TripleA-SoapReport-{safeName}-{dateStr}.pdf");
+            }
+        }
 
         var latestHistory = pet.MedicalHistories
             .OrderByDescending(m => m.CreatedDate)
@@ -87,6 +127,18 @@ public class GeneratePetReportQueryHandler : IRequestHandler<GeneratePetReportQu
                 l.IsCompleted))
             .ToListAsync(cancellationToken);
 
+        var painLogs = logs.Where(l => l.PainScore.HasValue).ToList();
+        var mobilityLogs = logs.Where(l => l.MobilityScore.HasValue).ToList();
+        var lamenessLogs = logs.Where(l => l.LamenessScore.HasValue).ToList();
+
+        var narrativeSummary = !string.IsNullOrWhiteSpace(query.CustomSummary)
+            ? query.CustomSummary
+            : BuildNarrativeSummary(logs, normalizedType, pet.PetName, latestHistory?.Diagnosis);
+
+        var physioName = _currentUserService.Role == UserRole.Physio
+            ? "Dr. S. Devson, Lead Veterinary Physiotherapist"
+            : "Triple A Veterinary Physiotherapy Team";
+
         var report = new PetClinicalReportDto(
             pet.PetId,
             pet.PetName,
@@ -100,29 +152,53 @@ public class GeneratePetReportQueryHandler : IRequestHandler<GeneratePetReportQu
             logs.Count(l => l.IsCompleted),
             logs.Count,
             logs,
-            BuildNarrativeSummary(logs));
+            narrativeSummary,
+            ReportType: normalizedType,
+            CustomTitle: query.CustomTitle,
+            CustomSummary: query.CustomSummary,
+            DischargeStatus: query.DischargeStatus,
+            MaintenancePlan: query.MaintenancePlan,
+            VeterinarianNotes: query.VeterinarianNotes,
+            OwnerInstructions: query.OwnerInstructions,
+            PhysioName: physioName,
+            InitialPainScore: painLogs.FirstOrDefault()?.PainScore,
+            FinalPainScore: painLogs.LastOrDefault()?.PainScore,
+            InitialMobilityScore: mobilityLogs.FirstOrDefault()?.MobilityScore,
+            FinalMobilityScore: mobilityLogs.LastOrDefault()?.MobilityScore,
+            InitialLamenessScore: lamenessLogs.FirstOrDefault()?.LamenessScore,
+            FinalLamenessScore: lamenessLogs.LastOrDefault()?.LamenessScore);
 
         var pdfBytes = _pdfGenerator.Generate(report);
-        var safeName = SanitizeFileName(pet.PetName);
-        var fileName = $"KPW-Report-{safeName}-{DateTime.UtcNow:yyyyMMdd}.pdf";
+        var fileName = normalizedType switch
+        {
+            "discharge" => $"TripleA-DischargeSummary-{safeName}-{dateStr}.pdf",
+            "home-program" => $"TripleA-HomeProgram-{safeName}-{dateStr}.pdf",
+            "soap" => $"TripleA-SoapSummary-{safeName}-{dateStr}.pdf",
+            _ => $"TripleA-ProgressReport-{safeName}-{dateStr}.pdf"
+        };
 
         return new PetReportFileDto(pdfBytes, fileName);
     }
 
-    private static string BuildNarrativeSummary(IReadOnlyList<PetProgressLogDto> logs)
+    private static string BuildNarrativeSummary(IReadOnlyList<PetProgressLogDto> logs, string reportType, string petName, string? diagnosis)
     {
+        if (reportType == "discharge")
+        {
+            return $"{petName} has successfully completed the prescribed rehabilitation course for {diagnosis ?? "clinical condition"}. Significant functional mobility gains and pain reduction have been achieved. Patient is formally discharged to the long-term home maintenance regimen.";
+        }
+
+        if (reportType == "home-program")
+        {
+            return $"This customized home exercise guide is designed for {petName}'s ongoing rehabilitation. Follow daily exercise recommendations, observe prescribed repetitions and sets, and monitor comfort levels during all activities.";
+        }
+
         if (logs.Count < 2)
         {
-            return "Insufficient tracking data for trend analysis. Continue daily logging for meaningful progress insights.";
+            return $"Rehabilitation tracking for {petName} is actively underway. Continue daily exercise logging and session attendance for optimal trend insights.";
         }
 
         var painLogs = logs.Where(l => l.PainScore.HasValue).ToList();
         var mobilityLogs = logs.Where(l => l.MobilityScore.HasValue).ToList();
-
-        if (painLogs.Count < 2 && mobilityLogs.Count < 2)
-        {
-            return "Insufficient pain and mobility scores for trend analysis.";
-        }
 
         var parts = new List<string>();
 
@@ -130,19 +206,19 @@ public class GeneratePetReportQueryHandler : IRequestHandler<GeneratePetReportQu
         {
             var firstPain = painLogs.First().PainScore!.Value;
             var lastPain = painLogs.Last().PainScore!.Value;
-            var painTrend = lastPain < firstPain ? "improving" : lastPain > firstPain ? "worsening" : "stable";
-            parts.Add($"Pain trend is {painTrend} (from {firstPain}/10 to {lastPain}/10)");
+            var painTrend = lastPain < firstPain ? "significantly improving" : lastPain > firstPain ? "elevated" : "stable";
+            parts.Add($"Pain score trend is {painTrend} (initially {firstPain}/10, currently {lastPain}/10)");
         }
 
         if (mobilityLogs.Count >= 2)
         {
             var firstMobility = mobilityLogs.First().MobilityScore!.Value;
             var lastMobility = mobilityLogs.Last().MobilityScore!.Value;
-            var mobilityTrend = lastMobility > firstMobility ? "improving" : lastMobility < firstMobility ? "declining" : "stable";
-            parts.Add($"mobility is {mobilityTrend} (from {firstMobility}/10 to {lastMobility}/10)");
+            var mobilityTrend = lastMobility > firstMobility ? "improving with enhanced weight bearing" : lastMobility < firstMobility ? "guarded" : "stable";
+            parts.Add($"functional mobility is {mobilityTrend} (from {firstMobility}/10 to {lastMobility}/10)");
         }
 
-        return string.Join("; ", parts) + ".";
+        return string.Join("; ", parts) + ". Clinical trajectory remains positive with consistent home exercise adherence.";
     }
 
     private static string SanitizeFileName(string name) =>

@@ -10,8 +10,23 @@ export const apiClient = axios.create({
   },
 })
 
-let accessToken: string | null = null
-let refreshToken: string | null = null
+function getStoredTokens(): { access: string | null; refresh: string | null } {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('kpw_auth') : null
+    if (!raw) return { access: null, refresh: null }
+    const parsed = JSON.parse(raw)
+    return {
+      access: parsed.accessToken || null,
+      refresh: parsed.refreshToken || null,
+    }
+  } catch {
+    return { access: null, refresh: null }
+  }
+}
+
+const initialTokens = getStoredTokens()
+let accessToken: string | null = initialTokens.access
+let refreshToken: string | null = initialTokens.refresh
 let onUnauthorized: (() => void) | null = null
 
 export function setAuthTokens(access: string | null, refresh: string | null) {
@@ -24,6 +39,14 @@ export function setUnauthorizedHandler(handler: () => void) {
 }
 
 apiClient.interceptors.request.use((config) => {
+  if (!accessToken) {
+    const stored = getStoredTokens()
+    if (stored.access) {
+      accessToken = stored.access
+      refreshToken = stored.refresh
+    }
+  }
+
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`
   }
@@ -42,6 +65,7 @@ apiClient.interceptors.response.use(
       url.includes('/api/auth/forgot-password') ||
       url.includes('/api/auth/reset-password')
 
+    // Avoid multiple simultaneous refresh loops
     if (error.response?.status === 401 && refreshToken && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true
       try {
@@ -49,6 +73,15 @@ apiClient.interceptors.response.use(
           refreshToken,
         })
         setAuthTokens(data.accessToken, data.refreshToken)
+        if (typeof localStorage !== 'undefined') {
+          const raw = localStorage.getItem('kpw_auth')
+          if (raw) {
+            const parsed = JSON.parse(raw)
+            parsed.accessToken = data.accessToken
+            parsed.refreshToken = data.refreshToken
+            localStorage.setItem('kpw_auth', JSON.stringify(parsed))
+          }
+        }
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
         return apiClient(originalRequest)
       } catch {

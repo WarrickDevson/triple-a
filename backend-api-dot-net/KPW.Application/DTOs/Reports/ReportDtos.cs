@@ -1,4 +1,5 @@
 using KPW.Application.DTOs.Progress;
+using KPW.Application.DTOs.SoapNotes;
 
 namespace KPW.Application.DTOs.Reports;
 
@@ -27,6 +28,34 @@ public record PetClinicalReportDto(
     int TotalCompletedSessions,
     int TotalTrackedDays,
     IReadOnlyList<PetProgressLogDto> Logs,
-    string NarrativeSummary);
+    string NarrativeSummary,
+    string ReportType = "progress",
+    string? CustomTitle = null,
+    string? CustomSummary = null,
+    string? DischargeStatus = null,
+    string? MaintenancePlan = null,
+    string? VeterinarianNotes = null,
+    string? OwnerInstructions = null,
+    string? PhysioName = null,
+    int? InitialPainScore = null,
+    int? FinalPainScore = null,
+    int? InitialMobilityScore = null,
+    int? FinalMobilityScore = null,
+    int? InitialLamenessScore = null,
+    int? FinalLamenessScore = null,
+    IReadOnlyList<SoapNoteDto>? RecentSoapNotes = null);
 
 public record PetReportFileDto(byte[] Content, string FileName);
+
+public record CreateReportRequestDto(
+    int PetId,
+    string ReportType,
+    string Title,
+    string? Summary = null,
+    string? Diagnosis = null,
+    string? DischargeStatus = null,
+    string? MaintenancePlan = null,
+    string? VeterinarianNotes = null,
+    string? OwnerInstructions = null,
+    int? SoapNoteId = null,
+    bool ShareWithOwner = true);

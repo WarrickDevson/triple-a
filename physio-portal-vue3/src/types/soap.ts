@@ -70,6 +70,25 @@ export interface SharedReport {
   reportType: string
   summary?: string | null
   sharedAtUtc: string
+  petName?: string
+  ownerName?: string
+  species?: string
+  breed?: string
+  isActive?: boolean
+}
+
+export interface CreateReportPayload {
+  petId: number
+  reportType: string
+  title: string
+  summary?: string
+  diagnosis?: string
+  dischargeStatus?: string
+  maintenancePlan?: string
+  veterinarianNotes?: string
+  ownerInstructions?: string
+  soapNoteId?: number
+  shareWithOwner?: boolean
 }
 
 export interface OwnerSubjectiveNote {

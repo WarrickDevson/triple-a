@@ -82,6 +82,13 @@ public static class SoapNoteMapper
             ? $"{report.SharedByPhysio.FirstName} {report.SharedByPhysio.LastName}".Trim()
             : "Clinician";
 
+        var petName = report.Pet?.PetName ?? string.Empty;
+        var ownerName = report.Pet?.Owner != null
+            ? $"{report.Pet.Owner.FirstName} {report.Pet.Owner.LastName}".Trim()
+            : string.Empty;
+        var species = report.Pet?.Species ?? string.Empty;
+        var breed = report.Pet?.Breed;
+
         return new SharedReportDto(
             report.SharedReportId,
             report.PetId,
@@ -91,6 +98,11 @@ public static class SoapNoteMapper
             report.Title,
             report.ReportType,
             report.Summary,
-            report.SharedAtUtc);
+            report.SharedAtUtc,
+            petName,
+            ownerName,
+            species,
+            breed,
+            report.IsActive);
     }
 }

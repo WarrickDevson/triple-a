@@ -132,6 +132,8 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("physios/{userId:int}/verify-email")]
+    [HttpPost("users/{userId:int}/verify-email")]
+    [HttpPost("owners/{userId:int}/verify-email")]
     public async Task<ActionResult<MessageResponseDto>> MarkEmailVerified(int userId, CancellationToken cancellationToken)
     {
         if (!IsSysAdmin())
@@ -139,20 +141,20 @@ public class AdminController : ControllerBase
             return Forbid();
         }
 
-        var physio = await _dbContext.Set<User>()
-            .FirstOrDefaultAsync(u => u.UserId == userId && u.UserRole == UserRole.Physio, cancellationToken);
+        var user = await _dbContext.Set<User>()
+            .FirstOrDefaultAsync(u => u.UserId == userId, cancellationToken);
 
-        if (physio is null)
+        if (user is null)
         {
-            return NotFound(new { message = "Physio account not found." });
+            return NotFound(new { message = "Account not found." });
         }
 
-        physio.IsEmailVerified = true;
-        physio.EmailVerificationTokenHash = null;
-        physio.EmailVerificationTokenExpiresAt = null;
+        user.IsEmailVerified = true;
+        user.EmailVerificationTokenHash = null;
+        user.EmailVerificationTokenExpiresAt = null;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return Ok(new MessageResponseDto("Physio email marked as verified."));
+        return Ok(new MessageResponseDto($"{user.UserRole} email marked as verified."));
     }
 
     [HttpPost("physios/{userId:int}/reject")]
@@ -290,7 +292,8 @@ public class AdminController : ControllerBase
                 u.IsActive,
                 u.IsApproved,
                 u.Pets.Count,
-                u.CreatedDate))
+                u.CreatedDate,
+                u.IsEmailVerified))
             .ToListAsync(cancellationToken);
 
         return Ok(users);

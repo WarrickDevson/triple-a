@@ -49,10 +49,9 @@ class MoreScreen extends ConsumerWidget {
       );
       return;
     }
-    final pet = pets.first;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => SavedReportsScreen(pet: pet),
+        builder: (_) => const SavedReportsScreen(),
       ),
     );
   }

@@ -22,71 +22,30 @@ class SharedReportsNotifier extends StateNotifier<SharedReportsState> {
 
   final Dio _dio;
 
-  Future<void> fetchSharedReports(int petId) async {
+  Future<void> fetchSharedReports([int? petId]) async {
     state = const SharedReportsState(isLoading: true);
     try {
-      final response = await _dio.get('/api/reports/pet/$petId/shared');
+      final endpoint = petId != null ? '/api/reports/pet/$petId/shared' : '/api/reports/recent';
+      final response = await _dio.get(endpoint);
       if (response.data is List) {
         final list = response.data as List;
-        if (list.isNotEmpty) {
-          final reports = list
-              .map((item) => SharedReportModel.fromJson(Map<String, dynamic>.from(item as Map)))
-              .toList();
-          state = SharedReportsState(reports: reports);
-          return;
-        }
+        final reports = list
+            .map((item) => SharedReportModel.fromJson(Map<String, dynamic>.from(item as Map)))
+            .toList();
+        state = SharedReportsState(reports: reports);
+        return;
       }
+      state = const SharedReportsState(reports: []);
+    } on DioException catch (dioErr) {
+      state = SharedReportsState(
+        reports: const [],
+        error: dioErr.response?.statusCode == 404
+            ? 'No clinical records found.'
+            : 'Unable to load clinical documents.',
+      );
     } catch (_) {
-      // Offline fallback
+      state = const SharedReportsState(reports: []);
     }
-
-    // Fallback demo reports for previewing
-    state = SharedReportsState(reports: [
-      SharedReportModel(
-        sharedReportId: 1,
-        petId: petId,
-        soapNoteId: 1,
-        sharedByPhysioId: 2,
-        sharedByPhysioName: 'Dr. Sarah Jenkins, PT',
-        title: 'SOAP Session Report - Jul 26, 2026',
-        reportType: 'SOAP_SESSION',
-        summary: 'Left stifle extension ROM improved to 135°. Continue PROM 2x daily, balance disc standing, and cold pack after walks.',
-        sharedAtUtc: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      SharedReportModel(
-        sharedReportId: 2,
-        petId: petId,
-        soapNoteId: null,
-        sharedByPhysioId: 2,
-        sharedByPhysioName: 'Dr. Sarah Jenkins, PT',
-        title: 'Comprehensive Clinical Progress Report',
-        reportType: 'CLINICAL_REPORT',
-        summary: 'Overall post-op recovery is on track. Pain scores reduced by 50% over past 4 weeks with steady muscle rebuilding.',
-        sharedAtUtc: DateTime.now().subtract(const Duration(days: 4)),
-      ),
-      SharedReportModel(
-        sharedReportId: 3,
-        petId: petId,
-        soapNoteId: null,
-        sharedByPhysioId: 2,
-        sharedByPhysioName: 'Dr. Sarah Jenkins, PT',
-        title: 'Veterinary Referral Letter & Initial Radiographs',
-        reportType: 'REFERRAL_LETTER',
-        summary: 'Pre-operative surgical referral letter and stifle joint diagnostic radiographs from referring orthopedic surgeon.',
-        sharedAtUtc: DateTime.now().subtract(const Duration(days: 10)),
-      ),
-      SharedReportModel(
-        sharedReportId: 4,
-        petId: petId,
-        soapNoteId: null,
-        sharedByPhysioId: 2,
-        sharedByPhysioName: 'Dr. Sarah Jenkins, PT',
-        title: 'Home Care Protocol — Phase 2 Strengthening',
-        reportType: 'HOME_PROGRAM',
-        summary: 'Daily home exercises including cavaletti rail steps, controlled sit-to-stands, and icing protocol.',
-        sharedAtUtc: DateTime.now().subtract(const Duration(days: 14)),
-      ),
-    ]);
   }
 
   Future<SoapNoteModel?> fetchSoapNoteById(int soapNoteId) async {

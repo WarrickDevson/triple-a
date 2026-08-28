@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Clock,
   Mail,
+  PawPrint,
   Plus,
   RefreshCw,
   Search,
@@ -22,7 +23,7 @@ import type { AdminUserSummary, PhysioApproval } from '../types/auth'
 const auth = useAuthStore()
 
 // Main section tab
-const mainTab = ref<'physios' | 'deletion'>('physios')
+const mainTab = ref<'physios' | 'owners' | 'deletion'>('physios')
 
 // Physio approval state
 const physios = ref<PhysioApproval[]>([])
@@ -30,6 +31,10 @@ const physiosLoading = ref(true)
 const actionUserId = ref<number | null>(null)
 const physioFilterTab = ref<'pending' | 'approved' | 'all'>('pending')
 const physioSearchQuery = ref('')
+
+// Owner accounts state
+const ownerFilterTab = ref<'all' | 'unverified' | 'verified'>('all')
+const ownerSearchQuery = ref('')
 
 // User data deletion state
 const users = ref<AdminUserSummary[]>([])
@@ -74,10 +79,36 @@ onMounted(() => {
 })
 
 watch(mainTab, (newTab) => {
-  if (newTab === 'deletion' && users.value.length === 0) {
+  if ((newTab === 'deletion' || newTab === 'owners') && users.value.length === 0) {
     loadUsers()
   }
 })
+
+// Filtered owners
+const filteredOwners = computed(() => {
+  return users.value.filter((u) => {
+    if (u.userRole !== 'Owner') return false
+
+    const matchesSearch =
+      `${u.firstName} ${u.lastName} ${u.email} ${u.clinicName || ''} ${u.phoneNumber || ''}`
+        .toLowerCase()
+        .includes(ownerSearchQuery.value.toLowerCase())
+
+    if (!matchesSearch) return false
+
+    if (ownerFilterTab.value === 'unverified') {
+      return !u.isEmailVerified
+    }
+    if (ownerFilterTab.value === 'verified') {
+      return !!u.isEmailVerified
+    }
+    return true
+  })
+})
+
+const totalOwnersCount = computed(() => users.value.filter((u) => u.userRole === 'Owner').length)
+const unverifiedOwnersCount = computed(() => users.value.filter((u) => u.userRole === 'Owner' && !u.isEmailVerified).length)
+const verifiedOwnersCount = computed(() => users.value.filter((u) => u.userRole === 'Owner' && u.isEmailVerified).length)
 
 // Debounced search for users
 let searchTimeout: any = null
@@ -169,9 +200,13 @@ async function handleMarkEmailVerified(userId: number) {
   try {
     const ok = await auth.markEmailVerified(userId)
     if (ok) {
-      const target = physios.value.find((p) => p.userId === userId)
-      if (target) {
-        target.isEmailVerified = true
+      const targetPhysio = physios.value.find((p) => p.userId === userId)
+      if (targetPhysio) {
+        targetPhysio.isEmailVerified = true
+      }
+      const targetUser = users.value.find((u) => u.userId === userId)
+      if (targetUser) {
+        targetUser.isEmailVerified = true
       }
     }
   } finally {
@@ -245,6 +280,15 @@ async function handleConfirmPurge() {
         >
           <UserCheck class="h-4 w-4" />
           Physio Approvals
+        </button>
+        <button
+          type="button"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all"
+          :class="mainTab === 'owners' ? 'bg-navy text-white shadow-sm' : 'text-neutral-muted hover:text-navy'"
+          @click="mainTab = 'owners'"
+        >
+          <PawPrint class="h-4 w-4" />
+          Owner Accounts
         </button>
         <button
           type="button"
@@ -457,7 +501,178 @@ async function handleConfirmPurge() {
     </template>
 
     <!-- ========================================================================= -->
-    <!-- TAB 2: DATA DELETION & USER MANAGEMENT (POPIA SECTION 24)                 -->
+    <!-- TAB 2: OWNER ACCOUNTS MANAGEMENT & EMAIL VERIFICATION                     -->
+    <!-- ========================================================================= -->
+    <template v-else-if="mainTab === 'owners'">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-navy">Pet Owner Account Management</h2>
+          <p class="text-xs text-neutral-muted">
+            Manage registered pet owners, review onboarding status, and manually verify email addresses for testing or manual approval.
+          </p>
+        </div>
+
+        <BaseButton variant="secondary" class="gap-2 text-xs" :disabled="usersLoading" @click="loadUsers">
+          <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin': usersLoading }" />
+          Refresh Owners
+        </BaseButton>
+      </div>
+
+      <!-- Owner Stat cards -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="rounded-2xl border border-neutral-grey bg-white p-5 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-neutral-muted">Total Pet Owners</span>
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <PawPrint class="h-5 w-5" />
+            </div>
+          </div>
+          <p class="mt-3 text-3xl font-bold text-navy">{{ totalOwnersCount }}</p>
+        </div>
+
+        <div class="rounded-2xl border border-neutral-grey bg-white p-5 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-neutral-muted">Unverified Owners</span>
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <Clock class="h-5 w-5" />
+            </div>
+          </div>
+          <p class="mt-3 text-3xl font-bold text-amber-600">{{ unverifiedOwnersCount }}</p>
+        </div>
+
+        <div class="rounded-2xl border border-neutral-grey bg-white p-5 shadow-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-neutral-muted">Verified Owners</span>
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <CheckCircle2 class="h-5 w-5" />
+            </div>
+          </div>
+          <p class="mt-3 text-3xl font-bold text-emerald-600">{{ verifiedOwnersCount }}</p>
+        </div>
+      </div>
+
+      <!-- Filter & search bar for owners -->
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-neutral-grey bg-white p-4">
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors"
+            :class="ownerFilterTab === 'unverified' ? 'bg-amber-600 text-white shadow-sm' : 'bg-surface text-neutral-muted hover:text-navy border border-neutral-grey'"
+            @click="ownerFilterTab = 'unverified'"
+          >
+            Unverified ({{ unverifiedOwnersCount }})
+          </button>
+          <button
+            type="button"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors"
+            :class="ownerFilterTab === 'verified' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-surface text-neutral-muted hover:text-navy border border-neutral-grey'"
+            @click="ownerFilterTab = 'verified'"
+          >
+            Verified ({{ verifiedOwnersCount }})
+          </button>
+          <button
+            type="button"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors"
+            :class="ownerFilterTab === 'all' ? 'bg-navy text-white shadow-sm' : 'bg-surface text-neutral-muted hover:text-navy border border-neutral-grey'"
+            @click="ownerFilterTab = 'all'"
+          >
+            All ({{ totalOwnersCount }})
+          </button>
+        </div>
+
+        <div class="relative w-full sm:w-80">
+          <Search class="absolute left-3.5 top-2.5 h-4 w-4 text-neutral-muted" />
+          <input
+            v-model="ownerSearchQuery"
+            type="text"
+            placeholder="Search owner name, email, clinic..."
+            class="w-full rounded-xl border border-neutral-grey bg-surface py-2 pl-10 pr-4 text-xs text-navy placeholder:text-neutral-muted focus:border-sage focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <!-- Owners Table -->
+      <div class="overflow-hidden rounded-2xl border border-neutral-grey bg-white shadow-sm">
+        <div v-if="usersLoading" class="p-12 text-center text-xs text-neutral-muted">
+          Loading pet owners...
+        </div>
+
+        <div v-else-if="filteredOwners.length === 0" class="p-12 text-center">
+          <PawPrint class="mx-auto h-8 w-8 text-neutral-muted/40" />
+          <p class="mt-2 text-sm font-semibold text-navy">No pet owners found</p>
+          <p class="mt-1 text-xs text-neutral-muted">No owners match the current filter or search query.</p>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-surface text-neutral-muted border-b border-neutral-grey font-semibold">
+              <tr>
+                <th class="px-5 py-3.5">Pet Owner</th>
+                <th class="px-5 py-3.5">Clinic Name</th>
+                <th class="px-5 py-3.5">Registered Pets</th>
+                <th class="px-5 py-3.5">Email Status</th>
+                <th class="px-5 py-3.5">Registered</th>
+                <th class="px-5 py-3.5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-neutral-grey">
+              <tr v-for="u in filteredOwners" :key="u.userId" class="hover:bg-surface/50 transition-colors">
+                <td class="px-5 py-4">
+                  <div class="font-semibold text-navy">{{ u.firstName }} {{ u.lastName }}</div>
+                  <div class="text-[11px] text-neutral-muted font-mono">{{ u.email }}</div>
+                  <div v-if="u.phoneNumber" class="text-[11px] text-neutral-muted">{{ u.phoneNumber }}</div>
+                </td>
+
+                <td class="px-5 py-4">
+                  <span v-if="u.clinicName" class="font-medium text-navy">{{ u.clinicName }}</span>
+                  <span v-else class="text-neutral-muted italic">—</span>
+                </td>
+
+                <td class="px-5 py-4">
+                  <span class="font-semibold text-navy">{{ u.petCount }}</span>
+                </td>
+
+                <td class="px-5 py-4">
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
+                    :class="u.isEmailVerified ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'"
+                  >
+                    <span class="h-1.5 w-1.5 rounded-full" :class="u.isEmailVerified ? 'bg-emerald-500' : 'bg-amber-500'" />
+                    {{ u.isEmailVerified ? 'Verified' : 'Unverified' }}
+                  </span>
+                </td>
+
+                <td class="px-5 py-4 text-neutral-muted text-[11px]">
+                  {{ new Date(u.createdDate).toLocaleDateString() }}
+                </td>
+
+                <td class="px-5 py-4 text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <BaseButton
+                      v-if="!u.isEmailVerified"
+                      variant="secondary"
+                      class="h-8 px-3 text-[11px] gap-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                      :disabled="actionUserId === u.userId"
+                      @click="handleMarkEmailVerified(u.userId)"
+                    >
+                      <CheckCircle2 class="h-3.5 w-3.5" />
+                      Verify Email
+                    </BaseButton>
+                    <span v-else class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                      <CheckCircle2 class="h-3.5 w-3.5 text-emerald-500" />
+                      Verified
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </template>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: DATA DELETION & USER MANAGEMENT (POPIA SECTION 24)                 -->
     <!-- ========================================================================= -->
     <template v-else>
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -568,9 +783,10 @@ async function handleConfirmPurge() {
                 <th class="px-5 py-3.5">Role</th>
                 <th class="px-5 py-3.5">Associated Clinic</th>
                 <th class="px-5 py-3.5">Pets</th>
-                <th class="px-5 py-3.5">Status</th>
+                <th class="px-5 py-3.5">Email Status</th>
+                <th class="px-5 py-3.5">Account Status</th>
                 <th class="px-5 py-3.5">Registered</th>
-                <th class="px-5 py-3.5 text-right">Data Deletion</th>
+                <th class="px-5 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-neutral-grey">
@@ -602,6 +818,16 @@ async function handleConfirmPurge() {
                 <td class="px-5 py-4">
                   <span
                     class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
+                    :class="u.isEmailVerified ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'"
+                  >
+                    <span class="h-1.5 w-1.5 rounded-full" :class="u.isEmailVerified ? 'bg-emerald-500' : 'bg-amber-500'" />
+                    {{ u.isEmailVerified ? 'Verified' : 'Unverified' }}
+                  </span>
+                </td>
+
+                <td class="px-5 py-4">
+                  <span
+                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
                     :class="u.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-600'"
                   >
                     <span class="h-1.5 w-1.5 rounded-full" :class="u.isActive ? 'bg-emerald-500' : 'bg-neutral-400'" />
@@ -614,18 +840,31 @@ async function handleConfirmPurge() {
                 </td>
 
                 <td class="px-5 py-4 text-right">
-                  <BaseButton
-                    v-if="u.isActive"
-                    variant="secondary"
-                    class="h-8 px-3 text-[11px] text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 gap-1.5 font-semibold"
-                    @click="openPurgeModal(u)"
-                  >
-                    <Trash2 class="h-3.5 w-3.5" />
-                    Purge User Data
-                  </BaseButton>
-                  <span v-else class="text-[11px] font-semibold text-neutral-400 italic">
-                    Already Purged
-                  </span>
+                  <div class="flex items-center justify-end gap-2">
+                    <BaseButton
+                      v-if="!u.isEmailVerified && u.isActive"
+                      variant="secondary"
+                      class="h-8 px-3 text-[11px] gap-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                      :disabled="actionUserId === u.userId"
+                      @click="handleMarkEmailVerified(u.userId)"
+                    >
+                      <CheckCircle2 class="h-3.5 w-3.5" />
+                      Verify Email
+                    </BaseButton>
+
+                    <BaseButton
+                      v-if="u.isActive"
+                      variant="secondary"
+                      class="h-8 px-3 text-[11px] text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 gap-1.5 font-semibold"
+                      @click="openPurgeModal(u)"
+                    >
+                      <Trash2 class="h-3.5 w-3.5" />
+                      Purge User Data
+                    </BaseButton>
+                    <span v-else class="text-[11px] font-semibold text-neutral-400 italic">
+                      Already Purged
+                    </span>
+                  </div>
                 </td>
               </tr>
             </tbody>

@@ -123,7 +123,8 @@ public record AdminUserSummaryDto(
     bool IsActive,
     bool IsApproved,
     int PetCount,
-    DateTime CreatedDate);
+    DateTime CreatedDate,
+    bool IsEmailVerified = false);
 
 public record AdminPurgeUserRequestDto(
     bool PurgeMediaAndLogs = true,

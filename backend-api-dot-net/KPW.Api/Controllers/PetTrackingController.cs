@@ -29,15 +29,23 @@ public class PetTrackingController : ControllerBase
         [FromServices] IValidator<UpsertTrackingRequestDto> validator,
         CancellationToken cancellationToken)
     {
-        await validator.ValidateAndThrowAsync(request, cancellationToken);
         try
         {
+            await validator.ValidateAndThrowAsync(request, cancellationToken);
             var result = await _mediator.Send(new UpsertTrackingCommand(petId, request), cancellationToken);
             return Ok(result);
         }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = string.Join("; ", ex.Errors.Select(e => e.ErrorMessage)) });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { message = ex.Message });
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
         {
@@ -56,9 +64,13 @@ public class PetTrackingController : ControllerBase
             var result = await _mediator.Send(new GetTrackingLogsQuery(petId, days), cancellationToken);
             return Ok(result);
         }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { message = ex.Message });
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
     }
 }

@@ -77,6 +77,7 @@ export interface AdminUserSummary {
   isApproved: boolean
   petCount: number
   createdDate: string
+  isEmailVerified?: boolean
 }
 
 export interface AdminPurgeUserRequest {

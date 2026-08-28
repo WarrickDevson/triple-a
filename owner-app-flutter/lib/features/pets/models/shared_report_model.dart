@@ -1,6 +1,7 @@
 class SharedReportModel {
   final int sharedReportId;
   final int petId;
+  final String? petName;
   final int? soapNoteId;
   final int sharedByPhysioId;
   final String sharedByPhysioName;
@@ -15,6 +16,7 @@ class SharedReportModel {
   SharedReportModel({
     required this.sharedReportId,
     required this.petId,
+    this.petName,
     this.soapNoteId,
     required this.sharedByPhysioId,
     required this.sharedByPhysioName,
@@ -53,6 +55,7 @@ class SharedReportModel {
   factory SharedReportModel.fromJson(Map<String, dynamic> json) {
     final id = json['sharedReportId'] ?? json['SharedReportId'] ?? json['id'] ?? 0;
     final petIdVal = json['petId'] ?? json['PetId'] ?? 0;
+    final petNameVal = json['petName'] ?? json['PetName'];
     final soapNoteIdVal = json['soapNoteId'] ?? json['SoapNoteId'];
     final physioIdVal = json['sharedByPhysioId'] ?? json['SharedByPhysioId'] ?? 0;
     final physioNameVal = json['sharedByPhysioName'] ?? json['SharedByPhysioName'] ?? 'Clinician';
@@ -64,6 +67,7 @@ class SharedReportModel {
     return SharedReportModel(
       sharedReportId: (id as num).toInt(),
       petId: (petIdVal as num).toInt(),
+      petName: petNameVal?.toString(),
       soapNoteId: soapNoteIdVal != null ? (soapNoteIdVal as num).toInt() : null,
       sharedByPhysioId: (physioIdVal as num).toInt(),
       sharedByPhysioName: physioNameVal.toString(),

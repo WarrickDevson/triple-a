@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseButton from '../components/BaseButton.vue'
 import BaseInput from '../components/BaseInput.vue'
@@ -20,7 +20,19 @@ onMounted(() => {
   if (token) form.token = token
 })
 
+const isPasswordValid = computed(() => {
+  const p = form.newPassword
+  return (
+    p.length >= 8 &&
+    /[a-z]/.test(p) &&
+    /[A-Z]/.test(p) &&
+    /[0-9]/.test(p) &&
+    /[^a-zA-Z0-9]/.test(p)
+  )
+})
+
 async function onSubmit() {
+  if (!isPasswordValid.value) return
   const ok = await auth.resetPassword(form.token.trim(), form.newPassword)
   if (ok) {
     await router.push({ name: 'login' })
@@ -40,14 +52,27 @@ async function onSubmit() {
 
       <form class="mt-6 space-y-4" @submit.prevent="onSubmit">
         <BaseInput id="token" v-model="form.token" label="Reset token" required />
-        <BaseInput
-          id="newPassword"
-          v-model="form.newPassword"
-          type="password"
-          label="New password"
-          required
-        />
-        <BaseButton type="submit" variant="accent" class="w-full" :disabled="auth.loading">
+        <div>
+          <BaseInput
+            id="newPassword"
+            v-model="form.newPassword"
+            type="password"
+            label="New password"
+            required
+          />
+          <p class="mt-1 text-[11px] text-neutral-muted">
+            Must be at least 8 characters with uppercase, lowercase, numbers, and symbols (e.g. Pass!123).
+          </p>
+          <p v-if="form.newPassword && !isPasswordValid" class="mt-1 text-xs text-red-600">
+            Password must include uppercase, lowercase, numbers, and symbols.
+          </p>
+        </div>
+        <BaseButton
+          type="submit"
+          variant="accent"
+          class="w-full"
+          :disabled="auth.loading || !isPasswordValid || !form.token.trim()"
+        >
           {{ auth.loading ? 'Updating...' : 'Update password' }}
         </BaseButton>
       </form>

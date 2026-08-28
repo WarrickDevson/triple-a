@@ -29,6 +29,12 @@ class AuthState {
   bool get isAuthenticated => user != null;
 }
 
+class CheckEmailResult {
+  final bool exists;
+  final String? message;
+  const CheckEmailResult({required this.exists, this.message});
+}
+
 class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier(this._config, this._tokenStorage) : super(const AuthState()) {
     _dio = _createDio();
@@ -45,8 +51,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Dio _createDio() {
     final dio = Dio(BaseOptions(
       baseUrl: _config.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
+      connectTimeout: const Duration(seconds: 20),
+      receiveTimeout: const Duration(seconds: 30),
       headers: {
         'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true',
@@ -166,13 +172,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       await applyAuth(AuthResponse.fromJson(response.data!));
       return true;
-    } on DioException catch (e) {
-      final serverMessage = e.response?.data is Map
-          ? (e.response?.data['message'] as String?)
-          : null;
-      final errorMsg = serverMessage ?? 'Invalid email or password.';
+    } catch (e) {
+      final errorMsg = _parseError(e, fallback: 'Invalid email or password.');
       state = AuthState(error: errorMsg);
       return false;
+    }
+  }
+
+  Future<CheckEmailResult> checkEmail(String email) async {
+    final clean = email.trim();
+    if (clean.isEmpty) return const CheckEmailResult(exists: false);
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/auth/check-email',
+        queryParameters: {'email': clean},
+      );
+      final exists = response.data?['exists'] as bool? ?? false;
+      final message = response.data?['message'] as String?;
+      return CheckEmailResult(exists: exists, message: message);
+    } catch (_) {
+      return const CheckEmailResult(exists: false);
     }
   }
 
@@ -189,25 +208,69 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/auth/register',
         data: {
-          'email': email,
+          'email': email.trim(),
           'password': password,
-          'firstName': firstName,
-          'lastName': lastName,
-          'inviteCode': inviteCode,
+          'firstName': firstName.trim(),
+          'lastName': lastName.trim(),
+          'inviteCode': inviteCode.trim().toUpperCase(),
           'role': 'Owner',
-          if (phoneNumber != null && phoneNumber.isNotEmpty) 'phoneNumber': phoneNumber,
+          if (phoneNumber != null && phoneNumber.trim().isNotEmpty) 'phoneNumber': phoneNumber.trim(),
         },
       );
       final auth = AuthResponse.fromJson(response.data!);
       await applyAuth(auth);
       return true;
-    } on DioException catch (e) {
-      final message = e.response?.data is Map
-          ? (e.response?.data['message'] as String?) ?? 'Unable to create account.'
-          : 'Unable to create account.';
+    } catch (e) {
+      final message = _parseError(e, fallback: 'Unable to create account. Please try again.');
       state = AuthState(error: message);
       return false;
     }
+  }
+
+  String _parseError(dynamic error, {String fallback = 'An error occurred.'}) {
+    if (error is DioException) {
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout) {
+        return 'Connection timed out. Please check your internet connection.';
+      }
+      if (error.type == DioExceptionType.receiveTimeout) {
+        return 'Server took longer than expected to respond. If your account was created, please try signing in.';
+      }
+      if (error.type == DioExceptionType.connectionError) {
+        return 'Unable to reach Triple A server. Please check your internet connection.';
+      }
+
+      final data = error.response?.data;
+      if (data is Map) {
+        // 1. Direct message
+        if (data['message'] is String && (data['message'] as String).trim().isNotEmpty) {
+          return (data['message'] as String).trim();
+        }
+        // 2. ASP.NET Core Validation Problem Details dictionary
+        if (data['errors'] is Map) {
+          final errMap = data['errors'] as Map;
+          final errorList = <String>[];
+          for (final entry in errMap.entries) {
+            final value = entry.value;
+            if (value is List) {
+              errorList.addAll(value.map((e) => e.toString()));
+            } else if (value != null) {
+              errorList.add(value.toString());
+            }
+          }
+          if (errorList.isNotEmpty) {
+            return errorList.join('\n');
+          }
+        }
+        // 3. ProblemDetails title
+        if (data['title'] is String && (data['title'] as String).trim().isNotEmpty) {
+          return (data['title'] as String).trim();
+        }
+      } else if (data is String && data.trim().isNotEmpty && !data.contains('<html')) {
+        return data.trim();
+      }
+    }
+    return fallback;
   }
 
   Future<String?> resendVerification(String email) async {

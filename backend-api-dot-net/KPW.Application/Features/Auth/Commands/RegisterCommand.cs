@@ -107,7 +107,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         if (emailExists)
         {
             _logger.LogWarning("Registration failed for {Email}: email already exists in database", email);
-            throw new InvalidOperationException("Email is already registered.");
+            throw new InvalidOperationException("This email address is already registered. Please sign in instead.");
         }
 
         var rawVerificationToken = _jwtTokenService.GenerateRefreshToken();
@@ -134,31 +134,44 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
 
         _logger.LogInformation("User created successfully (ID: {UserId}, Email: {Email}, Role: {Role}, IsApproved: {IsApproved})", user.UserId, user.Email, user.UserRole, user.IsApproved);
 
-        try
+        // Dispatch verification email in the background with dedicated timeout to guarantee registration response does not time out
+        var recipientEmail = user.Email;
+        var recipientFirstName = user.FirstName;
+        var recipientRole = user.UserRole;
+        _ = Task.Run(async () =>
         {
-            await SendVerificationEmailAsync(user, rawVerificationToken, cancellationToken);
-            _logger.LogInformation("Verification email successfully dispatched for {Email}", user.Email);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send initial verification email to {Email}", user.Email);
-        }
+            try
+            {
+                using var emailCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                await DispatchVerificationEmailAsync(recipientEmail, recipientFirstName, recipientRole, rawVerificationToken, emailCts.Token);
+                _logger.LogInformation("Verification email successfully dispatched for {Email}", recipientEmail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send initial verification email to {Email}", recipientEmail);
+            }
+        });
 
         return await BuildAuthResponse(user, clinic, cancellationToken);
     }
 
-    private async Task SendVerificationEmailAsync(User user, string rawToken, CancellationToken cancellationToken)
+    private async Task DispatchVerificationEmailAsync(
+        string email,
+        string firstName,
+        string userRole,
+        string rawToken,
+        CancellationToken cancellationToken)
     {
-        var baseUrl = user.UserRole == UserRole.Owner
+        var baseUrl = userRole == UserRole.Owner
             ? _appOptions.PublicOwnerAppUrl.TrimEnd('/')
             : _appOptions.PublicPortalUrl.TrimEnd('/');
-        var verifyLink = $"{baseUrl}/verify-email?email={Uri.EscapeDataString(user.Email)}&token={Uri.EscapeDataString(rawToken)}";
+        var verifyLink = $"{baseUrl}/verify-email?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(rawToken)}";
 
-        _logger.LogInformation("Generated verification link for {Email}: {VerifyLink}", user.Email, verifyLink);
+        _logger.LogInformation("Generated verification link for {Email}: {VerifyLink}", email, verifyLink);
 
         var body = $"""
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2>Welcome to Triple A, {user.FirstName}!</h2>
+                <h2>Welcome to Triple A, {firstName}!</h2>
                 <p>Thank you for signing up. Please verify your email address to complete your account setup.</p>
                 <p style="margin: 24px 0;">
                     <a href="{verifyLink}" style="background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Verify Email Address</a>
@@ -170,7 +183,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             """;
 
         await _emailSender.SendAsync(
-            user.Email,
+            email,
             "Verify your Triple A account",
             body,
             cancellationToken);

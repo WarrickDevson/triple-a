@@ -46,58 +46,64 @@ public class CreateRehabProgramCommandHandler : IRequestHandler<CreateRehabProgr
             }
         }
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-        try
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
+
+        return await strategy.ExecuteAsync(async () =>
         {
-            var overlappingPrograms = await _dbContext.Set<RehabProgram>()
-                .Where(p => p.PetId == request.PetId)
-                .ToListAsync(cancellationToken);
-
-            foreach (var program in overlappingPrograms)
+            _dbContext.ChangeTracker.Clear();
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            try
             {
-                program.IsActive = false;
-                program.EndDate = DateOnly.FromDateTime(DateTime.UtcNow);
-            }
+                var overlappingPrograms = await _dbContext.Set<RehabProgram>()
+                    .Where(p => p.PetId == request.PetId)
+                    .ToListAsync(cancellationToken);
 
-            var rehabProgram = new RehabProgram
-            {
-                PhysioId = _currentUserService.UserId!.Value,
-                PetId = request.PetId,
-                ProgramTitle = request.ProgramTitle.Trim(),
-                StartDate = request.StartDate,
-                EndDate = request.EndDate,
-                Notes = request.Notes?.Trim()
-            };
-
-            _dbContext.Set<RehabProgram>().Add(rehabProgram);
-
-            foreach (var exercise in request.Exercises)
-            {
-                _dbContext.Set<RehabProgramExercise>().Add(new RehabProgramExercise
+                foreach (var program in overlappingPrograms)
                 {
-                    RehabProgram = rehabProgram,
-                    ExerciseId = exercise.ExerciseId,
-                    Repetitions = exercise.Repetitions,
-                    Sets = exercise.Sets,
-                    FrequencyPerDay = exercise.FrequencyPerDay
-                });
+                    program.IsActive = false;
+                    program.EndDate = DateOnly.FromDateTime(DateTime.UtcNow);
+                }
+
+                var rehabProgram = new RehabProgram
+                {
+                    PhysioId = _currentUserService.UserId!.Value,
+                    PetId = request.PetId,
+                    ProgramTitle = request.ProgramTitle.Trim(),
+                    StartDate = request.StartDate,
+                    EndDate = request.EndDate,
+                    Notes = request.Notes?.Trim()
+                };
+
+                _dbContext.Set<RehabProgram>().Add(rehabProgram);
+
+                foreach (var exercise in request.Exercises)
+                {
+                    _dbContext.Set<RehabProgramExercise>().Add(new RehabProgramExercise
+                    {
+                        RehabProgram = rehabProgram,
+                        ExerciseId = exercise.ExerciseId,
+                        Repetitions = exercise.Repetitions,
+                        Sets = exercise.Sets,
+                        FrequencyPerDay = exercise.FrequencyPerDay
+                    });
+                }
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+
+                var created = await _dbContext.Set<RehabProgram>()
+                    .Include(p => p.RehabProgramExercises)
+                        .ThenInclude(e => e.Exercise)
+                            .ThenInclude(ex => ex.Steps)
+                    .FirstAsync(p => p.RehabProgramId == rehabProgram.RehabProgramId, cancellationToken);
+
+                return RehabProgramMapper.ToDto(created);
             }
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-
-            var created = await _dbContext.Set<RehabProgram>()
-                .Include(p => p.RehabProgramExercises)
-                    .ThenInclude(e => e.Exercise)
-                        .ThenInclude(ex => ex.Steps)
-                .FirstAsync(p => p.RehabProgramId == rehabProgram.RehabProgramId, cancellationToken);
-
-            return RehabProgramMapper.ToDto(created);
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
     }
 }

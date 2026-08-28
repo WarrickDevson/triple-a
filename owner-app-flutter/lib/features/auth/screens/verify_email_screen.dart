@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../shell/main_shell.dart';
@@ -10,6 +12,8 @@ import 'login_screen.dart';
 
 const String _cooldownKey = 'resend_cooldown_owner';
 const int _cooldownSeconds = 60;
+const String _playStoreUrl = 'https://play.google.com/store/apps/details?id=com.devson.triplea';
+const String _appDeepLink = 'triplea://app';
 
 class VerifyEmailScreen extends ConsumerStatefulWidget {
   final String email;
@@ -119,6 +123,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               );
             }
           });
+        }
+
+        if (kIsWeb) {
+          launchUrl(Uri.parse(_appDeepLink), mode: LaunchMode.externalNonBrowserApplication).catchError((_) => false);
         }
       } else {
         _errorMessage = ref.read(authProvider).error ?? 'Invalid or expired verification link.';
@@ -256,6 +264,60 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                           _errorMessage ?? auth.error!,
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.red.shade800, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                    if (kIsWeb) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.navy,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.android, color: Colors.white, size: 20),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                'Using Android? Get the full experience in the app.',
+                                style: TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => launchUrl(
+                                Uri.parse(_playStoreUrl),
+                                mode: LaunchMode.externalApplication,
+                              ),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                backgroundColor: AppColors.sage,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                minimumSize: const Size(0, 30),
+                              ),
+                              child: const Text('GET APP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (kIsWeb && _statusMessage != null && _statusMessage!.contains('successfully')) ...[
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => launchUrl(
+                            Uri.parse(_appDeepLink),
+                            mode: LaunchMode.externalNonBrowserApplication,
+                          ),
+                          icon: const Icon(Icons.open_in_new, size: 18),
+                          label: const Text('Open in Triple A App'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.sage,
+                            foregroundColor: Colors.white,
+                          ),
                         ),
                       ),
                     ],

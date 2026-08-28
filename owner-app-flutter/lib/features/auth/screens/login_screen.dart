@@ -12,7 +12,8 @@ import 'signup_screen.dart';
 import 'verify_email_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  final String? initialEmail;
+  const LoginScreen({super.key, this.initialEmail});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -22,6 +23,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _passwordVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialEmail != null && widget.initialEmail!.isNotEmpty) {
+      _emailController.text = widget.initialEmail!;
+    }
+  }
 
   @override
   void dispose() {

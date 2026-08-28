@@ -28,65 +28,71 @@ public class CreatePetCommandHandler : IRequestHandler<CreatePetCommand, PetDto>
     public async Task<PetDto> Handle(CreatePetCommand command, CancellationToken cancellationToken)
     {
         var request = command.Request;
-        var ownerId = await ResolveOwnerId(request, cancellationToken);
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
 
-        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-        try
+        return await strategy.ExecuteAsync(async () =>
         {
-            if (_currentUserService.Role is UserRole.Physio or UserRole.SysAdmin && _currentUserService.UserId.HasValue)
+            _dbContext.ChangeTracker.Clear();
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            try
             {
-                var physioUser = await _dbContext.Set<User>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.UserId == _currentUserService.UserId.Value, cancellationToken);
-                var ownerUser = await _dbContext.Set<User>()
-                    .FirstOrDefaultAsync(u => u.UserId == ownerId, cancellationToken);
+                var ownerId = await ResolveOwnerId(request, cancellationToken);
 
-                if (physioUser?.ClinicId is not null && ownerUser is not null && ownerUser.ClinicId != physioUser.ClinicId)
+                if (_currentUserService.Role is UserRole.Physio or UserRole.SysAdmin && _currentUserService.UserId.HasValue)
                 {
-                    ownerUser.ClinicId = physioUser.ClinicId;
+                    var physioUser = await _dbContext.Set<User>()
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(u => u.UserId == _currentUserService.UserId.Value, cancellationToken);
+                    var ownerUser = await _dbContext.Set<User>()
+                        .FirstOrDefaultAsync(u => u.UserId == ownerId, cancellationToken);
+
+                    if (physioUser?.ClinicId is not null && ownerUser is not null && ownerUser.ClinicId != physioUser.ClinicId)
+                    {
+                        ownerUser.ClinicId = physioUser.ClinicId;
+                    }
                 }
-            }
 
-            var pet = new Pet
-            {
-                OwnerId = ownerId,
-                PetName = request.PetName.Trim(),
-                Species = request.Species,
-                Breed = request.Breed?.Trim(),
-                BirthDate = request.BirthDate,
-                WeightKg = request.WeightKg
-            };
-
-            _dbContext.Set<Pet>().Add(pet);
-
-            if (request.InitialMedicalHistory is not null)
-            {
-                var history = new MedicalHistory
+                var pet = new Pet
                 {
-                    Pet = pet,
-                    Diagnosis = request.InitialMedicalHistory.Diagnosis.Trim(),
-                    InjuryOrCondition = request.InitialMedicalHistory.InjuryOrCondition?.Trim(),
-                    SurgeryDate = request.InitialMedicalHistory.SurgeryDate,
-                    ClinicianNotes = request.InitialMedicalHistory.ClinicianNotes?.Trim()
+                    OwnerId = ownerId,
+                    PetName = request.PetName.Trim(),
+                    Species = request.Species,
+                    Breed = request.Breed?.Trim(),
+                    BirthDate = request.BirthDate,
+                    WeightKg = request.WeightKg
                 };
-                _dbContext.Set<MedicalHistory>().Add(history);
+
+                _dbContext.Set<Pet>().Add(pet);
+
+                if (request.InitialMedicalHistory is not null)
+                {
+                    var history = new MedicalHistory
+                    {
+                        Pet = pet,
+                        Diagnosis = request.InitialMedicalHistory.Diagnosis.Trim(),
+                        InjuryOrCondition = request.InitialMedicalHistory.InjuryOrCondition?.Trim(),
+                        SurgeryDate = request.InitialMedicalHistory.SurgeryDate,
+                        ClinicianNotes = request.InitialMedicalHistory.ClinicianNotes?.Trim()
+                    };
+                    _dbContext.Set<MedicalHistory>().Add(history);
+                }
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+
+                var created = await _dbContext.Set<Pet>()
+                    .Include(p => p.Owner)
+                    .Include(p => p.MedicalHistories)
+                    .FirstAsync(p => p.PetId == pet.PetId, cancellationToken);
+
+                return PetMapper.ToDto(created);
             }
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-
-            var created = await _dbContext.Set<Pet>()
-                .Include(p => p.Owner)
-                .Include(p => p.MedicalHistories)
-                .FirstAsync(p => p.PetId == pet.PetId, cancellationToken);
-
-            return PetMapper.ToDto(created);
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
     }
 
     private async Task<int> ResolveOwnerId(CreatePetRequestDto request, CancellationToken cancellationToken)

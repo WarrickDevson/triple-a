@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseButton from '../components/BaseButton.vue'
 import {
@@ -81,7 +81,19 @@ function persistNotifications() {
   notificationsStore.reloadSettings()
 }
 
+const isChangePasswordValid = computed(() => {
+  const p = changeForm.newPassword
+  return (
+    p.length >= 8 &&
+    /[a-z]/.test(p) &&
+    /[A-Z]/.test(p) &&
+    /[0-9]/.test(p) &&
+    /[^a-zA-Z0-9]/.test(p)
+  )
+})
+
 async function submitChangePassword() {
+  if (!isChangePasswordValid.value) return
   changeMessage.value = null
   const ok = await auth.changePassword(changeForm.currentPassword, changeForm.newPassword)
   if (ok) {
@@ -261,9 +273,20 @@ function logout() {
             class="mt-1 w-full rounded-lg border border-neutral-grey px-3 py-2 text-sm"
           />
         </label>
+        <p class="text-[11px] text-neutral-muted">
+          Must be at least 8 characters with uppercase, lowercase, numbers, and symbols (e.g. Pass!123).
+        </p>
+        <p v-if="changeForm.newPassword && !isChangePasswordValid" class="text-xs text-red-600">
+          Password must include uppercase, lowercase, numbers, and symbols.
+        </p>
         <p v-if="auth.error" class="text-sm text-alert-red">{{ auth.error }}</p>
         <p v-if="changeMessage" class="text-sm text-success-green">{{ changeMessage }}</p>
-        <BaseButton type="submit" variant="secondary" size="sm" :disabled="auth.loading">
+        <BaseButton
+          type="submit"
+          variant="secondary"
+          size="sm"
+          :disabled="auth.loading || !isChangePasswordValid || !changeForm.currentPassword"
+        >
           {{ auth.loading ? 'Updating...' : 'Change password' }}
         </BaseButton>
       </form>

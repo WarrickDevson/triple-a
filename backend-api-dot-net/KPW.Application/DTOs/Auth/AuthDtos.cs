@@ -80,6 +80,10 @@ public record VerifyEmailResponseDto(
     bool IsApproved,
     string UserRole);
 
+public record CheckEmailResponseDto(
+    bool Exists,
+    string? Message = null);
+
 public record ResendVerificationEmailRequestDto(
     string Email);
 

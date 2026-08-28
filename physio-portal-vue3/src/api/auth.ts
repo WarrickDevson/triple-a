@@ -32,6 +32,13 @@ export async function register(payload: RegisterRequest): Promise<AuthResponse> 
   return data
 }
 
+export async function checkEmail(email: string): Promise<{ exists: boolean; message?: string }> {
+  const { data } = await apiClient.get<{ exists: boolean; message?: string }>('/api/auth/check-email', {
+    params: { email: email.trim() },
+  })
+  return data
+}
+
 export async function verifyEmail(payload: VerifyEmailRequest): Promise<VerifyEmailResponse> {
   const { data } = await apiClient.post<VerifyEmailResponse>('/api/auth/verify-email', payload)
   return data

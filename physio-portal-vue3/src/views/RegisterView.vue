@@ -5,6 +5,7 @@ import { Building2, CheckCircle2, Mail, ShieldCheck, UserPlus } from '@lucide/vu
 import BaseButton from '../components/BaseButton.vue'
 import BaseInput from '../components/BaseInput.vue'
 import { brand } from '../config/brand'
+import { checkEmail } from '../api/auth'
 import { useAuthStore } from '../store/auth'
 
 const auth = useAuthStore()
@@ -15,6 +16,8 @@ const submittedEmail = ref('')
 const resendSuccess = ref(false)
 const resendLoading = ref(false)
 const hasInviteCode = ref(false)
+const localError = ref<string | null>(null)
+const isDuplicateEmail = ref(false)
 
 const form = reactive({
   firstName: '',
@@ -37,6 +40,31 @@ onMounted(() => {
   }
 })
 
+const isEmailValid = computed(() => {
+  if (!form.email.trim()) return false
+  return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.email.trim())
+})
+
+const isPhoneValid = computed(() => {
+  if (!form.phoneNumber.trim()) return true
+  const clean = form.phoneNumber.replace(/[\s\-()]/g, '')
+  return /^(\+27|27|0)[6-8][0-9]{8}$/.test(clean)
+})
+
+const passwordHasLower = computed(() => /[a-z]/.test(form.password))
+const passwordHasUpper = computed(() => /[A-Z]/.test(form.password))
+const passwordHasDigit = computed(() => /[0-9]/.test(form.password))
+const passwordHasSymbol = computed(() => /[^a-zA-Z0-9]/.test(form.password))
+const isPasswordValid = computed(() => {
+  return (
+    form.password.length >= 8 &&
+    passwordHasLower.value &&
+    passwordHasUpper.value &&
+    passwordHasDigit.value &&
+    passwordHasSymbol.value
+  )
+})
+
 const passwordMatch = computed(() => {
   if (!form.confirmPassword) return true
   return form.password === form.confirmPassword
@@ -44,17 +72,29 @@ const passwordMatch = computed(() => {
 
 const isValid = computed(() => {
   return (
-    form.firstName.trim().length > 0 &&
-    form.lastName.trim().length > 0 &&
-    form.email.trim().length > 0 &&
-    form.password.length >= 8 &&
+    form.firstName.trim().length >= 2 &&
+    form.lastName.trim().length >= 2 &&
+    isEmailValid.value &&
+    isPhoneValid.value &&
+    isPasswordValid.value &&
     passwordMatch.value
   )
 })
 
 async function onSubmit() {
+  localError.value = null
+  isDuplicateEmail.value = false
   if (!isValid.value) return
+
   try {
+    // Pre-check if email already exists
+    const check = await checkEmail(form.email.trim())
+    if (check.exists) {
+      isDuplicateEmail.value = true
+      localError.value = check.message || 'This email address is already registered. Please sign in instead.'
+      return
+    }
+
     submittedEmail.value = form.email.trim()
     await auth.register({
       firstName: form.firstName.trim(),
@@ -66,8 +106,12 @@ async function onSubmit() {
       password: form.password,
     })
     submitted.value = true
-  } catch {
-    // error handled via store
+  } catch (err: any) {
+    const msg = err?.response?.data?.message || auth.error || 'Registration failed. Please check details.'
+    localError.value = msg
+    if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already exists')) {
+      isDuplicateEmail.value = true
+    }
   }
 }
 
@@ -183,12 +227,20 @@ async function handleResend() {
             </p>
           </div>
 
-          <!-- Store error banner -->
+          <!-- Error banner -->
           <div
-            v-if="auth.error"
+            v-if="localError || auth.error"
             class="mb-6 rounded-xl border border-coral/30 bg-coral/10 p-4 text-xs font-medium text-coral-dark"
           >
-            {{ auth.error }}
+            <p>{{ localError || auth.error }}</p>
+            <div v-if="isDuplicateEmail" class="mt-2.5">
+              <RouterLink
+                :to="{ path: '/login', query: { email: form.email } }"
+                class="inline-flex items-center gap-1.5 rounded-lg bg-coral/20 px-3 py-1.5 text-xs font-semibold text-coral-dark hover:bg-coral/30"
+              >
+                Sign in with this email &rarr;
+              </RouterLink>
+            </div>
           </div>
 
           <form class="space-y-4" @submit.prevent="onSubmit">
@@ -209,21 +261,32 @@ async function handleResend() {
               />
             </div>
 
-            <BaseInput
-              id="email"
-              v-model="form.email"
-              label="Work Email"
-              type="email"
-              autocomplete="email"
-              required
-            />
+            <div>
+              <BaseInput
+                id="email"
+                v-model="form.email"
+                label="Work Email"
+                type="email"
+                autocomplete="email"
+                required
+              />
+              <p v-if="form.email.trim() && !isEmailValid" class="mt-1 text-xs text-red-600">
+                Please enter a valid email address.
+              </p>
+            </div>
 
-            <BaseInput
-              id="phoneNumber"
-              v-model="form.phoneNumber"
-              label="Phone Number (Optional)"
-              type="tel"
-            />
+            <div>
+              <BaseInput
+                id="phoneNumber"
+                v-model="form.phoneNumber"
+                label="Phone Number (Optional)"
+                type="tel"
+                placeholder="082 123 4567 or +27 82 123 4567"
+              />
+              <p v-if="form.phoneNumber.trim() && !isPhoneValid" class="mt-1 text-xs text-red-600">
+                Please enter a valid South African mobile number (e.g. 082 123 4567 or +27 82 123 4567).
+              </p>
+            </div>
 
             <BaseInput
               id="clinicName"
@@ -244,30 +307,37 @@ async function handleResend() {
               </p>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <BaseInput
-                id="password"
-                v-model="form.password"
-                type="password"
-                label="Password"
-                autocomplete="new-password"
-                icon="LockKeyhole"
-                required
-              />
-              <BaseInput
-                id="confirmPassword"
-                v-model="form.confirmPassword"
-                type="password"
-                label="Confirm Password"
-                autocomplete="new-password"
-                icon="LockKeyhole"
-                required
-              />
+            <div>
+              <div class="grid grid-cols-2 gap-3">
+                <BaseInput
+                  id="password"
+                  v-model="form.password"
+                  type="password"
+                  label="Password"
+                  autocomplete="new-password"
+                  icon="LockKeyhole"
+                  required
+                />
+                <BaseInput
+                  id="confirmPassword"
+                  v-model="form.confirmPassword"
+                  type="password"
+                  label="Confirm Password"
+                  autocomplete="new-password"
+                  icon="LockKeyhole"
+                  required
+                />
+              </div>
+              <p class="mt-1 text-[11px] text-neutral-muted">
+                Must be at least 8 characters with uppercase, lowercase, numbers, and symbols.
+              </p>
+              <p v-if="form.password && !isPasswordValid" class="mt-1 text-xs text-red-600">
+                Password must be at least 8 characters and include uppercase, lowercase, numbers, and symbols (e.g. Pass!123).
+              </p>
+              <p v-if="!passwordMatch" class="mt-1 text-xs text-red-600">
+                Passwords do not match.
+              </p>
             </div>
-
-            <p v-if="!passwordMatch" class="text-xs text-red-600">
-              Passwords do not match.
-            </p>
 
             <BaseButton
               type="submit"

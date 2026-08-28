@@ -12,10 +12,12 @@ class ChangePasswordScreen extends ConsumerStatefulWidget {
 }
 
 class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _currentController = TextEditingController();
   final _newController = TextEditingController();
   bool _currentVisible = false;
   bool _newVisible = false;
+  AutovalidateMode _autoValidateMode = AutovalidateMode.disabled;
 
   @override
   void dispose() {
@@ -25,6 +27,11 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
   }
 
   Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) {
+      setState(() => _autoValidateMode = AutovalidateMode.onUserInteraction);
+      return;
+    }
+
     final ok = await ref.read(authProvider.notifier).changePassword(
           _currentController.text,
           _newController.text,
@@ -49,45 +56,81 @@ class _ChangePasswordScreenState extends ConsumerState<ChangePasswordScreen> {
           padding: const EdgeInsets.all(24),
           child: AppPanel(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: _currentController,
-                  obscureText: !_currentVisible,
-                  decoration: InputDecoration(
-                    labelText: 'Current password',
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _currentVisible = !_currentVisible),
-                      icon: Icon(_currentVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+            child: Form(
+              key: _formKey,
+              autovalidateMode: _autoValidateMode,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: _currentController,
+                    obscureText: !_currentVisible,
+                    decoration: InputDecoration(
+                      labelText: 'Current password',
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(() => _currentVisible = !_currentVisible),
+                        icon: Icon(_currentVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Current password is required';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _newController,
+                    obscureText: !_newVisible,
+                    decoration: InputDecoration(
+                      labelText: 'New password',
+                      helperText: 'Min 8 chars, uppercase, lowercase, number & symbol',
+                      helperMaxLines: 2,
+                      suffixIcon: IconButton(
+                        onPressed: () => setState(() => _newVisible = !_newVisible),
+                        icon: Icon(_newVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'New password is required';
+                      }
+                      if (value.length < 8) {
+                        return 'Must be at least 8 characters';
+                      }
+                      if (!RegExp(r'[a-z]').hasMatch(value)) {
+                        return 'Must contain at least one lowercase letter';
+                      }
+                      if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                        return 'Must contain at least one uppercase letter';
+                      }
+                      if (!RegExp(r'[0-9]').hasMatch(value)) {
+                        return 'Must contain at least one number';
+                      }
+                      if (!RegExp(r'[^a-zA-Z0-9]').hasMatch(value)) {
+                        return 'Must contain at least one symbol (e.g. !@#\$)';
+                      }
+                      if (value == _currentController.text) {
+                        return 'New password must be different from current password';
+                      }
+                      return null;
+                    },
+                  ),
+                  if (auth.error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(auth.error!, style: const TextStyle(color: AppColors.alertRed)),
+                  ],
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: auth.isLoading ? null : _submit,
+                      child: Text(auth.isLoading ? 'Updating...' : 'Update password'),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _newController,
-                  obscureText: !_newVisible,
-                  decoration: InputDecoration(
-                    labelText: 'New password (min 8 characters)',
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _newVisible = !_newVisible),
-                      icon: Icon(_newVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                    ),
-                  ),
-                ),
-                if (auth.error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(auth.error!, style: const TextStyle(color: AppColors.alertRed)),
                 ],
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: auth.isLoading ? null : _submit,
-                    child: Text(auth.isLoading ? 'Updating...' : 'Update password'),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { AlertCircle, CheckCircle2, Clock, Loader2 } from '@lucide/vue'
+import { AlertCircle, CheckCircle2, Clock, ExternalLink, Loader2 } from '@lucide/vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseInput from '../components/BaseInput.vue'
 import { brand } from '../config/brand'
 import { useAuthStore } from '../store/auth'
+
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.devson.triplea'
+const APP_DEEP_LINK = 'triplea://app'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -14,6 +17,8 @@ const router = useRouter()
 const loading = ref(true)
 const verified = ref(false)
 const isApproved = ref<boolean | null>(null)
+const userRole = ref<string | null>(null)
+const isMobile = ref(false)
 const redirecting = ref(false)
 const errorMessage = ref<string | null>(null)
 
@@ -67,6 +72,7 @@ function startTimer() {
 
 onMounted(async () => {
   checkCooldown()
+  isMobile.value = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
   emailParam.value = (route.query.email as string || '').trim()
   tokenParam.value = (route.query.token as string || '').trim()
   resendEmail.value = emailParam.value
@@ -82,8 +88,16 @@ onMounted(async () => {
     if (res) {
       verified.value = true
       isApproved.value = res.isApproved
+      userRole.value = res.userRole
 
-      if (auth.isAuthenticated) {
+      // If user is a Pet Owner or accessing from a mobile browser, attempt to redirect back to the app
+      if (res.userRole === 'Owner' || isMobile.value) {
+        setTimeout(() => {
+          try {
+            window.location.href = APP_DEEP_LINK
+          } catch (_) {}
+        }, 1200)
+      } else if (auth.isAuthenticated) {
         if (res.isApproved) {
           redirecting.value = true
           setTimeout(() => {
@@ -137,6 +151,29 @@ async function handleResend() {
         <h1 class="mt-2 text-2xl font-bold text-navy">Email Verification</h1>
       </div>
 
+      <!-- Mobile Google Play Download Banner -->
+      <div v-if="isMobile" class="mt-6 flex items-center justify-between rounded-xl bg-navy p-3 text-white shadow-sm">
+        <div class="flex items-center gap-2.5">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-emerald-400">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3.609 1.814L13.792 12 3.61 22.186a2.222 2.222 0 0 1-.227-.887V2.701c0-.328.082-.63.226-.887zm11.246 11.247l2.368 2.368-11.24 6.425 8.872-8.793zm0-2.122L5.983 2.146l11.24 6.425-2.368 2.368zm1.061 1.061l3.327-1.901a1.232 1.232 0 0 0 0 2.138l-3.327 1.901z"/>
+            </svg>
+          </div>
+          <div class="text-left">
+            <p class="text-xs font-bold leading-tight">Triple A Companion</p>
+            <p class="text-[11px] text-white/70">Get the mobile app</p>
+          </div>
+        </div>
+        <a
+          :href="PLAY_STORE_URL"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="rounded-lg bg-sage px-3 py-1.5 text-xs font-bold text-white transition hover:bg-sage/90"
+        >
+          INSTALL
+        </a>
+      </div>
+
       <!-- Loading State -->
       <div v-if="loading" class="mt-8 flex flex-col items-center py-8 text-center">
         <Loader2 class="h-10 w-10 animate-spin text-sage" />
@@ -155,38 +192,67 @@ async function handleResend() {
           Your email address has been successfully verified.
         </p>
 
-        <!-- Physio Approval Status Note -->
-        <div v-if="isApproved === false" class="mt-5 w-full rounded-xl border border-amber-200 bg-amber-50 p-4 text-left">
-          <div class="flex items-start gap-2.5 text-amber-800 text-xs leading-relaxed">
-            <Clock class="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-            <div>
-              <p class="font-bold text-sm text-amber-900">Pending Admin Approval</p>
-              <p class="mt-1">
-                Note: Your practitioner account is currently undergoing administrator review. Full portal features will be unlocked once approved.
-              </p>
-            </div>
-          </div>
-        </div>
+        <!-- Pet Owner or Mobile App Redirection Section -->
+        <div v-if="userRole === 'Owner' || isMobile" class="mt-6 flex flex-col gap-3 w-full">
+          <a
+            :href="APP_DEEP_LINK"
+            class="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-sage px-4 text-sm font-bold text-white shadow-sm transition hover:bg-sage/90"
+          >
+            <ExternalLink class="h-4 w-4" />
+            Open in Triple A App
+          </a>
 
-        <div v-else-if="isApproved === true" class="mt-5 w-full rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-left">
-          <div class="flex items-start gap-2.5 text-emerald-800 text-xs leading-relaxed">
-            <CheckCircle2 class="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
-            <div>
-              <p class="font-bold text-sm text-emerald-900">Account Approved & Verified</p>
-              <p class="mt-1">
-                {{ redirecting ? 'Auto-redirecting to your dashboard in 3 seconds...' : 'Your account is active with full practitioner access.' }}
-              </p>
-            </div>
-          </div>
-        </div>
+          <a
+            :href="PLAY_STORE_URL"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-semibold text-navy transition hover:bg-neutral-50"
+          >
+            <svg class="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3.609 1.814L13.792 12 3.61 22.186a2.222 2.222 0 0 1-.227-.887V2.701c0-.328.082-.63.226-.887zm11.246 11.247l2.368 2.368-11.24 6.425 8.872-8.793zm0-2.122L5.983 2.146l11.24 6.425-2.368 2.368zm1.061 1.061l3.327-1.901a1.232 1.232 0 0 0 0 2.138l-3.327 1.901z"/>
+            </svg>
+            Download on Google Play
+          </a>
 
-        <div class="mt-6 w-full">
-          <RouterLink :to="auth.isAuthenticated ? '/dashboard' : '/login'">
-            <BaseButton variant="accent" class="w-full h-11">
-              {{ auth.isAuthenticated ? 'Go to Dashboard' : 'Proceed to Sign In' }}
-            </BaseButton>
+          <RouterLink to="/login" class="text-xs text-center text-neutral-muted hover:underline mt-1">
+            Proceed to Web Sign In
           </RouterLink>
         </div>
+
+        <!-- Physio Approval Status Note -->
+        <template v-else>
+          <div v-if="isApproved === false" class="mt-5 w-full rounded-xl border border-amber-200 bg-amber-50 p-4 text-left">
+            <div class="flex items-start gap-2.5 text-amber-800 text-xs leading-relaxed">
+              <Clock class="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+              <div>
+                <p class="font-bold text-sm text-amber-900">Pending Admin Approval</p>
+                <p class="mt-1">
+                  Note: Your practitioner account is currently undergoing administrator review. Full portal features will be unlocked once approved.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="isApproved === true" class="mt-5 w-full rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-left">
+            <div class="flex items-start gap-2.5 text-emerald-800 text-xs leading-relaxed">
+              <CheckCircle2 class="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+              <div>
+                <p class="font-bold text-sm text-emerald-900">Account Approved & Verified</p>
+                <p class="mt-1">
+                  {{ redirecting ? 'Auto-redirecting to your dashboard in 3 seconds...' : 'Your account is active with full practitioner access.' }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 w-full">
+            <RouterLink :to="auth.isAuthenticated ? '/dashboard' : '/login'">
+              <BaseButton variant="accent" class="w-full h-11">
+                {{ auth.isAuthenticated ? 'Go to Dashboard' : 'Proceed to Sign In' }}
+              </BaseButton>
+            </RouterLink>
+          </div>
+        </template>
       </div>
 
       <!-- Error / Expired Token State -->

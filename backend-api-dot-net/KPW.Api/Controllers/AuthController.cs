@@ -21,6 +21,16 @@ public class AuthController : ControllerBase
         _mediator = mediator;
     }
 
+    [HttpGet("check-email")]
+    [AllowAnonymous]
+    public async Task<ActionResult<CheckEmailResponseDto>> CheckEmail(
+        [FromQuery] string? email,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new CheckEmailQuery(email), cancellationToken);
+        return Ok(result);
+    }
+
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthResponseDto>> Register(
@@ -28,11 +38,20 @@ public class AuthController : ControllerBase
         [FromServices] IValidator<RegisterRequestDto> validator,
         CancellationToken cancellationToken)
     {
-        await validator.ValidateAndThrowAsync(request, cancellationToken);
         try
         {
+            await validator.ValidateAndThrowAsync(request, cancellationToken);
             var result = await _mediator.Send(new RegisterCommand(request), cancellationToken);
             return Ok(result);
+        }
+        catch (ValidationException ex)
+        {
+            var firstError = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed.";
+            return BadRequest(new
+            {
+                message = firstError,
+                errors = ex.Errors.ToDictionary(e => e.PropertyName, e => new[] { e.ErrorMessage })
+            });
         }
         catch (InvalidOperationException ex)
         {

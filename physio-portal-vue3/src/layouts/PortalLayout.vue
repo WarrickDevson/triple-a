@@ -5,6 +5,8 @@ import { MessageSquare, Menu, X, Sparkles, Loader2, AlertCircle } from '@lucide/
 import UnverifiedAccountBanner from '../components/UnverifiedAccountBanner.vue'
 import AppSidebar from '../components/layout/AppSidebar.vue'
 import AppTopBar from '../components/layout/AppTopBar.vue'
+import PwaInstallButton from '../components/PwaInstallButton.vue'
+import PwaReloadPrompt from '../components/PwaReloadPrompt.vue'
 import { useMessagesStore } from '../store/messages'
 import { useVoiceSessionStore, type VoiceSessionNotification } from '../store/voiceSession'
 
@@ -74,15 +76,18 @@ function openVoiceSessionReview(notif: VoiceSessionNotification) {
           <Menu class="h-5 w-5" :stroke-width="1.75" />
         </button>
         <span class="text-sm font-semibold text-navy">Triple A</span>
-        <button
-          v-if="mobileNavOpen"
-          type="button"
-          class="ml-auto flex h-10 w-10 items-center justify-center rounded-lg text-navy hover:bg-navy/5"
-          aria-label="Close navigation"
-          @click="closeMobileNav"
-        >
-          <X class="h-5 w-5" :stroke-width="1.75" />
-        </button>
+        <div class="ml-auto flex items-center gap-2">
+          <PwaInstallButton compact />
+          <button
+            v-if="mobileNavOpen"
+            type="button"
+            class="flex h-10 w-10 items-center justify-center rounded-lg text-navy hover:bg-navy/5"
+            aria-label="Close navigation"
+            @click="closeMobileNav"
+          >
+            <X class="h-5 w-5" :stroke-width="1.75" />
+          </button>
+        </div>
       </div>
 
       <UnverifiedAccountBanner />
@@ -253,5 +258,8 @@ function openVoiceSessionReview(notif: VoiceSessionNotification) {
         </div>
       </div>
     </Transition>
+
+    <!-- PWA Service Worker Update Prompt -->
+    <PwaReloadPrompt />
   </div>
 </template>

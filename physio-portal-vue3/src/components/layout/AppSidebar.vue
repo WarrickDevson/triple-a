@@ -21,6 +21,7 @@ import { portalNavItems } from '../../config/navigation'
 import { useAuthStore } from '../../store/auth'
 import { useMessagesStore } from '../../store/messages'
 import { useBrandLogo } from '../../composables/useBrandLogo'
+import PwaInstallButton from '../PwaInstallButton.vue'
 
 const iconMap = {
   LayoutDashboard,
@@ -139,6 +140,9 @@ function displayRole(role?: string) {
           </p>
           <p class="truncate text-xs text-white/55">{{ displayRole(auth.user.userRole) }}</p>
         </div>
+      </div>
+      <div class="mb-3">
+        <PwaInstallButton />
       </div>
       <button
         type="button"

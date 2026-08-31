@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { LockKeyhole } from '@lucide/vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseInput from '../components/BaseInput.vue'
+import PwaInstallButton from '../components/PwaInstallButton.vue'
 import { brand } from '../config/brand'
 import { useAuthStore } from '../store/auth'
 
@@ -141,6 +142,9 @@ async function onSubmit() {
               Sign up as a Physio
             </RouterLink>
           </p>
+          <div class="mt-4 w-full max-w-xs">
+            <PwaInstallButton />
+          </div>
         </div>
       </div>
     </main>

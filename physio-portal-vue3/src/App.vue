@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { setUnauthorizedHandler } from './api/client'
 import { useAuthStore } from './store/auth'
+import PwaInstallBanner from './components/PwaInstallBanner.vue'
 
 const auth = useAuthStore()
 
@@ -13,4 +14,5 @@ onMounted(() => {
 
 <template>
   <RouterView />
+  <PwaInstallBanner />
 </template>

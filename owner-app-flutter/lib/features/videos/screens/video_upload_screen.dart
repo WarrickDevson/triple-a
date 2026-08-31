@@ -27,6 +27,11 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
   bool _isUploading = false;
   String? _error;
 
+  // Upload type: 'exercise' or 'progress'
+  String _uploadType = 'exercise';
+  final _titleController = TextEditingController();
+  final _notesController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +43,13 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
         _loadExercisesForPet(pets.first);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _notesController.dispose();
+    super.dispose();
   }
 
   Future<void> _pickVideo() async {
@@ -86,6 +98,11 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
       setState(() {
         _selectedExercise = exercises.first;
       });
+    } else {
+      // If no exercises assigned, default to general progress
+      setState(() {
+        _uploadType = 'progress';
+      });
     }
   }
 
@@ -102,8 +119,18 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
     final exercise = _selectedExercise;
     final file = _selectedFile;
 
-    if (pet == null || exercise == null || file == null) {
-      setState(() => _error = 'Select a pet, exercise, and video file.');
+    if (pet == null) {
+      setState(() => _error = 'Please select a pet.');
+      return;
+    }
+
+    if (_uploadType == 'exercise' && exercise == null) {
+      setState(() => _error = 'Please select an assigned exercise or switch to General Progress.');
+      return;
+    }
+
+    if (file == null) {
+      setState(() => _error = 'Please select a video file to upload.');
       return;
     }
 
@@ -144,10 +171,27 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
         }
       }
 
-      final formData = FormData.fromMap({
-        'exerciseId': exercise.exerciseId,
+      final formMap = <String, dynamic>{
         'file': multipartFile,
-      });
+      };
+
+      if (_uploadType == 'exercise' && exercise != null) {
+        formMap['exerciseId'] = exercise.exerciseId;
+      }
+
+      final title = _titleController.text.trim();
+      if (title.isNotEmpty) {
+        formMap['title'] = title;
+      } else if (_uploadType == 'progress') {
+        formMap['title'] = 'Progress Video (${DateTime.now().month}/${DateTime.now().day})';
+      }
+
+      final notes = _notesController.text.trim();
+      if (notes.isNotEmpty) {
+        formMap['notes'] = notes;
+      }
+
+      final formData = FormData.fromMap(formMap);
 
       await dio.post<void>(
         '/api/pets/${pet.petId}/videos',
@@ -161,6 +205,8 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
       setState(() {
         _selectedFile = null;
         _uploadProgress = 0;
+        _titleController.clear();
+        _notesController.clear();
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).clearSnackBars();
@@ -234,17 +280,85 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
                       _isUploading ? null : (pet) => pet != null ? _loadExercisesForPet(pet) : null,
                 ),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<RehabProgramExercise>(
-                  initialValue: exercises.any((ex) => ex.exerciseId == _selectedExercise?.exerciseId)
-                      ? exercises.firstWhere((ex) => ex.exerciseId == _selectedExercise!.exerciseId)
-                      : null,
-                  decoration: const InputDecoration(labelText: 'Exercise'),
-                  items: exercises
-                      .map((ex) => DropdownMenuItem(value: ex, child: Text(ex.title)))
-                      .toList(),
-                  onChanged: _isUploading
+                // Toggle between Assigned Exercise and General Progress
+                SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment<String>(
+                      value: 'exercise',
+                      label: const Text('Assigned Exercise'),
+                      icon: const Icon(Icons.fitness_center_outlined),
+                      enabled: exercises.isNotEmpty,
+                    ),
+                    const ButtonSegment<String>(
+                      value: 'progress',
+                      label: Text('General Progress'),
+                      icon: Icon(Icons.trending_up_outlined),
+                    ),
+                  ],
+                  selected: {_uploadType},
+                  onSelectionChanged: _isUploading
                       ? null
-                      : (ex) => setState(() => _selectedExercise = ex),
+                      : (newSelection) {
+                          setState(() {
+                            _uploadType = newSelection.first;
+                          });
+                        },
+                ),
+                const SizedBox(height: 16),
+                if (_uploadType == 'exercise') ...[
+                  if (exercises.isNotEmpty)
+                    DropdownButtonFormField<RehabProgramExercise>(
+                      initialValue: exercises.any((ex) => ex.exerciseId == _selectedExercise?.exerciseId)
+                          ? exercises.firstWhere((ex) => ex.exerciseId == _selectedExercise!.exerciseId)
+                          : null,
+                      decoration: const InputDecoration(labelText: 'Exercise'),
+                      items: exercises
+                          .map((ex) => DropdownMenuItem(value: ex, child: Text(ex.title)))
+                          .toList(),
+                      onChanged: _isUploading
+                          ? null
+                          : (ex) => setState(() => _selectedExercise = ex),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutralGrey.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline, color: AppColors.primaryLight, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'No assigned exercises found for this pet. Please use General Progress.',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ] else ...[
+                  TextField(
+                    controller: _titleController,
+                    enabled: !_isUploading,
+                    decoration: const InputDecoration(
+                      labelText: 'Title / Milestone',
+                      hintText: 'e.g. Walking in backyard, Stairs test',
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _notesController,
+                  enabled: !_isUploading,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes / Description (Optional)',
+                    hintText: 'Describe how your pet moved, any hesitation, or signs of pain...',
+                    alignLabelWithHint: true,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 if (_selectedFile != null) ...[

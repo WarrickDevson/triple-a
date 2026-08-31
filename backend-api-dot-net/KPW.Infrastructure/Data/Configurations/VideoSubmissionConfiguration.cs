@@ -17,14 +17,19 @@ public class VideoSubmissionConfiguration : IEntityTypeConfiguration<VideoSubmis
             .HasMaxLength(20)
             .HasDefaultValue(Domain.Enums.VideoProcessingStatus.Pending);
 
+        builder.Property(v => v.Title).HasMaxLength(200);
+        builder.Property(v => v.Notes).HasMaxLength(2000);
+
         builder.HasOne(v => v.Pet)
             .WithMany(p => p.VideoSubmissions)
             .HasForeignKey(v => v.PetId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.Property(v => v.ExerciseId).IsRequired(false);
         builder.HasOne(v => v.Exercise)
             .WithMany(e => e.VideoSubmissions)
             .HasForeignKey(v => v.ExerciseId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

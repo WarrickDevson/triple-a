@@ -76,7 +76,12 @@ const videoUrl = computed(() =>
             <Play class="h-10 w-10" :stroke-width="1.5" />
           </div>
         </div>
-        <p class="mt-3 text-sm font-semibold text-navy">{{ latestVideo.exerciseTitle }}</p>
+        <p class="mt-3 text-sm font-semibold text-navy">
+          {{ latestVideo.exerciseTitle || latestVideo.title || 'General Progress Video' }}
+        </p>
+        <p v-if="latestVideo.notes" class="mt-1 text-xs italic text-navy/80">
+          "{{ latestVideo.notes }}"
+        </p>
         <p class="text-xs text-neutral-muted">
           {{ new Date(latestVideo.createdDate).toLocaleString() }}
         </p>

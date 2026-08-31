@@ -41,7 +41,9 @@ public class PetVideosController : ControllerBase
     [RequestFormLimits(MultipartBodyLengthLimit = 104_857_600)]
     public async Task<ActionResult<UploadVideoResultDto>> Upload(
         int petId,
-        [FromForm] int exerciseId,
+        [FromForm] int? exerciseId,
+        [FromForm] string? title,
+        [FromForm] string? notes,
         IFormFile file,
         CancellationToken cancellationToken)
     {
@@ -54,7 +56,7 @@ public class PetVideosController : ControllerBase
         {
             await using var stream = file.OpenReadStream();
             var result = await _mediator.Send(
-                new UploadVideoCommand(petId, exerciseId, stream, file.FileName, file.ContentType, file.Length),
+                new UploadVideoCommand(petId, exerciseId, title, notes, stream, file.FileName, file.ContentType, file.Length),
                 cancellationToken);
             return Ok(result);
         }

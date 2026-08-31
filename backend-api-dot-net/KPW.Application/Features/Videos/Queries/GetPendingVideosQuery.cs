@@ -57,7 +57,9 @@ public class GetPendingVideosQueryHandler : IRequestHandler<GetPendingVideosQuer
             v.PetId,
             v.Pet.PetName,
             v.ExerciseId,
-            v.Exercise.Title,
+            v.Exercise?.Title,
+            v.Title,
+            v.Notes,
             _videoStorage.GetPublicUrl(v.RawVideoStorageUrl),
             v.ProcessedVideoStreamingUrl is not null
                 ? _videoStorage.GetPublicUrl(v.ProcessedVideoStreamingUrl)

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
+import '../../exercises/widgets/exercise_video_player.dart';
 import '../../pets/models/pet.dart';
 import '../../pets/providers/pets_provider.dart';
 import '../../shell/main_shell.dart';
@@ -96,6 +98,108 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
     );
   }
 
+  String _resolveVideoUrl(String path) {
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    final baseUrl = AppConfig.fromEnvironment().apiBaseUrl;
+    return '$baseUrl${path.startsWith('/') ? path : '/$path'}';
+  }
+
+  void _watchVideo(VideoSubmission submission) {
+    final rawUrl = submission.processedVideoStreamingUrl ?? submission.rawVideoStorageUrl;
+    if (rawUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Video is not available yet.')),
+      );
+      return;
+    }
+
+    final resolvedUrl = _resolveVideoUrl(rawUrl);
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 500),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          submission.displayTitle,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: AppColors.primaryDark,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: ExerciseVideoPlayer(videoUrl: resolvedUrl),
+                  ),
+                ),
+                if (submission.notes != null && submission.notes!.trim().isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.neutralGrey.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Owner notes',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.neutralDark,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            submission.notes!,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else
+                  const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildSubmissionCard(VideoSubmission submission) {
     final statusColor = submission.isReviewed ? AppColors.successGreen : AppColors.accentAmber;
     final statusLabel = submission.isReviewed ? 'Reviewed' : submission.processingStatus;
@@ -110,7 +214,7 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    submission.exerciseTitle,
+                    submission.displayTitle,
                     style: const TextStyle(
                       color: AppColors.primaryDark,
                       fontWeight: FontWeight.w800,
@@ -140,6 +244,29 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
               '${submission.petName} · ${_formatDate(submission.createdDate)}',
               style: TextStyle(color: AppColors.neutralDark.withValues(alpha: 0.7)),
             ),
+            if (submission.notes != null && submission.notes!.trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.neutralGrey.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.notes, size: 16, color: AppColors.primaryLight),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        submission.notes!,
+                        style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (submission.isReviewed && submission.physioFeedbackNotes != null) ...[
               const SizedBox(height: 12),
               Text(
@@ -159,26 +286,36 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
                 style: TextStyle(color: AppColors.neutralDark.withValues(alpha: 0.7)),
               ),
             ],
-            if (submission.isReviewed) ...[
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => MainShell(
-                        initialTab: 2,
-                        messagesPetId: submission.petId,
-                        messagesInitialText:
-                            'Hi, I have a question about my ${submission.exerciseTitle} video feedback.',
-                        messagesVideoSubmissionId: submission.videoSubmissionId,
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _watchVideo(submission),
+                  icon: const Icon(Icons.play_circle_outline, size: 18),
+                  label: const Text('WATCH VIDEO'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (submission.isReviewed)
+                  TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => MainShell(
+                          initialTab: 2,
+                          messagesPetId: submission.petId,
+                          messagesInitialText:
+                              'Hi, I have a question about my ${submission.displayTitle} video feedback.',
+                          messagesVideoSubmissionId: submission.videoSubmissionId,
+                        ),
                       ),
                     ),
+                    child: const Text('Ask about this'),
                   ),
-                  child: const Text('Ask about this'),
-                ),
-              ),
-            ],
+              ],
+            ),
           ],
         ),
       ),

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,12 +11,13 @@ namespace KPW.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "IsApproved",
-                table: "Users",
-                type: "bit",
-                nullable: false,
-                defaultValue: false);
+            // Note: IsApproved was already added in database
+            // migrationBuilder.AddColumn<bool>(
+            //     name: "IsApproved",
+            //     table: "Users",
+            //     type: "bit",
+            //     nullable: false,
+            //     defaultValue: false);
 
             migrationBuilder.CreateTable(
                 name: "SoapNotes",

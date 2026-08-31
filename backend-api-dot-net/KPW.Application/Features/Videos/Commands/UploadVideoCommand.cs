@@ -10,7 +10,9 @@ namespace KPW.Application.Features.Videos.Commands;
 
 public record UploadVideoCommand(
     int PetId,
-    int ExerciseId,
+    int? ExerciseId,
+    string? Title,
+    string? Notes,
     Stream FileStream,
     string FileName,
     string ContentType,
@@ -24,6 +26,8 @@ public class UploadVideoCommandHandler : IRequestHandler<UploadVideoCommand, Upl
         "video/mp4",
         "video/quicktime",
         "video/hevc",
+        "video/x-m4v",
+        "video/webm",
         "application/octet-stream"
     ];
 
@@ -31,20 +35,18 @@ public class UploadVideoCommandHandler : IRequestHandler<UploadVideoCommand, Upl
     private readonly ICurrentUserService _currentUserService;
     private readonly IVideoStorage _videoStorage;
     private readonly IVideoProcessingQueue _processingQueue;
-    private readonly long _maxBytes;
+    private const long MaxBytes = 104_857_600; // 100MB
 
     public UploadVideoCommandHandler(
         DbContext dbContext,
         ICurrentUserService currentUserService,
         IVideoStorage videoStorage,
-        IVideoProcessingQueue processingQueue,
-        Microsoft.Extensions.Options.IOptions<VideoOptions> videoOptions)
+        IVideoProcessingQueue processingQueue)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
         _videoStorage = videoStorage;
         _processingQueue = processingQueue;
-        _maxBytes = videoOptions.Value.MaxBytes;
     }
 
     public async Task<UploadVideoResultDto> Handle(UploadVideoCommand command, CancellationToken cancellationToken)
@@ -57,9 +59,9 @@ public class UploadVideoCommandHandler : IRequestHandler<UploadVideoCommand, Upl
         await PetAuthorization.EnsureCanAccessPet(
             _dbContext, _currentUserService, command.PetId, cancellationToken);
 
-        if (command.FileSize <= 0 || command.FileSize > _maxBytes)
+        if (command.FileSize <= 0 || command.FileSize > MaxBytes)
         {
-            throw new InvalidOperationException($"Video must be between 1 byte and {_maxBytes / (1024 * 1024)}MB.");
+            throw new InvalidOperationException($"Video must be between 1 byte and {MaxBytes / (1024 * 1024)}MB.");
         }
 
         var extension = Path.GetExtension(command.FileName).ToLowerInvariant();
@@ -74,11 +76,14 @@ public class UploadVideoCommandHandler : IRequestHandler<UploadVideoCommand, Upl
             throw new InvalidOperationException("Unsupported video content type.");
         }
 
-        var exerciseExists = await _dbContext.Set<Exercise>()
-            .AnyAsync(e => e.ExerciseId == command.ExerciseId, cancellationToken);
-        if (!exerciseExists)
+        if (command.ExerciseId.HasValue)
         {
-            throw new KeyNotFoundException("Exercise not found.");
+            var exerciseExists = await _dbContext.Set<Exercise>()
+                .AnyAsync(e => e.ExerciseId == command.ExerciseId.Value, cancellationToken);
+            if (!exerciseExists)
+            {
+                throw new KeyNotFoundException("Exercise not found.");
+            }
         }
 
         var storagePath = await _videoStorage.UploadAsync(
@@ -88,6 +93,8 @@ public class UploadVideoCommandHandler : IRequestHandler<UploadVideoCommand, Upl
         {
             PetId = command.PetId,
             ExerciseId = command.ExerciseId,
+            Title = string.IsNullOrWhiteSpace(command.Title) ? null : command.Title.Trim(),
+            Notes = string.IsNullOrWhiteSpace(command.Notes) ? null : command.Notes.Trim(),
             RawVideoStorageUrl = storagePath,
             ProcessingStatus = VideoProcessingStatus.Pending,
             IsReviewed = false

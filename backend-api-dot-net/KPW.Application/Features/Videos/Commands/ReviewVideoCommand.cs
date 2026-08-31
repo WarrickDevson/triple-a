@@ -52,7 +52,9 @@ public class ReviewVideoCommandHandler : IRequestHandler<ReviewVideoCommand, Vid
             submission.PetId,
             submission.Pet.PetName,
             submission.ExerciseId,
-            submission.Exercise.Title,
+            submission.Exercise?.Title,
+            submission.Title,
+            submission.Notes,
             _videoStorage.GetPublicUrl(submission.RawVideoStorageUrl),
             submission.ProcessedVideoStreamingUrl is not null
                 ? _videoStorage.GetPublicUrl(submission.ProcessedVideoStreamingUrl)

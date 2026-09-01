@@ -20,21 +20,6 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 
-  // Mobile smart app banner
-  const banner = document.getElementById('mobile-app-banner');
-  const bannerClose = document.getElementById('banner-close');
-  const isMobileDevice = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-  if (banner && isMobileDevice && !sessionStorage.getItem('dismiss_play_banner')) {
-    banner.removeAttribute('hidden');
-    if (bannerClose) {
-      bannerClose.addEventListener('click', function () {
-        banner.setAttribute('hidden', '');
-        sessionStorage.setItem('dismiss_play_banner', '1');
-      });
-    }
-  }
-
   // Mobile nav toggle
   if (navToggle && siteNav) {
     navToggle.addEventListener('click', function () {

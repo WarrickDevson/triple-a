@@ -57,7 +57,12 @@ class _MainShellState extends ConsumerState<MainShell> {
           Expanded(
             child: IndexedStack(
               index: _currentIndex,
-              children: screens,
+              children: List.generate(screens.length, (index) {
+                return ExcludeSemantics(
+                  excluding: index != _currentIndex,
+                  child: screens[index],
+                );
+              }),
             ),
           ),
         ],

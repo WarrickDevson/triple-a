@@ -218,12 +218,31 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
               final selected = _filter == filter;
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(_filterLabel(filter)),
-                  selected: selected,
-                  onSelected: (_) => setState(() => _filter = filter),
-                  selectedColor: AppColors.sageMuted,
-                  checkmarkColor: AppColors.sage,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => setState(() => _filter = filter),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: selected ? AppColors.sageMuted : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: selected ? AppColors.sage : AppColors.neutralGrey,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Text(
+                        _filterLabel(filter),
+                        style: TextStyle(
+                          color: selected ? AppColors.sage : AppColors.neutralDark,
+                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               );
             }).toList(),

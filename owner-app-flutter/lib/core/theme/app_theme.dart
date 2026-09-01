@@ -95,7 +95,7 @@ class AppTheme {
           foregroundColor: Colors.white,
           disabledBackgroundColor: AppColors.sage.withValues(alpha: 0.4),
           disabledForegroundColor: Colors.white70,
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size(64, 48),
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: const TextStyle(
@@ -108,7 +108,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.navy,
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size(64, 48),
           side: BorderSide(color: AppColors.navy.withValues(alpha: 0.15), width: 1.5),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: const TextStyle(

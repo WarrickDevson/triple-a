@@ -4,40 +4,57 @@ import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../exercises/widgets/exercise_video_player.dart';
-import '../../pets/models/pet.dart';
 import '../../pets/providers/pets_provider.dart';
 import '../../shell/main_shell.dart';
 import '../models/video_submission.dart';
 import '../providers/videos_provider.dart';
+import 'video_upload_screen.dart';
 
 class VideoInboxScreen extends ConsumerStatefulWidget {
-  const VideoInboxScreen({super.key});
+  const VideoInboxScreen({super.key, this.initialPetId});
+
+  final int? initialPetId;
 
   @override
   ConsumerState<VideoInboxScreen> createState() => _VideoInboxScreenState();
 }
 
 class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
-  Pet? _selectedPet;
+  int? _activePetId;
 
   @override
   void initState() {
     super.initState();
+    _activePetId = widget.initialPetId;
+
     Future.microtask(() async {
-      await ref.read(petsProvider.notifier).loadPets(force: true);
+      await ref.read(petsProvider.notifier).loadPets();
       if (!mounted) return;
       final pets = ref.read(petsProvider).pets;
       if (pets.isNotEmpty) {
-        setState(() => _selectedPet = pets.first);
-        await ref.read(videosProvider.notifier).loadForPet(pets.first.petId);
+        final targetPetId = (_activePetId != null && pets.any((p) => p.petId == _activePetId))
+            ? _activePetId!
+            : pets.first.petId;
+        setState(() {
+          _activePetId = targetPetId;
+        });
+        ref.read(videosProvider.notifier).loadForPet(targetPetId);
       }
     });
   }
 
-  Future<void> _selectPet(Pet? pet) async {
-    if (pet == null) return;
-    setState(() => _selectedPet = pet);
-    await ref.read(videosProvider.notifier).loadForPet(pet.petId);
+  void _selectPet(int petId) {
+    if (_activePetId == petId) return;
+    setState(() {
+      _activePetId = petId;
+    });
+    ref.read(videosProvider.notifier).loadForPet(petId);
+  }
+
+  Future<void> _onRefresh() async {
+    if (_activePetId != null) {
+      await ref.read(videosProvider.notifier).loadForPet(_activePetId!);
+    }
   }
 
   String _formatDate(DateTime value) {
@@ -49,50 +66,177 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
   Widget build(BuildContext context) {
     final petsState = ref.watch(petsProvider);
     final videosState = ref.watch(videosProvider);
+    final pets = petsState.pets;
+
+    final effectiveActivePetId = (_activePetId != null && pets.any((p) => p.petId == _activePetId))
+        ? _activePetId!
+        : (pets.isNotEmpty ? pets.first.petId : null);
+
+    final currentPetDisplayName = pets.isNotEmpty
+        ? (pets.firstWhere((p) => p.petId == effectiveActivePetId, orElse: () => pets.first).petName)
+        : 'Pet';
 
     return AppPageScaffold(
       title: 'Video Feedback',
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (petsState.pets.isNotEmpty)
-            AppPanel(
-              child: DropdownButtonFormField<Pet>(
-                initialValue: _selectedPet,
-                decoration: const InputDecoration(
-                  labelText: 'Pet',
-                  border: OutlineInputBorder(),
+          if (pets.length > 1) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text(
+                'SELECT COMPANION',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                  color: AppColors.neutralDark.withValues(alpha: 0.6),
                 ),
-                items: petsState.pets
-                    .map(
-                      (pet) => DropdownMenuItem(
-                        value: pet,
-                        child: Text(pet.petName),
-                      ),
-                    )
-                    .toList(),
-                onChanged: _selectPet,
               ),
             ),
-          const SizedBox(height: 16),
-          if (petsState.pets.isEmpty)
-            const AppEmptyState(
-              icon: Icons.pets_rounded,
-              title: 'No pets yet',
-              message: 'Add a pet to view video feedback.',
-            )
-          else if (videosState.isLoading)
-            const AppPanel(child: Text('Loading submissions...'))
-          else if (videosState.error != null)
-            AppPanel(child: Text(videosState.error!))
-          else if (videosState.submissions.isEmpty)
-            const AppEmptyState(
-              icon: Icons.inbox_outlined,
-              title: 'No submissions yet',
-              message: 'Upload an exercise video to receive physiotherapist feedback.',
-            )
-          else
-            ...videosState.submissions.map(_buildSubmissionCard),
+            SizedBox(
+              height: 42,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: pets.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final pet = pets[index];
+                  final isSelected = pet.petId == effectiveActivePetId;
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _selectPet(pet.petId),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primaryDark : Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected ? AppColors.primaryDark : AppColors.neutralGrey,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Text(
+                          pet.petName,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : AppColors.neutralDark,
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+          ] else if (pets.length == 1) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: AppPanel(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.pets, size: 20, color: AppColors.primaryLight),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Viewing submissions for ${pets.first.petName}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+                children: [
+                  if (pets.isEmpty && !petsState.isLoading)
+                    const AppEmptyState(
+                      icon: Icons.pets_rounded,
+                      title: 'No pets yet',
+                      message: 'Add a pet companion to view video feedback.',
+                    )
+                  else if (videosState.isLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else if (videosState.error != null)
+                    AppPanel(
+                      child: Column(
+                        children: [
+                          Text(
+                            videosState.error!,
+                            style: const TextStyle(color: AppColors.alertRed),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton(
+                            onPressed: _onRefresh,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (videosState.submissions.isEmpty)
+                    AppEmptyState(
+                      icon: Icons.video_library_outlined,
+                      title: 'No video submissions yet',
+                      message:
+                          'Upload an exercise form video or general progress update for $currentPetDisplayName to receive physiotherapist review.',
+                      action: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const VideoUploadScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('UPLOAD VIDEO'),
+                      ),
+                    )
+                  else ...[
+                    ...videosState.submissions.map(_buildSubmissionCard),
+                    const SizedBox(height: 12),
+                    Center(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const VideoUploadScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.add_circle_outline, size: 18),
+                        label: const Text('Upload Another Video'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -205,7 +349,7 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
     final statusLabel = submission.isReviewed ? 'Reviewed' : submission.processingStatus;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 14),
       child: AppPanel(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,7 +385,7 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              '${submission.petName} · ${_formatDate(submission.createdDate)}',
+              '${submission.petName.isNotEmpty ? submission.petName : 'Patient'} · ${_formatDate(submission.createdDate)}',
               style: TextStyle(color: AppColors.neutralDark.withValues(alpha: 0.7)),
             ),
             if (submission.notes != null && submission.notes!.trim().isNotEmpty) ...[
@@ -267,9 +411,11 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
                 ),
               ),
             ],
-            if (submission.isReviewed && submission.physioFeedbackNotes != null) ...[
+            if (submission.isReviewed &&
+                submission.physioFeedbackNotes != null &&
+                submission.physioFeedbackNotes!.trim().isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text(
+              const Text(
                 'Physio feedback',
                 style: TextStyle(
                   color: AppColors.primaryLight,
@@ -278,7 +424,19 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(submission.physioFeedbackNotes!),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.sage.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.sage.withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  submission.physioFeedbackNotes!,
+                  style: const TextStyle(fontSize: 13, color: AppColors.neutralDark),
+                ),
+              ),
             ] else if (!submission.isReviewed) ...[
               const SizedBox(height: 12),
               Text(

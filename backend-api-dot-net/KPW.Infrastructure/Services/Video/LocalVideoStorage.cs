@@ -25,6 +25,10 @@ public class LocalVideoStorage : IVideoStorage
     public async Task<string> UploadAsync(Stream content, string fileName, CancellationToken cancellationToken = default)
     {
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        if (string.IsNullOrEmpty(extension))
+        {
+            extension = ".mp4";
+        }
         var storedName = $"{Guid.NewGuid():N}{extension}";
         var relativePath = $"videos/{storedName}";
         var fullPath = Path.Combine(_rootPath, relativePath);

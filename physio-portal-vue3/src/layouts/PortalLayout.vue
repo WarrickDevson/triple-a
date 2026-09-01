@@ -5,7 +5,6 @@ import { MessageSquare, Menu, X, Sparkles, Loader2, AlertCircle } from '@lucide/
 import UnverifiedAccountBanner from '../components/UnverifiedAccountBanner.vue'
 import AppSidebar from '../components/layout/AppSidebar.vue'
 import AppTopBar from '../components/layout/AppTopBar.vue'
-import PwaInstallButton from '../components/PwaInstallButton.vue'
 import PwaReloadPrompt from '../components/PwaReloadPrompt.vue'
 import { useMessagesStore } from '../store/messages'
 import { useVoiceSessionStore, type VoiceSessionNotification } from '../store/voiceSession'
@@ -77,7 +76,6 @@ function openVoiceSessionReview(notif: VoiceSessionNotification) {
         </button>
         <span class="text-sm font-semibold text-navy">Triple A</span>
         <div class="ml-auto flex items-center gap-2">
-          <PwaInstallButton compact />
           <button
             v-if="mobileNavOpen"
             type="button"

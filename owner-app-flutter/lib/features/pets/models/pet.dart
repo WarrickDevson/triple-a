@@ -22,6 +22,14 @@ class PetMedicalHistory {
       clinicianNotes: json['clinicianNotes'] as String?,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PetMedicalHistory && runtimeType == other.runtimeType && medicalHistoryId == other.medicalHistoryId;
+
+  @override
+  int get hashCode => medicalHistoryId.hashCode;
 }
 
 class Pet {
@@ -62,6 +70,14 @@ class Pet {
           .toList(),
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Pet && runtimeType == other.runtimeType && petId == other.petId;
+
+  @override
+  int get hashCode => petId.hashCode;
 }
 
 const petSpecies = ['Canine', 'Feline', 'Equine', 'Avian', 'Other'];

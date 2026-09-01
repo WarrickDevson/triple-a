@@ -41,19 +41,21 @@ class VideoSubmission {
 
   factory VideoSubmission.fromJson(Map<String, dynamic> json) {
     return VideoSubmission(
-      videoSubmissionId: json['videoSubmissionId'] as int,
-      petId: json['petId'] as int,
-      petName: json['petName'] as String,
-      exerciseId: json['exerciseId'] as int?,
-      exerciseTitle: json['exerciseTitle'] as String?,
-      title: json['title'] as String?,
-      notes: json['notes'] as String?,
-      rawVideoStorageUrl: json['rawVideoStorageUrl'] as String,
-      processedVideoStreamingUrl: json['processedVideoStreamingUrl'] as String?,
-      processingStatus: json['processingStatus'] as String,
-      isReviewed: json['isReviewed'] as bool,
-      physioFeedbackNotes: json['physioFeedbackNotes'] as String?,
-      createdDate: DateTime.parse(json['createdDate'] as String),
+      videoSubmissionId: (json['videoSubmissionId'] as num?)?.toInt() ?? 0,
+      petId: (json['petId'] as num?)?.toInt() ?? 0,
+      petName: json['petName']?.toString() ?? '',
+      exerciseId: (json['exerciseId'] as num?)?.toInt(),
+      exerciseTitle: json['exerciseTitle']?.toString(),
+      title: json['title']?.toString(),
+      notes: json['notes']?.toString(),
+      rawVideoStorageUrl: json['rawVideoStorageUrl']?.toString() ?? '',
+      processedVideoStreamingUrl: json['processedVideoStreamingUrl']?.toString(),
+      processingStatus: json['processingStatus']?.toString() ?? 'Pending',
+      isReviewed: json['isReviewed'] == true,
+      physioFeedbackNotes: json['physioFeedbackNotes']?.toString(),
+      createdDate: json['createdDate'] != null
+          ? (DateTime.tryParse(json['createdDate'].toString()) ?? DateTime.now())
+          : DateTime.now(),
     );
   }
 }

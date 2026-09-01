@@ -14,7 +14,6 @@ const isInstalled = ref(false)
 // Show install option unless app is already running as installed standalone PWA
 const isInstallable = ref(true)
 const isIOS = ref(false)
-const showInstructionsModal = ref(false)
 
 if (typeof window !== 'undefined') {
   // Check standalone
@@ -72,15 +71,11 @@ export function usePwaInstall() {
           isInstalled.value = true
           isInstallable.value = false
           deferredPrompt.value = null
-          showInstructionsModal.value = false
           return true
         }
       } catch (err) {
         console.warn('PWA install prompt error:', err)
       }
-    } else {
-      // If browser doesn't support or hasn't fired beforeinstallprompt yet
-      showInstructionsModal.value = true
     }
     return false
   }
@@ -89,7 +84,6 @@ export function usePwaInstall() {
     isInstallable,
     isInstalled,
     isIOS,
-    showInstructionsModal,
     promptInstall,
   }
 }

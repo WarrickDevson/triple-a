@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,51 +11,31 @@ namespace KPW.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "OwnerSubjectiveNotes",
-                columns: table => new
-                {
-                    OwnerSubjectiveNoteId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    PetId = table.Column<int>(type: "int", nullable: false),
-                    OwnerId = table.Column<int>(type: "int", nullable: false),
-                    NoteDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Notes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
-                    PainObserved = table.Column<int>(type: "int", nullable: true),
-                    EnergyObserved = table.Column<int>(type: "int", nullable: true),
-                    IsReviewed = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CreatedUserId = table.Column<int>(type: "int", nullable: true),
-                    ModifiedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    ModifiedUserId = table.Column<int>(type: "int", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_OwnerSubjectiveNotes", x => x.OwnerSubjectiveNoteId);
-                    table.ForeignKey(
-                        name: "FK_OwnerSubjectiveNotes_Pets_PetId",
-                        column: x => x.PetId,
-                        principalTable: "Pets",
-                        principalColumn: "PetId",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_OwnerSubjectiveNotes_Users_OwnerId",
-                        column: x => x.OwnerId,
-                        principalTable: "Users",
-                        principalColumn: "UserId",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_OwnerSubjectiveNotes_OwnerId",
-                table: "OwnerSubjectiveNotes",
-                column: "OwnerId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_OwnerSubjectiveNotes_PetId",
-                table: "OwnerSubjectiveNotes",
-                column: "PetId");
+            migrationBuilder.Sql(@"
+                IF OBJECT_ID(N'[OwnerSubjectiveNotes]', N'U') IS NULL
+                BEGIN
+                    CREATE TABLE [OwnerSubjectiveNotes] (
+                        [OwnerSubjectiveNoteId] int NOT NULL IDENTITY,
+                        [PetId] int NOT NULL,
+                        [OwnerId] int NOT NULL,
+                        [NoteDate] datetime2 NOT NULL,
+                        [Notes] nvarchar(2000) NOT NULL,
+                        [PainObserved] int NULL,
+                        [EnergyObserved] int NULL,
+                        [IsReviewed] bit NOT NULL,
+                        [CreatedDate] datetime2 NOT NULL,
+                        [CreatedUserId] int NULL,
+                        [ModifiedDate] datetime2 NOT NULL,
+                        [ModifiedUserId] int NULL,
+                        [IsActive] bit NOT NULL,
+                        CONSTRAINT [PK_OwnerSubjectiveNotes] PRIMARY KEY ([OwnerSubjectiveNoteId]),
+                        CONSTRAINT [FK_OwnerSubjectiveNotes_Pets_PetId] FOREIGN KEY ([PetId]) REFERENCES [Pets] ([PetId]) ON DELETE CASCADE,
+                        CONSTRAINT [FK_OwnerSubjectiveNotes_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [Users] ([UserId]) ON DELETE NO ACTION
+                    );
+                    CREATE INDEX [IX_OwnerSubjectiveNotes_OwnerId] ON [OwnerSubjectiveNotes] ([OwnerId]);
+                    CREATE INDEX [IX_OwnerSubjectiveNotes_PetId] ON [OwnerSubjectiveNotes] ([PetId]);
+                END
+            ");
         }
 
         /// <inheritdoc />

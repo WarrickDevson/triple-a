@@ -55,28 +55,30 @@ class AppBottomNav extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Icon(
-                              selected ? item.activeIcon : item.icon,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                            if (index == 2 && messageBadgeCount > 0)
-                              Positioned(
-                                right: -6,
-                                top: -4,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.alertRed,
-                                    shape: BoxShape.circle,
+                        ExcludeSemantics(
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Icon(
+                                selected ? item.activeIcon : item.icon,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                              if (index == 2 && messageBadgeCount > 0)
+                                Positioned(
+                                  right: -6,
+                                  top: -4,
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.alertRed,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(

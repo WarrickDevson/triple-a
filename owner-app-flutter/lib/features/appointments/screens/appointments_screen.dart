@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
-import '../../pets/models/pet.dart';
 import '../../pets/providers/pets_provider.dart';
 import '../models/appointment.dart';
 import '../providers/appointments_provider.dart';
@@ -15,7 +14,7 @@ class AppointmentsScreen extends ConsumerStatefulWidget {
 }
 
 class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
-  Pet? _selectedPet;
+  int? _selectedPetId;
   DateTime? _selectedDateTime;
   final _notesController = TextEditingController();
   bool _isSubmitting = false;
@@ -59,7 +58,10 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
   }
 
   Future<void> _requestAppointment() async {
-    if (_selectedPet == null || _selectedDateTime == null) {
+    final petsState = ref.read(petsProvider);
+    final petId = _selectedPetId ?? (petsState.pets.isNotEmpty ? petsState.pets.first.petId : null);
+
+    if (petId == null || _selectedDateTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Select a pet and appointment date/time.')),
       );
@@ -68,7 +70,7 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
 
     setState(() => _isSubmitting = true);
     final success = await ref.read(appointmentsProvider.notifier).requestAppointment(
-          petId: _selectedPet!.petId,
+          petId: petId,
           scheduledDateTime: _selectedDateTime!,
           clientNotes: _notesController.text.trim(),
         );
@@ -78,7 +80,7 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
     if (success) {
       _notesController.clear();
       setState(() {
-        _selectedPet = null;
+        _selectedPetId = null;
         _selectedDateTime = null;
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -476,34 +478,36 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
         children: [
           // View mode toggle
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Bookings & Calendar',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.navy,
-                  fontSize: 18,
+              const Expanded(
+                child: Text(
+                  'Bookings & Calendar',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.navy,
+                    fontSize: 17,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               SegmentedButton<bool>(
                 segments: const [
                   ButtonSegment(
                     value: false,
-                    icon: Icon(Icons.list_alt_rounded, size: 18),
-                    label: Text('List'),
+                    icon: Icon(Icons.list_alt_rounded, size: 16),
+                    label: Text('List', style: TextStyle(fontSize: 12)),
                   ),
                   ButtonSegment(
                     value: true,
-                    icon: Icon(Icons.calendar_month_rounded, size: 18),
-                    label: Text('Calendar'),
+                    icon: Icon(Icons.calendar_month_rounded, size: 16),
+                    label: Text('Calendar', style: TextStyle(fontSize: 12)),
                   ),
                 ],
                 selected: {_showCalendarView},
                 onSelectionChanged: (set) {
                   setState(() => _showCalendarView = set.first);
                 },
-                style: ButtonStyle(
+                style: const ButtonStyle(
                   visualDensity: VisualDensity.compact,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -524,21 +528,36 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
                       ),
                 ),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<Pet>(
-                  initialValue: _selectedPet,
-                  decoration: const InputDecoration(
-                    labelText: 'Pet',
-                    border: OutlineInputBorder(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.neutralGrey),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  items: petsState.pets
-                      .map(
-                        (pet) => DropdownMenuItem(
-                          value: pet,
-                          child: Text(pet.petName),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (pet) => setState(() => _selectedPet = pet),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: petsState.pets.any((p) => p.petId == _selectedPetId)
+                          ? _selectedPetId
+                          : (petsState.pets.isNotEmpty ? petsState.pets.first.petId : null),
+                      isExpanded: true,
+                      hint: const Text('Select Pet'),
+                      items: petsState.pets
+                          .map(
+                            (pet) => DropdownMenuItem<int>(
+                              value: pet.petId,
+                              child: Text(
+                                pet.petName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryDark,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (id) => setState(() => _selectedPetId = id),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(

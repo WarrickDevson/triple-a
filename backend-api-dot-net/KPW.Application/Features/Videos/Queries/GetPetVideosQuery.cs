@@ -42,7 +42,7 @@ public class GetPetVideosQueryHandler : IRequestHandler<GetPetVideosQuery, IRead
         return submissions.Select(v => new VideoSubmissionDto(
             v.VideoSubmissionId,
             v.PetId,
-            v.Pet.PetName,
+            v.Pet != null ? v.Pet.PetName : "Pet",
             v.ExerciseId,
             v.Exercise?.Title,
             v.Title,

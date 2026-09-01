@@ -20,7 +20,10 @@ public record UploadVideoCommand(
 
 public class UploadVideoCommandHandler : IRequestHandler<UploadVideoCommand, UploadVideoResultDto>
 {
-    private static readonly HashSet<string> AllowedExtensions = [".mp4", ".mov", ".hevc"];
+    private static readonly HashSet<string> AllowedExtensions =
+    [
+        ".mp4", ".mov", ".hevc", ".m4v", ".webm", ".mkv", ".3gp", ".avi"
+    ];
     private static readonly HashSet<string> AllowedContentTypes =
     [
         "video/mp4",
@@ -28,6 +31,9 @@ public class UploadVideoCommandHandler : IRequestHandler<UploadVideoCommand, Upl
         "video/hevc",
         "video/x-m4v",
         "video/webm",
+        "video/x-matroska",
+        "video/3gpp",
+        "video/avi",
         "application/octet-stream"
     ];
 
@@ -65,12 +71,13 @@ public class UploadVideoCommandHandler : IRequestHandler<UploadVideoCommand, Upl
         }
 
         var extension = Path.GetExtension(command.FileName).ToLowerInvariant();
-        if (!AllowedExtensions.Contains(extension))
+        if (!string.IsNullOrEmpty(extension) && !AllowedExtensions.Contains(extension))
         {
-            throw new InvalidOperationException("Only .mp4, .mov, and .hevc video files are allowed.");
+            throw new InvalidOperationException("Unsupported video file format.");
         }
 
         if (!string.IsNullOrWhiteSpace(command.ContentType) &&
+            !command.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) &&
             !AllowedContentTypes.Contains(command.ContentType.ToLowerInvariant()))
         {
             throw new InvalidOperationException("Unsupported video content type.");

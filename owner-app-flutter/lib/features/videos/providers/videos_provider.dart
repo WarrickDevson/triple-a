@@ -23,12 +23,20 @@ class VideosNotifier extends StateNotifier<VideosState> {
   Future<void> loadForPet(int petId) async {
     state = const VideosState(isLoading: true);
     try {
-      final response = await _dio.get<List<dynamic>>('/api/pets/$petId/videos');
-      final submissions = response.data!
-          .map((item) => VideoSubmission.fromJson(item as Map<String, dynamic>))
-          .toList();
+      final response = await _dio.get<dynamic>('/api/pets/$petId/videos');
+      final data = response.data;
+      final List<VideoSubmission> submissions = [];
+      if (data is List) {
+        for (final item in data) {
+          if (item is Map<String, dynamic>) {
+            submissions.add(VideoSubmission.fromJson(item));
+          } else if (item is Map) {
+            submissions.add(VideoSubmission.fromJson(Map<String, dynamic>.from(item)));
+          }
+        }
+      }
       state = VideosState(submissions: submissions);
-    } on DioException {
+    } catch (e) {
       state = const VideosState(error: 'Unable to load video feedback.');
     }
   }

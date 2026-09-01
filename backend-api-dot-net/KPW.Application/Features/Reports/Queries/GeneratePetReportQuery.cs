@@ -183,7 +183,27 @@ public class GeneratePetReportQueryHandler : IRequestHandler<GeneratePetReportQu
                 }
             }
 
-            referencedSessions = referencedSessions.OrderByDescending(r => r.Date).Take(5).ToList();
+            var reviewedVideos = await _dbContext.Set<VideoSubmission>()
+                .AsNoTracking()
+                .Include(v => v.Exercise)
+                .Where(v => v.PetId == query.PetId && v.IsReviewed && !string.IsNullOrWhiteSpace(v.PhysioFeedbackNotes))
+                .OrderByDescending(v => v.CreatedDate)
+                .Take(3)
+                .ToListAsync(cancellationToken);
+
+            foreach (var vid in reviewedVideos)
+            {
+                var title = vid.Exercise?.Title ?? vid.Title ?? "Rehabilitation / Progress Video";
+                var summary = $"Physio Review: {vid.PhysioFeedbackNotes}" +
+                    (!string.IsNullOrWhiteSpace(vid.Notes) ? $" (Owner Notes: \"{vid.Notes}\")" : "");
+                referencedSessions.Add(new ReferencedReportSessionDto(
+                    vid.CreatedDate,
+                    $"Video Clinical Review: {title}",
+                    summary,
+                    null));
+            }
+
+            referencedSessions = referencedSessions.OrderByDescending(r => r.Date).Take(6).ToList();
         }
 
         var report = new PetClinicalReportDto(

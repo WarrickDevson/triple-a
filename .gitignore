@@ -36,3 +36,13 @@ devson-development-*.json
 Thumbs.db
 .DS_Store
 /publish
+
+# Media & Uploads
+*.mp4
+*.mov
+*.hevc
+*.webm
+*.mkv
+**/wwwroot/uploads/**
+!**/wwwroot/uploads/.gitkeep
+

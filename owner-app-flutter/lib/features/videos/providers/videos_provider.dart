@@ -40,6 +40,40 @@ class VideosNotifier extends StateNotifier<VideosState> {
       state = const VideosState(error: 'Unable to load video feedback.');
     }
   }
+
+  Future<bool> updateVideo({
+    required int petId,
+    required int videoId,
+    String? title,
+    String? notes,
+  }) async {
+    try {
+      await _dio.put(
+        '/api/pets/$petId/videos/$videoId',
+        data: {
+          'title': title,
+          'notes': notes,
+        },
+      );
+      await loadForPet(petId);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteVideo({
+    required int petId,
+    required int videoId,
+  }) async {
+    try {
+      await _dio.delete('/api/pets/$petId/videos/$videoId');
+      await loadForPet(petId);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 final videosProvider = StateNotifierProvider<VideosNotifier, VideosState>((ref) {

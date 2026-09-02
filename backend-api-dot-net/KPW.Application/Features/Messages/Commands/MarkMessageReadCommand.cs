@@ -34,6 +34,8 @@ public class MarkMessageReadCommandHandler : IRequestHandler<MarkMessageReadComm
         var message = await _dbContext.Set<Message>()
             .Include(m => m.Sender)
             .Include(m => m.Thread)
+            .Include(m => m.VideoSubmission)
+                .ThenInclude(v => v!.Exercise)
             .FirstOrDefaultAsync(m => m.MessageId == command.MessageId, cancellationToken);
 
         if (message is null)

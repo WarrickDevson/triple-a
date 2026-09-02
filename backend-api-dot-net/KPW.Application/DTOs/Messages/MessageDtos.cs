@@ -7,6 +7,7 @@ public record MessageDto(
     string SenderName,
     string Body,
     int? VideoSubmissionId,
+    string? VideoTitle,
     string? AttachmentUrl,
     string? AttachmentName,
     string? AttachmentType,

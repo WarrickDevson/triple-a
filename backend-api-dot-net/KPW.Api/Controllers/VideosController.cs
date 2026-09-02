@@ -36,6 +36,27 @@ public class VideosController : ControllerBase
         }
     }
 
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<VideoSubmissionDto>> Update(
+        int id,
+        [FromBody] UpdateVideoSubmissionRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new UpdateVideoSubmissionCommand(id, request), cancellationToken);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
     [HttpPut("{id:int}/review")]
     public async Task<ActionResult<VideoSubmissionDto>> Review(
         int id,
@@ -48,6 +69,24 @@ public class VideosController : ControllerBase
         {
             var result = await _mediator.Send(new ReviewVideoCommand(id, request), cancellationToken);
             return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _mediator.Send(new DeleteVideoSubmissionCommand(id), cancellationToken);
+            return NoContent();
         }
         catch (KeyNotFoundException ex)
         {

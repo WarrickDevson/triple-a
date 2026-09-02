@@ -121,6 +121,19 @@ export async function fetchOwnerSubjectiveNotes(petId: number): Promise<OwnerSub
   }
 }
 
+export async function updateOwnerSubjectiveNote(
+  noteId: number,
+  payload: { notes: string; painObserved?: number | null; energyObserved?: number | null },
+): Promise<OwnerSubjectiveNote> {
+  const res = await apiClient.put<OwnerSubjectiveNote>(`/api/soap-notes/owner-notes/${noteId}`, payload)
+  return res.data
+}
+
+export async function deleteOwnerSubjectiveNote(noteId: number): Promise<boolean> {
+  await apiClient.delete(`/api/soap-notes/owner-notes/${noteId}`)
+  return true
+}
+
 // Voice Dictation & Audio Transcription Endpoints
 export async function parseSoapNarrative(payload: ParseSoapNarrativeRequest): Promise<StructuredSoapNote> {
   try {

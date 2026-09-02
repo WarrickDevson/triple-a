@@ -5,6 +5,7 @@ export interface Message {
   senderName: string
   body: string
   videoSubmissionId: number | null
+  videoTitle?: string | null
   attachmentUrl?: string | null
   attachmentName?: string | null
   attachmentType?: string | null

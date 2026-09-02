@@ -35,6 +35,9 @@ public class GetPetMessagesQueryHandler : IRequestHandler<GetPetMessagesQuery, I
         var thread = await _dbContext.Set<MessageThread>()
             .Include(t => t.Messages)
                 .ThenInclude(m => m.Sender)
+            .Include(t => t.Messages)
+                .ThenInclude(m => m.VideoSubmission)
+                    .ThenInclude(v => v!.Exercise)
             .FirstOrDefaultAsync(t => t.PetId == request.PetId, cancellationToken);
 
         if (thread is null)

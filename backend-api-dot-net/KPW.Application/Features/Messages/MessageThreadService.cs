@@ -9,19 +9,38 @@ namespace KPW.Application.Features.Messages;
 
 internal static class MessageMapper
 {
-    public static MessageDto ToDto(Message message) =>
-        new(
+    public static MessageDto ToDto(Message message)
+    {
+        string? videoTitle = null;
+        if (message.VideoSubmission != null)
+        {
+            videoTitle = !string.IsNullOrWhiteSpace(message.VideoSubmission.Title)
+                ? message.VideoSubmission.Title
+                : !string.IsNullOrWhiteSpace(message.VideoSubmission.Exercise?.Title)
+                    ? message.VideoSubmission.Exercise.Title
+                    : !string.IsNullOrWhiteSpace(message.VideoSubmission.Notes)
+                        ? message.VideoSubmission.Notes
+                        : $"Video #{message.VideoSubmissionId}";
+        }
+        else if (message.VideoSubmissionId.HasValue)
+        {
+            videoTitle = $"Video #{message.VideoSubmissionId}";
+        }
+
+        return new(
             message.MessageId,
             message.MessageThreadId,
             message.SenderUserId,
             $"{message.Sender.FirstName} {message.Sender.LastName}",
             message.Body,
             message.VideoSubmissionId,
+            videoTitle,
             message.AttachmentUrl,
             message.AttachmentName,
             message.AttachmentType,
             message.ReadAt,
             message.CreatedDate);
+    }
 }
 
 internal static class MessageThreadService

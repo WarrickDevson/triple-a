@@ -9,6 +9,7 @@ import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/pet_avatar.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../pets/models/pet.dart';
+import '../../videos/models/video_submission.dart';
 import '../models/message.dart';
 import '../providers/messages_provider.dart';
 
@@ -32,6 +33,7 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   int? _videoSubmissionId;
+  String? _stagedVideoTitle;
   String? _attachedFileUrl;
   String? _attachedFileName;
   String? _attachedFileType;
@@ -214,9 +216,9 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
                       itemCount: rawList.length,
                       separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (context, index) {
-                        final item = rawList[index] as Map<String, dynamic>;
-                        final id = item['videoSubmissionId'] as int;
-                        final title = (item['exerciseTitle'] as String?) ?? 'Video Submission #$id';
+                        final submission = VideoSubmission.fromJson(rawList[index] as Map<String, dynamic>);
+                        final id = submission.videoSubmissionId;
+                        final title = submission.displayTitle;
                         final isSelected = _videoSubmissionId == id;
                         return ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -236,7 +238,10 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
                                   ),
                                 ),
                           onTap: () {
-                            setState(() => _videoSubmissionId = id);
+                            setState(() {
+                              _videoSubmissionId = id;
+                              _stagedVideoTitle = title;
+                            });
                             Navigator.pop(context);
                           },
                         );
@@ -348,10 +353,13 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
                 child: InputChip(
                   avatar: const Icon(Icons.videocam_rounded, size: 18, color: AppColors.sage),
                   label: Text(
-                    'Attached Video #$_videoSubmissionId',
+                    _stagedVideoTitle != null ? 'Attached: $_stagedVideoTitle' : 'Attached Video #$_videoSubmissionId',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
-                  onDeleted: () => setState(() => _videoSubmissionId = null),
+                  onDeleted: () => setState(() {
+                    _videoSubmissionId = null;
+                    _stagedVideoTitle = null;
+                  }),
                   deleteIconColor: AppColors.alertRed,
                   backgroundColor: AppColors.sage.withValues(alpha: 0.15),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -382,8 +390,14 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
             ),
           SafeArea(
             top: false,
+            bottom: MediaQuery.of(context).viewInsets.bottom == 0,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                8,
+                16,
+                MediaQuery.of(context).viewInsets.bottom > 0 ? 8 : 16,
+              ),
               child: Row(
                 children: [
                   IconButton(
@@ -514,7 +528,7 @@ class _MessageBubble extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Video #${message.videoSubmissionId}',
+                      message.videoTitle ?? 'Video #${message.videoSubmissionId}',
                       style: TextStyle(
                         color: isMine ? Colors.white : AppColors.navy,
                         fontSize: 12,

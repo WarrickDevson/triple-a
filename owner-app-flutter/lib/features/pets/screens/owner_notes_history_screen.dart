@@ -101,23 +101,29 @@ class OwnerNotesHistoryScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.sage.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.sage.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.rate_review_outlined, size: 16, color: AppColors.sage),
                                 ),
-                                child: const Icon(Icons.rate_review_outlined, size: 16, color: AppColors.sage),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                dateStr,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.neutralMuted),
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    dateStr,
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.neutralMuted),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
@@ -132,7 +138,7 @@ class OwnerNotesHistoryScreen extends ConsumerWidget {
                               ),
                             ),
                             child: Text(
-                              note.isReviewed ? 'Reviewed by Physio' : 'Pending Review',
+                              note.isReviewed ? 'Reviewed' : 'Pending',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -177,6 +183,60 @@ class OwnerNotesHistoryScreen extends ConsumerWidget {
                           ],
                         ),
                       ],
+                      const SizedBox(height: 10),
+                      const Divider(height: 1),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                foregroundColor: AppColors.sage,
+                              ),
+                              icon: const Icon(Icons.edit_outlined, size: 16),
+                              label: const Text('Edit Note', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                              onPressed: () => showDialog(
+                                context: context,
+                                builder: (_) => SubmitOwnerNoteDialog(pet: pet, existingNote: note),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                foregroundColor: AppColors.alertRed,
+                              ),
+                              icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                              label: const Text('Delete', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('Delete Note?'),
+                                    content: const Text('Are you sure you want to delete this home note? This action cannot be undone.'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.alertRed, foregroundColor: Colors.white),
+                                        onPressed: () => Navigator.pop(ctx, true),
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  final ok = await ref.read(ownerNotesProvider.notifier).deleteOwnerSubjectiveNote(note.ownerSubjectiveNoteId);
+                                  if (ok) {
+                                    ref.invalidate(ownerNotesListProvider(pet.petId));
+                                  }
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 );

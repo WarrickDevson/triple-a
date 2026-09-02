@@ -30,13 +30,16 @@ class VideoSubmission {
   final DateTime createdDate;
 
   String get displayTitle {
-    if (exerciseTitle != null && exerciseTitle!.trim().isNotEmpty) {
-      return exerciseTitle!;
-    }
     if (title != null && title!.trim().isNotEmpty) {
       return title!;
     }
-    return 'Progress Update';
+    if (exerciseTitle != null && exerciseTitle!.trim().isNotEmpty) {
+      return exerciseTitle!;
+    }
+    if (notes != null && notes!.trim().isNotEmpty) {
+      return notes!;
+    }
+    return 'Video #$videoSubmissionId';
   }
 
   factory VideoSubmission.fromJson(Map<String, dynamic> json) {

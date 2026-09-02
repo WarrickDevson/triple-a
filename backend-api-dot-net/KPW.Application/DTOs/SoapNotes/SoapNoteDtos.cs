@@ -99,3 +99,8 @@ public record CreateOwnerSubjectiveNoteRequestDto(
     int? PainObserved,
     int? EnergyObserved);
 
+public record UpdateOwnerSubjectiveNoteRequestDto(
+    string Notes,
+    int? PainObserved,
+    int? EnergyObserved);
+

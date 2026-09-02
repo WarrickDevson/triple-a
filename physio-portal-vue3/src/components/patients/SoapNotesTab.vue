@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { Plus, Download, ChevronDown, ChevronUp, FileText, CheckCircle2, MessageSquareQuote, Pencil, Trash2, Mic, Share2 } from '@lucide/vue'
+import { Plus, Download, ChevronDown, ChevronUp, FileText, CheckCircle2, MessageSquareQuote, Pencil, Trash2, Mic, Share2, X, Loader2 } from '@lucide/vue'
 import type { SoapNote, OwnerSubjectiveNote } from '../../types/soap'
-import { fetchSoapNotesByPet, deleteSoapNote, downloadSoapPdf, fetchOwnerSubjectiveNotes, toggleSoapNoteShare } from '../../api/soapNotes'
+import {
+  fetchSoapNotesByPet,
+  deleteSoapNote,
+  downloadSoapPdf,
+  fetchOwnerSubjectiveNotes,
+  toggleSoapNoteShare,
+  deleteOwnerSubjectiveNote,
+  updateOwnerSubjectiveNote,
+} from '../../api/soapNotes'
+import BaseButton from '../BaseButton.vue'
 import CreateSoapNoteModal from './CreateSoapNoteModal.vue'
 import VoiceSoapDictationModal from '../soap/VoiceSoapDictationModal.vue'
 
@@ -121,6 +130,60 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('soap-note-created', handleSoapNoteEvent)
 })
+
+// Owner Note Actions
+async function handleDeleteOwnerNote(noteId: number) {
+  if (!confirm('Are you sure you want to delete this home observation note?')) return
+  try {
+    const ok = await deleteOwnerSubjectiveNote(noteId)
+    if (ok) {
+      ownerNotes.value = ownerNotes.value.filter((n) => n.ownerSubjectiveNoteId !== noteId)
+    }
+  } catch (err) {
+    alert('Failed to delete owner note.')
+  }
+}
+
+const activeEditOwnerNote = ref<OwnerSubjectiveNote | null>(null)
+const editOwnerNotesText = ref('')
+const editPainObserved = ref<number | null>(null)
+const editEnergyObserved = ref<number | null>(null)
+const isOwnerNoteSaving = ref(false)
+
+function openEditOwnerNoteModal(note: OwnerSubjectiveNote) {
+  activeEditOwnerNote.value = note
+  editOwnerNotesText.value = note.notes
+  editPainObserved.value = note.painObserved ?? null
+  editEnergyObserved.value = note.energyObserved ?? null
+}
+
+function closeEditOwnerNoteModal() {
+  activeEditOwnerNote.value = null
+  editOwnerNotesText.value = ''
+  editPainObserved.value = null
+  editEnergyObserved.value = null
+}
+
+async function handleSaveEditOwnerNote() {
+  if (!activeEditOwnerNote.value || !editOwnerNotesText.value.trim()) return
+  isOwnerNoteSaving.value = true
+  try {
+    const updated = await updateOwnerSubjectiveNote(activeEditOwnerNote.value.ownerSubjectiveNoteId, {
+      notes: editOwnerNotesText.value.trim(),
+      painObserved: editPainObserved.value,
+      energyObserved: editEnergyObserved.value,
+    })
+    const idx = ownerNotes.value.findIndex((n) => n.ownerSubjectiveNoteId === updated.ownerSubjectiveNoteId)
+    if (idx !== -1) {
+      ownerNotes.value[idx] = updated
+    }
+    closeEditOwnerNoteModal()
+  } catch (err: any) {
+    alert(err?.response?.data?.message || 'Failed to update owner note.')
+  } finally {
+    isOwnerNoteSaving.value = false
+  }
+}
 </script>
 
 <template>
@@ -176,7 +239,27 @@ onUnmounted(() => {
         >
           <div class="flex items-center justify-between gap-2">
             <span class="font-bold text-navy">{{ on.ownerName }}</span>
-            <span class="text-[10px] text-neutral-muted">{{ new Date(on.noteDate).toLocaleString() }}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-neutral-muted">{{ new Date(on.noteDate).toLocaleString() }}</span>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold text-neutral-muted hover:bg-neutral-grey/40 hover:text-navy"
+                title="Edit this note"
+                @click="openEditOwnerNoteModal(on)"
+              >
+                <Pencil class="h-3 w-3 text-sage" />
+                Edit
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold text-alert-red/80 hover:bg-rose-50 hover:text-alert-red"
+                title="Delete this note"
+                @click="handleDeleteOwnerNote(on.ownerSubjectiveNoteId)"
+              >
+                <Trash2 class="h-3 w-3 text-rose-500" />
+                Delete
+              </button>
+            </div>
           </div>
           <p class="mt-1 text-sm text-navy italic">"{{ on.notes }}"</p>
           <div class="mt-2 flex gap-3 text-[11px] text-neutral-muted">
@@ -399,5 +482,81 @@ onUnmounted(() => {
       species="Canine"
       @close="showVoiceDictationModal = false"
     />
+
+    <!-- Edit Owner Note Modal -->
+    <div
+      v-if="activeEditOwnerNote"
+      class="fixed inset-0 z-60 flex items-center justify-center bg-navy/60 p-4 backdrop-blur-xs"
+      @click.self="closeEditOwnerNoteModal"
+    >
+      <div class="portal-card max-h-[90vh] w-full max-w-md overflow-y-auto bg-white p-5 shadow-xl rounded-2xl space-y-4">
+        <div class="flex items-center justify-between border-b border-neutral-grey/80 pb-3">
+          <h3 class="text-base font-bold text-navy">Edit Home Observation Note</h3>
+          <button
+            type="button"
+            class="rounded-lg p-1.5 text-neutral-muted hover:bg-neutral-grey/40 hover:text-navy"
+            @click="closeEditOwnerNoteModal"
+          >
+            <X class="h-5 w-5" />
+          </button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-navy mb-1">Observation Notes</label>
+            <textarea
+              v-model="editOwnerNotesText"
+              rows="4"
+              class="portal-input w-full"
+              placeholder="Owner observations..."
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-navy mb-1">Pain Observed (0-10)</label>
+              <input
+                v-model.number="editPainObserved"
+                type="number"
+                min="0"
+                max="10"
+                class="portal-input w-full"
+                placeholder="e.g. 2"
+              />
+            </div>
+            <div>
+              <label class="block font-bold text-navy mb-1">Energy Observed (1-10)</label>
+              <input
+                v-model.number="editEnergyObserved"
+                type="number"
+                min="1"
+                max="10"
+                class="portal-input w-full"
+                placeholder="e.g. 7"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 border-t border-neutral-grey/80 pt-3">
+          <button
+            type="button"
+            class="rounded-lg px-3 py-1.5 text-xs font-semibold text-neutral-muted hover:bg-neutral-grey/40 transition"
+            @click="closeEditOwnerNoteModal"
+          >
+            Cancel
+          </button>
+          <BaseButton
+            size="sm"
+            variant="accent"
+            :disabled="isOwnerNoteSaving || !editOwnerNotesText.trim()"
+            @click="handleSaveEditOwnerNote"
+          >
+            <Loader2 v-if="isOwnerNoteSaving" class="h-3.5 w-3.5 animate-spin" />
+            Save Changes
+          </BaseButton>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

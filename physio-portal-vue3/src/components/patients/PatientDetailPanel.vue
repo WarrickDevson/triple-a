@@ -6,12 +6,14 @@ import PatientActionBar from './PatientActionBar.vue'
 import PatientOverviewTab from './PatientOverviewTab.vue'
 import PatientPlanTab from './PatientPlanTab.vue'
 import PatientProgressTab from './PatientProgressTab.vue'
+import PatientVideosTab from './PatientVideosTab.vue'
 import PatientDocumentsTab from './PatientDocumentsTab.vue'
 import SoapNotesTab from './SoapNotesTab.vue'
 import type { Appointment } from '../../types/appointment'
 import type { PatientDemoMeta } from '../../data/patientDemo'
 import type { RehabProgram } from '../../types/exercise'
 import type { Pet } from '../../types/pet'
+import type { VideoSubmission } from '../../types/video'
 
 const route = useRoute()
 
@@ -21,6 +23,7 @@ defineProps<{
   activeProgram: RehabProgram | null
   nextAppointment: Appointment | null
   progressPercent: number
+  videos?: VideoSubmission[]
   loading?: boolean
   showBack?: boolean
 }>()
@@ -34,19 +37,28 @@ const tabs = [
   { id: 'soap', label: 'SOAP Notes' },
   { id: 'plan', label: 'Plan' },
   { id: 'progress', label: 'Progress' },
+  { id: 'videos', label: 'Videos' },
   { id: 'documents', label: 'Documents' },
 ] as const
 
-const activeTab = ref<(typeof tabs)[number]['id']>(route.query.openSoap === 'true' || route.query.tab === 'soap' ? 'soap' : 'overview')
+const activeTab = ref<(typeof tabs)[number]['id']>(
+  route.query.openSoap === 'true' || route.query.tab === 'soap'
+    ? 'soap'
+    : route.query.tab === 'videos'
+      ? 'videos'
+      : 'overview',
+)
 
 watch(
   () => route.query,
   (q) => {
     if (q.openSoap === 'true' || q.tab === 'soap') {
       activeTab.value = 'soap'
+    } else if (q.tab === 'videos') {
+      activeTab.value = 'videos'
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 </script>
 
@@ -115,6 +127,12 @@ watch(
             v-else-if="activeTab === 'progress'"
             :patient="patient"
             :progress-percent="progressPercent"
+          />
+          <PatientVideosTab
+            v-else-if="activeTab === 'videos'"
+            :patient="patient"
+            :videos="videos"
+            :loading="loading"
           />
           <PatientDocumentsTab
             v-else-if="activeTab === 'documents'"

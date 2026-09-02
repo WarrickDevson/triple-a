@@ -6,6 +6,7 @@ class PetMessage {
     required this.senderName,
     required this.body,
     this.videoSubmissionId,
+    this.videoTitle,
     this.attachmentUrl,
     this.attachmentName,
     this.attachmentType,
@@ -19,6 +20,7 @@ class PetMessage {
   final String senderName;
   final String body;
   final int? videoSubmissionId;
+  final String? videoTitle;
   final String? attachmentUrl;
   final String? attachmentName;
   final String? attachmentType;
@@ -33,6 +35,7 @@ class PetMessage {
       senderName: json['senderName'] as String,
       body: json['body'] as String,
       videoSubmissionId: json['videoSubmissionId'] as int?,
+      videoTitle: json['videoTitle'] as String?,
       attachmentUrl: json['attachmentUrl'] as String?,
       attachmentName: json['attachmentName'] as String?,
       attachmentType: json['attachmentType'] as String?,

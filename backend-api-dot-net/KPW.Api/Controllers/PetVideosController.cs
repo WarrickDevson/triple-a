@@ -77,4 +77,47 @@ public class PetVideosController : ControllerBase
             return StatusCode(500, new { message = ex.Message });
         }
     }
+
+    [HttpPut("{videoId:int}")]
+    public async Task<ActionResult<VideoSubmissionDto>> Update(
+        int petId,
+        int videoId,
+        [FromBody] UpdateVideoSubmissionRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new UpdateVideoSubmissionCommand(videoId, request), cancellationToken);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{videoId:int}")]
+    public async Task<IActionResult> Delete(
+        int petId,
+        int videoId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _mediator.Send(new DeleteVideoSubmissionCommand(videoId), cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
 }

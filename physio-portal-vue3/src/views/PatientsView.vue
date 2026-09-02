@@ -37,6 +37,7 @@ const progressPercent = computed(() => detail.progressPercent.value)
 const detailLoading = computed(() => detail.loading.value)
 const patientProgress = computed(() => detail.progress.value)
 const latestVideo = computed(() => detail.latestVideo.value)
+const patientVideos = computed(() => detail.videos.value)
 
 onMounted(async () => {
   await patientsStore.fetchClinicPatients().catch(() => undefined)
@@ -110,6 +111,7 @@ function onPatientCreated(petId: number) {
         :active-program="activeProgram"
         :next-appointment="nextAppointment"
         :progress-percent="progressPercent"
+        :videos="patientVideos"
         :loading="detailLoading"
         :show-back="mobileView === 'detail'"
         @back="backToList"
@@ -123,6 +125,7 @@ function onPatientCreated(petId: number) {
       <PatientOutcomePanel
         :progress="patientProgress"
         :latest-video="latestVideo"
+        :videos="patientVideos"
         :loading="detailLoading"
       />
     </div>

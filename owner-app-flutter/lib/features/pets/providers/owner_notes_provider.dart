@@ -43,6 +43,41 @@ class OwnerNotesNotifier extends StateNotifier<OwnerNotesState> {
     }
   }
 
+  Future<bool> updateOwnerSubjectiveNote({
+    required int noteId,
+    required String notes,
+    int? painObserved,
+    int? energyObserved,
+  }) async {
+    state = const OwnerNotesState(isSubmitting: true);
+    try {
+      final data = <String, dynamic>{
+        'notes': notes,
+      };
+      if (painObserved != null) data['painObserved'] = painObserved;
+      if (energyObserved != null) data['energyObserved'] = energyObserved;
+
+      await _dio.put('/api/soap-notes/owner-notes/$noteId', data: data);
+      state = const OwnerNotesState(success: true);
+      return true;
+    } catch (e) {
+      state = OwnerNotesState(error: e.toString());
+      return false;
+    }
+  }
+
+  Future<bool> deleteOwnerSubjectiveNote(int noteId) async {
+    state = const OwnerNotesState(isSubmitting: true);
+    try {
+      await _dio.delete('/api/soap-notes/owner-notes/$noteId');
+      state = const OwnerNotesState(success: true);
+      return true;
+    } catch (e) {
+      state = OwnerNotesState(error: e.toString());
+      return false;
+    }
+  }
+
   Future<List<OwnerSubjectiveNote>> fetchNotes(int petId) async {
     try {
       final response = await _dio.get('/api/soap-notes/pet/$petId/owner-notes');

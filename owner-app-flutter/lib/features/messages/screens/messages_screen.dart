@@ -353,6 +353,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
     if (widget.embedded) {
       return PageWashBackground(
         child: SafeArea(
+          bottom: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

@@ -5,12 +5,19 @@ import { uploadMessageAttachment } from '../../api/messages'
 import { getPetVideos } from '../../api/videos'
 import { useMessagesStore } from '../../store/messages'
 import type { VideoSubmission } from '../../types/video'
+import { getVideoTitle } from '../../types/video'
 
 interface LocalAttachment {
   url: string
   name: string
   type: string
 }
+
+const props = defineProps<{
+  petId?: number
+  physioId?: number
+  ownerId?: number
+}>()
 
 const messagesStore = useMessagesStore()
 const body = ref('')
@@ -24,26 +31,28 @@ const loadingVideos = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 watch(
-  () => messagesStore.activePetId,
-  async (newPetId) => {
+  () => props.petId,
+  (newPetId) => {
     selectedVideo.value = null
     selectedAttachment.value = null
     showVideoPicker.value = false
     if (newPetId) {
-      loadingVideos.value = true
-      try {
-        availableVideos.value = await getPetVideos(newPetId)
-      } catch {
-        availableVideos.value = []
-      } finally {
-        loadingVideos.value = false
-      }
-    } else {
-      availableVideos.value = []
+      loadVideos(newPetId)
     }
   },
   { immediate: true },
 )
+
+async function loadVideos(petId: number) {
+  loadingVideos.value = true
+  try {
+    availableVideos.value = await getPetVideos(petId)
+  } catch {
+    availableVideos.value = []
+  } finally {
+    loadingVideos.value = false
+  }
+}
 
 function triggerFileSelect() {
   fileInput.value?.click()
@@ -71,6 +80,7 @@ async function handleFileUpload(event: Event) {
 }
 
 async function send() {
+  if (!props.petId) return
   const text = body.value.trim()
   if (!text && !selectedVideo.value && !selectedAttachment.value) return
 
@@ -80,7 +90,7 @@ async function send() {
   const attachmentType = selectedAttachment.value?.type ?? undefined
 
   await messagesStore.sendMessage({
-    body: text || (selectedAttachment.value ? `[File Attachment: ${selectedAttachment.value.name}]` : '[Video Submission Attached]'),
+    body: text || (selectedVideo.value ? `Video Submission: ${getVideoTitle(selectedVideo.value)}` : 'Attached file'),
     videoSubmissionId: videoId,
     attachmentUrl,
     attachmentName,
@@ -122,7 +132,7 @@ function clearAttachment() {
     <div v-if="selectedVideo" class="mb-2 flex items-center justify-between rounded-lg bg-sage/10 px-3 py-1.5 text-xs text-navy border border-sage/30">
       <div class="flex items-center gap-2 truncate">
         <span class="font-bold text-sage">📹 Attached Video:</span>
-        <span class="truncate font-medium">{{ selectedVideo.exerciseTitle || `Video #${selectedVideo.videoSubmissionId}` }}</span>
+        <span class="truncate font-medium">{{ getVideoTitle(selectedVideo) }}</span>
       </div>
       <button type="button" class="ml-2 font-bold text-alert-red hover:underline" @click="clearVideo">
         ✕ Remove
@@ -165,7 +175,7 @@ function clearAttachment() {
           @click="selectVideo(v)"
         >
           <div>
-            <p class="font-semibold text-navy">{{ v.exerciseTitle || `Video #${v.videoSubmissionId}` }}</p>
+            <p class="font-semibold text-navy">{{ getVideoTitle(v) }}</p>
             <p class="text-[10px] text-neutral-muted">{{ new Date(v.createdDate).toLocaleDateString() }} · {{ v.isReviewed ? 'Reviewed' : 'Pending Review' }}</p>
           </div>
           <span class="text-xs text-sage font-bold">Attach →</span>

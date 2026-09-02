@@ -445,8 +445,8 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
               ),
             ],
             const SizedBox(height: 12),
+            const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 OutlinedButton.icon(
                   onPressed: () => _watchVideo(submission),
@@ -457,7 +457,19 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
                     textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                   ),
                 ),
-                if (submission.isReviewed)
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.primaryLight),
+                  tooltip: 'Edit Title & Notes',
+                  onPressed: () => _showEditVideoDialog(submission),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.alertRed),
+                  tooltip: 'Delete Video',
+                  onPressed: () => _confirmDeleteVideo(submission),
+                ),
+                if (submission.isReviewed) ...[
+                  const SizedBox(width: 4),
                   TextButton(
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(
@@ -472,11 +484,154 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
                     ),
                     child: const Text('Ask about this'),
                   ),
+                ],
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _showEditVideoDialog(VideoSubmission submission) {
+    final titleController = TextEditingController(text: submission.title ?? '');
+    final notesController = TextEditingController(text: submission.notes ?? '');
+    bool isSaving = false;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.sage.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.edit_outlined, color: AppColors.sage, size: 20),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Edit Video Details',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.navy),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Video Title:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.navy),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. Walking in the yard, Sit to stand...',
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Owner Notes for Physio:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.navy),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: notesController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Describe how the pet performed or any observations...',
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.sage,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      setModalState(() => isSaving = true);
+                      final ok = await ref.read(videosProvider.notifier).updateVideo(
+                            petId: submission.petId,
+                            videoId: submission.videoSubmissionId,
+                            title: titleController.text.trim(),
+                            notes: notesController.text.trim(),
+                          );
+                      if (ok && mounted) {
+                        if (dialogCtx.mounted) {
+                          Navigator.pop(dialogCtx);
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Video details updated successfully!')),
+                        );
+                      } else if (mounted) {
+                        setModalState(() => isSaving = false);
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteVideo(VideoSubmission submission) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Video Submission?'),
+        content: Text(
+          'Are you sure you want to delete "${submission.displayTitle}"? This video and its review history will be removed.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.alertRed, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final ok = await ref.read(videosProvider.notifier).deleteVideo(
+            petId: submission.petId,
+            videoId: submission.videoSubmissionId,
+          );
+      if (ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Video submission deleted.')),
+        );
+      }
+    }
   }
 }

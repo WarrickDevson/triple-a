@@ -13,8 +13,10 @@ import '../../exercises/screens/exercise_program_screen.dart';
 import '../../shell/main_shell.dart';
 import '../../tracking/screens/tracking_screen.dart';
 import '../models/pet.dart';
+import '../providers/owner_notes_provider.dart';
 import 'owner_notes_history_screen.dart';
 import 'saved_reports_screen.dart';
+import 'submit_owner_note_dialog.dart';
 
 class PetDetailScreen extends ConsumerStatefulWidget {
   const PetDetailScreen({
@@ -570,51 +572,323 @@ class _ProgressTab extends StatelessWidget {
   }
 }
 
-class _NotesTab extends StatelessWidget {
+class _NotesTab extends ConsumerWidget {
   const _NotesTab({required this.pet});
 
   final Pet pet;
 
+  String _formatDate(DateTime dt) {
+    final local = dt.toLocal();
+    final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final m = monthNames[local.month - 1];
+    final h = local.hour > 12 ? local.hour - 12 : (local.hour == 0 ? 12 : local.hour);
+    final ampm = local.hour >= 12 ? 'PM' : 'AM';
+    final min = local.minute.toString().padLeft(2, '0');
+    return '$m ${local.day}, ${local.year} · $h:$min $ampm';
+  }
+
   @override
-  Widget build(BuildContext context) {
-    if (pet.medicalHistories.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: AppEmptyState(
-          icon: Icons.note_alt_outlined,
-          title: 'No notes yet',
-          message: 'Medical history and clinician notes will appear here.',
-        ),
-      );
-    }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notesAsync = ref.watch(ownerNotesListProvider(pet.petId));
 
     return PageWashBackground(
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-        itemCount: pet.medicalHistories.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (context, index) {
-          final history = pet.medicalHistories[index];
-          return SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: RefreshIndicator(
+        color: AppColors.sage,
+        onRefresh: () => ref.refresh(ownerNotesListProvider(pet.petId).future),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+          children: [
+            // Header Bar
+            Row(
               children: [
-                Text(
-                  history.diagnosis,
-                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Home Observations',
+                        style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy, fontSize: 16),
+                      ),
+                      Text(
+                        'Notes shared with your physio',
+                        style: TextStyle(color: AppColors.navy.withValues(alpha: 0.6), fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-                if (history.injuryOrCondition != null) ...[
-                  const SizedBox(height: 6),
-                  Text(history.injuryOrCondition!, style: const TextStyle(color: AppColors.neutralMuted)),
-                ],
-                if (history.clinicianNotes != null) ...[
-                  const SizedBox(height: 10),
-                  Text(history.clinicianNotes!, style: const TextStyle(height: 1.45)),
-                ],
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.sage,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.add_comment_outlined, size: 16),
+                  label: const Text('Add Note', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                  onPressed: () => showDialog(
+                    context: context,
+                    builder: (_) => SubmitOwnerNoteDialog(pet: pet),
+                  ),
+                ),
               ],
             ),
-          );
-        },
+            const SizedBox(height: 14),
+
+            // Notes List
+            notesAsync.when(
+              data: (notes) {
+                if (notes.isEmpty && pet.medicalHistories.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: AppEmptyState(
+                      icon: Icons.rate_review_outlined,
+                      title: 'No notes yet',
+                      message: 'Share pain levels, energy changes, or daily progress with your physio.',
+                      action: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.sage, foregroundColor: Colors.white),
+                        onPressed: () => showDialog(
+                          context: context,
+                          builder: (_) => SubmitOwnerNoteDialog(pet: pet),
+                        ),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add First Note'),
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    if (notes.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: SectionCard(
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, color: AppColors.navy.withValues(alpha: 0.5), size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'No home observation notes yet. Tap "+ Add Note" to share updates with your physio.',
+                                  style: TextStyle(fontSize: 12, color: AppColors.navy.withValues(alpha: 0.7)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      ...notes.map(
+                        (note) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: SectionCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.sage.withValues(alpha: 0.12),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(Icons.rate_review_outlined, size: 16, color: AppColors.sage),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Flexible(
+                                            child: Text(
+                                              _formatDate(note.noteDate),
+                                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.neutralMuted),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: note.isReviewed ? Colors.green.shade50 : Colors.amber.shade50,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: note.isReviewed ? Colors.green.shade200 : Colors.amber.shade200,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        note.isReviewed ? 'Reviewed' : 'Pending',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: note.isReviewed ? Colors.green.shade700 : Colors.amber.shade800,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  '"${note.notes}"',
+                                  style: const TextStyle(fontSize: 14, color: AppColors.navy, height: 1.45, fontStyle: FontStyle.italic),
+                                ),
+                                if (note.painObserved != null || note.energyObserved != null) ...[
+                                  const SizedBox(height: 10),
+                                  Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      if (note.painObserved != null)
+                                        Chip(
+                                          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                                          visualDensity: VisualDensity.compact,
+                                          backgroundColor: Colors.grey.shade100,
+                                          label: Text(
+                                            'Pain: ${note.painObserved}/10',
+                                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.navy),
+                                          ),
+                                        ),
+                                      if (note.energyObserved != null)
+                                        Chip(
+                                          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+                                          visualDensity: VisualDensity.compact,
+                                          backgroundColor: Colors.grey.shade100,
+                                          label: Text(
+                                            'Energy: ${note.energyObserved}/10',
+                                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.navy),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                                const SizedBox(height: 10),
+                                const Divider(height: 1),
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      TextButton.icon(
+                                        style: TextButton.styleFrom(
+                                          visualDensity: VisualDensity.compact,
+                                          foregroundColor: AppColors.sage,
+                                        ),
+                                        icon: const Icon(Icons.edit_outlined, size: 16),
+                                        label: const Text('Edit Note', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                        onPressed: () => showDialog(
+                                          context: context,
+                                          builder: (_) => SubmitOwnerNoteDialog(pet: pet, existingNote: note),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      TextButton.icon(
+                                        style: TextButton.styleFrom(
+                                          visualDensity: VisualDensity.compact,
+                                          foregroundColor: AppColors.alertRed,
+                                        ),
+                                        icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                                        label: const Text('Delete', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                        onPressed: () async {
+                                          final confirm = await showDialog<bool>(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                              title: const Text('Delete Note?'),
+                                              content: const Text('Are you sure you want to delete this home observation note?'),
+                                              actions: [
+                                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                                ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.alertRed, foregroundColor: Colors.white),
+                                                  onPressed: () => Navigator.pop(ctx, true),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirm == true) {
+                                            final ok = await ref.read(ownerNotesProvider.notifier).deleteOwnerSubjectiveNote(note.ownerSubjectiveNoteId);
+                                            if (ok) {
+                                              ref.invalidate(ownerNotesListProvider(pet.petId));
+                                            }
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 32),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (err, _) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Text(
+                    'Unable to load notes: $err',
+                    style: const TextStyle(color: AppColors.alertRed, fontSize: 13),
+                  ),
+                ),
+              ),
+            ),
+
+            // Clinician Records & Diagnosis section
+            if (pet.medicalHistories.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Icon(Icons.medical_services_outlined, size: 18, color: AppColors.navy.withValues(alpha: 0.7)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Clinical Diagnosis & Practice Records',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.navy, fontSize: 14),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ...pet.medicalHistories.map(
+                (history) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: SectionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          history.diagnosis,
+                          style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.navy),
+                        ),
+                        if (history.injuryOrCondition != null) ...[
+                          const SizedBox(height: 6),
+                          Text(history.injuryOrCondition!, style: const TextStyle(color: AppColors.neutralMuted)),
+                        ],
+                        if (history.clinicianNotes != null) ...[
+                          const SizedBox(height: 10),
+                          Text(history.clinicianNotes!, style: const TextStyle(height: 1.45)),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

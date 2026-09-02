@@ -111,14 +111,14 @@ function scrollToBottom() {
             >
               <span class="text-lg">🎥</span>
               <div class="flex-1 min-w-0">
-                <p class="font-bold truncate">Attached Video Submission</p>
+                <p class="font-bold truncate">{{ message.videoTitle || 'Attached Video Submission' }}</p>
                 <p class="text-[10px]" :class="isOutgoing(message) ? 'text-white/80' : 'text-neutral-muted'">
-                  Video Submission #{{ message.videoSubmissionId }}
+                  {{ message.videoTitle ? `Video #${message.videoSubmissionId}` : `Video Submission #${message.videoSubmissionId}` }}
                 </p>
               </div>
               <RouterLink
                 v-if="activePetId"
-                :to="{ name: 'patient-detail', params: { petId: activePetId }, query: { tab: 'videos', videoId: message.videoSubmissionId } }"
+                :to="{ name: 'patient-detail', params: { petId: activePetId }, query: { videoId: message.videoSubmissionId } }"
                 class="rounded-lg px-2 py-1 text-[11px] font-bold transition hover:underline"
                 :class="isOutgoing(message) ? 'bg-white text-sage' : 'bg-sage text-white'"
               >

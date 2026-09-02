@@ -22,3 +22,15 @@ export async function reviewVideo(id: number, payload: ReviewVideoRequest): Prom
   const { data } = await apiClient.put<VideoSubmission>(`/api/videos/${id}/review`, payload)
   return data
 }
+
+export async function updateVideo(
+  id: number,
+  payload: { title?: string | null; notes?: string | null },
+): Promise<VideoSubmission> {
+  const { data } = await apiClient.put<VideoSubmission>(`/api/videos/${id}`, payload)
+  return data
+}
+
+export async function deleteVideo(id: number): Promise<void> {
+  await apiClient.delete(`/api/videos/${id}`)
+}

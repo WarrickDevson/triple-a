@@ -17,6 +17,10 @@ public record VideoSubmissionDto(
 
 public record ReviewVideoRequestDto(string FeedbackNotes);
 
+public record UpdateVideoSubmissionRequestDto(
+    string? Title,
+    string? Notes);
+
 public record UploadVideoResultDto(
     int VideoSubmissionId,
     string ProcessingStatus,

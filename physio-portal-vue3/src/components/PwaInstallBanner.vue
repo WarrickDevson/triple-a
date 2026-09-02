@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { Download, X } from '@lucide/vue'
 import { usePwaInstall } from '../composables/usePwaInstall'
 import logoUrl from '../assets/brand/triple-a-logo.png'
 
-const { isInstalled, promptInstall } = usePwaInstall()
-const dismissed = ref(false)
+const { isInstalled, isDismissed, dismissBanner, promptInstall } = usePwaInstall()
 
 function dismiss() {
-  dismissed.value = true
+  dismissBanner()
 }
 
 async function handleInstallClick() {
@@ -20,7 +18,7 @@ async function handleInstallClick() {
   <div>
     <!-- Prominent Fixed Bottom Install Banner -->
     <div
-      v-if="!isInstalled && !dismissed"
+      v-if="!isInstalled && !isDismissed"
       id="pwa-install-banner"
       style="position: fixed; bottom: 0; left: 0; right: 0; z-index: 99999; display: flex;"
       class="p-3 sm:p-4 bg-navy text-white shadow-2xl border-t border-white/20 items-center justify-between gap-3 sm:max-w-md sm:bottom-4 sm:left-4 sm:right-auto sm:rounded-2xl sm:border"

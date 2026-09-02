@@ -70,6 +70,8 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Mes
 
         var created = await _dbContext.Set<Message>()
             .Include(m => m.Sender)
+            .Include(m => m.VideoSubmission)
+                .ThenInclude(v => v!.Exercise)
             .FirstAsync(m => m.MessageId == message.MessageId, cancellationToken);
 
         var dto = MessageMapper.ToDto(created);

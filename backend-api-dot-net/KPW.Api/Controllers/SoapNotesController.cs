@@ -187,6 +187,47 @@ public class SoapNotesController : ControllerBase
         }
     }
 
+    [HttpPut("owner-notes/{noteId:int}")]
+    [HttpPut("pet/{petId:int}/owner-notes/{noteId:int}")]
+    public async Task<ActionResult<OwnerSubjectiveNoteDto>> UpdateOwnerNote(
+        int noteId,
+        [FromBody] UpdateOwnerSubjectiveNoteRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(new UpdateOwnerSubjectiveNoteCommand(noteId, request), cancellationToken);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("owner-notes/{noteId:int}")]
+    [HttpDelete("pet/{petId:int}/owner-notes/{noteId:int}")]
+    public async Task<IActionResult> DeleteOwnerNote(int noteId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _mediator.Send(new DeleteOwnerSubjectiveNoteCommand(noteId), cancellationToken);
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("dictation/parse-narrative")]
     public async Task<ActionResult<StructuredSoapNoteDto>> ParseNarrative(
         [FromBody] ParseSoapNarrativeRequestDto request,

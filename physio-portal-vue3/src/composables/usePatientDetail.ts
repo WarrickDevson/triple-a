@@ -105,6 +105,7 @@ export function usePatientDetail(pet: () => Pet | null) {
     activeProgram,
     nextAppointment,
     latestVideo,
+    videos,
     demoMeta,
     progressPercent,
     reload: () => {

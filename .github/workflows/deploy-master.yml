@@ -332,6 +332,19 @@ jobs:
       - name: Publish API
         run: dotnet publish "backend-api-dot-net/KPW.Api/KPW.Api.csproj" -c Release -o "artifacts/api" /p:EnvironmentName=Staging
 
+      - name: Write GCP credentials key
+        shell: powershell
+        env:
+          GCP_JSON: ${{ secrets.GCP_SA_KEY_JSON || secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON || '' }}
+        run: |
+          if (-not [string]::IsNullOrWhiteSpace($env:GCP_JSON)) {
+            $dest = "artifacts/api/devson-development-6d4da133b74e.json"
+            [System.IO.File]::WriteAllText($dest, $env:GCP_JSON)
+            Write-Host "GCP service account credentials written to $dest"
+          } else {
+            Write-Warning "GCP_SA_KEY_JSON secret is not configured in GitHub repository secrets."
+          }
+
       - name: Apply API environment configuration
         shell: powershell
         env:
@@ -344,6 +357,7 @@ jobs:
           DEPLOY_AI_MODEL: ${{ vars.AI_MODEL || vars.Ai__Model || vars.DEPLOY_AI_MODEL || '' }}
           DEPLOY_DB_CONNECTION_STRING: ${{ secrets.DB_CONNECTION_STRING || secrets.ConnectionStrings__DefaultConnection || secrets.DEPLOY_DB_CONNECTION_STRING || '' }}
           DEPLOY_JWT_KEY: ${{ secrets.JWT_KEY || secrets.Jwt__Key || secrets.DEPLOY_JWT_KEY || '' }}
+          DEPLOY_GCP_CREDENTIALS_PATH: devson-development-6d4da133b74e.json
         run: |
           ./infra/deploy/iis/set-api-iis-environment.ps1 -ApiPhysicalPath "artifacts/api"
 

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -23,6 +24,7 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
   Pet? _selectedPet;
   RehabProgramExercise? _selectedExercise;
   PlatformFile? _selectedFile;
+  String? _safeguardedFilePath;
   double _uploadProgress = 0;
   bool _isUploading = false;
   String? _error;
@@ -48,7 +50,18 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
   void dispose() {
     _titleController.dispose();
     _notesController.dispose();
+    _cleanupSafeguardedFile();
     super.dispose();
+  }
+
+  void _cleanupSafeguardedFile() {
+    if (_safeguardedFilePath != null) {
+      try {
+        final f = File(_safeguardedFilePath!);
+        if (f.existsSync()) f.deleteSync();
+      } catch (_) {}
+      _safeguardedFilePath = null;
+    }
   }
 
   Future<void> _pickVideo() async {
@@ -57,7 +70,7 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
         type: FileType.video,
         allowMultiple: false,
         withData: kIsWeb,
-        withReadStream: false,
+        withReadStream: !kIsWeb,
       );
       if (result == null || result.files.isEmpty) return;
 
@@ -72,8 +85,31 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
         return;
       }
 
+      // Safeguard against aggressive OS cache cleanups (like MIUI cleaner)
+      String? safePath;
+      if (!kIsWeb && file.path != null) {
+        final src = File(file.path!);
+        if (await src.exists()) {
+          try {
+            final tempDir = Directory.systemTemp;
+            final dest = File('${tempDir.path}/triplea_video_${DateTime.now().millisecondsSinceEpoch}_${file.name}');
+            await src.copy(dest.path);
+            safePath = dest.path;
+          } catch (_) {
+            safePath = file.path;
+          }
+        } else if (file.bytes == null && file.readStream == null) {
+          setState(() {
+            _error = 'The selected video could not be read by the system. Please try selecting again.';
+          });
+          return;
+        }
+      }
+
+      _cleanupSafeguardedFile();
       setState(() {
         _selectedFile = file;
+        _safeguardedFilePath = safePath;
         _error = null;
       });
     } catch (e) {
@@ -160,12 +196,22 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
           throw Exception('Unable to read selected video data on Web.');
         }
       } else {
-        if (file.path != null) {
+        // Check safeguarded persistent copy first, then original path, then stream, then bytes
+        final candidatePath = _safeguardedFilePath ?? file.path;
+        if (candidatePath != null && await File(candidatePath).exists()) {
+          multipartFile = await MultipartFile.fromFile(candidatePath, filename: fileName);
+        } else if (file.path != null && await File(file.path!).exists()) {
           multipartFile = await MultipartFile.fromFile(file.path!, filename: fileName);
+        } else if (file.readStream != null) {
+          multipartFile = MultipartFile.fromStream(
+            () => file.readStream!,
+            file.size,
+            filename: fileName,
+          );
         } else if (file.bytes != null) {
           multipartFile = MultipartFile.fromBytes(file.bytes!, filename: fileName);
         } else {
-          throw Exception('Unable to read selected video file path.');
+          throw Exception('Selected video file is no longer accessible on device. Please select the video again.');
         }
       }
 
@@ -200,6 +246,7 @@ class _VideoUploadScreenState extends ConsumerState<VideoUploadScreen> {
         },
       );
 
+      _cleanupSafeguardedFile();
       setState(() {
         _selectedFile = null;
         _uploadProgress = 0;

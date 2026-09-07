@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -110,21 +112,39 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
   }
 
   Future<void> _pickDeviceFile() async {
+    String? tempSafeguardPath;
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx', 'mp4', 'mov'],
       );
       if (result != null && result.files.single.path != null) {
-        final path = result.files.single.path!;
+        final origPath = result.files.single.path!;
         final name = result.files.single.name;
+
+        // Safeguard against aggressive OS cache cleanups (like MIUI / ColorOS cleaner)
+        String uploadPath = origPath;
+        if (!kIsWeb) {
+          final src = File(origPath);
+          if (await src.exists()) {
+            try {
+              final tempDir = Directory.systemTemp;
+              final dest = File('${tempDir.path}/triplea_attach_${DateTime.now().millisecondsSinceEpoch}_$name');
+              await src.copy(dest.path);
+              tempSafeguardPath = dest.path;
+              uploadPath = dest.path;
+            } catch (_) {
+              uploadPath = origPath;
+            }
+          }
+        }
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Uploading file from device...'), duration: Duration(seconds: 2)),
         );
 
-        final uploadRes = await ref.read(messagesProvider.notifier).uploadAttachment(path, name);
+        final uploadRes = await ref.read(messagesProvider.notifier).uploadAttachment(uploadPath, name);
         if (uploadRes != null) {
           setState(() {
             _attachedFileUrl = uploadRes['attachmentUrl'];
@@ -143,6 +163,15 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Unable to pick file.')),
       );
+    } finally {
+      if (tempSafeguardPath != null) {
+        try {
+          final f = File(tempSafeguardPath);
+          if (await f.exists()) {
+            await f.delete();
+          }
+        } catch (_) {}
+      }
     }
   }
 

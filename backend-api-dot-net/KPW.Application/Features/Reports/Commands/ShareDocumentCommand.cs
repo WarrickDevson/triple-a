@@ -47,6 +47,7 @@ public class ShareDocumentCommandHandler : IRequestHandler<ShareDocumentCommand,
             Title = !string.IsNullOrWhiteSpace(req.Title) ? req.Title.Trim() : "Clinical Document Record",
             ReportType = !string.IsNullOrWhiteSpace(req.ReportType) ? req.ReportType.Trim() : "CLINICAL_DOCUMENT",
             Summary = req.Summary?.Trim(),
+            FileUrl = req.FileUrl?.Trim(),
             SharedAtUtc = DateTime.UtcNow
         };
 

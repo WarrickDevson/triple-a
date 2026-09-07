@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   AlertTriangle,
+  Bot,
   CheckCircle2,
   Clock,
   Mail,
@@ -17,13 +18,14 @@ import {
 } from '@lucide/vue'
 import BaseButton from '../components/BaseButton.vue'
 import BaseInput from '../components/BaseInput.vue'
+import AiPromptEditor from '../components/admin/AiPromptEditor.vue'
 import { useAuthStore } from '../store/auth'
 import type { AdminUserSummary, PhysioApproval } from '../types/auth'
 
 const auth = useAuthStore()
 
 // Main section tab
-const mainTab = ref<'physios' | 'owners' | 'deletion'>('physios')
+const mainTab = ref<'physios' | 'owners' | 'deletion' | 'ai-prompts'>('physios')
 
 // Physio approval state
 const physios = ref<PhysioApproval[]>([])
@@ -298,6 +300,15 @@ async function handleConfirmPurge() {
         >
           <ShieldAlert class="h-4 w-4" />
           Data Deletion & Users
+        </button>
+        <button
+          type="button"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all"
+          :class="mainTab === 'ai-prompts' ? 'bg-navy text-white shadow-sm' : 'text-neutral-muted hover:text-navy'"
+          @click="mainTab = 'ai-prompts'"
+        >
+          <Bot class="h-4 w-4" />
+          AI Prompts
         </button>
       </div>
     </div>
@@ -674,7 +685,7 @@ async function handleConfirmPurge() {
     <!-- ========================================================================= -->
     <!-- TAB 3: DATA DELETION & USER MANAGEMENT (POPIA SECTION 24)                 -->
     <!-- ========================================================================= -->
-    <template v-else>
+    <template v-else-if="mainTab === 'deletion'">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 class="text-lg font-bold text-navy">POPIA User Data & Deletion Portal</h2>
@@ -871,6 +882,13 @@ async function handleConfirmPurge() {
           </table>
         </div>
       </div>
+    </template>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: AI WELLNESS ASSISTANT PROMPTS                                      -->
+    <!-- ========================================================================= -->
+    <template v-else-if="mainTab === 'ai-prompts'">
+      <AiPromptEditor />
     </template>
 
     <!-- ========================================================================= -->

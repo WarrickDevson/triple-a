@@ -2,9 +2,11 @@
 import { computed } from 'vue'
 import { FileText, Download, Eye, Plus, Share2, CheckCircle2 } from '@lucide/vue'
 import BaseButton from '../BaseButton.vue'
-import { downloadPetReport, publishProgressReport, shareDocument } from '../../api/reports'
+import { publishProgressReport, shareDocument } from '../../api/reports'
 import { useDocumentsStore } from '../../store/documents'
 import type { Pet } from '../../types/pet'
+import UploadDocumentModal from '../documents/UploadDocumentModal.vue'
+import PreviewDocumentModal from '../documents/PreviewDocumentModal.vue'
 
 const props = defineProps<{
   patient: Pet
@@ -17,14 +19,6 @@ const patientDocs = computed(() =>
     (d) => d.petName.toLowerCase() === props.patient.petName.toLowerCase(),
   ),
 )
-
-async function handleDownloadReport() {
-  try {
-    await downloadPetReport(props.patient.petId)
-  } catch {
-    documentsStore.showToast('Downloading clinical PDF report...')
-  }
-}
 
 async function handleShareProgressReport() {
   try {
@@ -64,10 +58,6 @@ async function handleToggleShareDoc(doc: any) {
           <Plus class="h-3.5 w-3.5" />
           Upload File
         </BaseButton>
-        <BaseButton size="sm" variant="secondary" @click="handleDownloadReport">
-          <Download class="h-3.5 w-3.5" />
-          Download PDF
-        </BaseButton>
         <BaseButton size="sm" variant="accent" @click="handleShareProgressReport">
           <Share2 class="h-3.5 w-3.5" />
           Share Full Report to Owner
@@ -78,11 +68,11 @@ async function handleToggleShareDoc(doc: any) {
     <div v-if="patientDocs.length === 0" class="portal-card p-6 text-center">
       <FileText class="mx-auto h-8 w-8 text-neutral-muted/60 mb-2" />
       <p class="text-xs font-semibold text-navy">No records uploaded for {{ patient.petName }} yet.</p>
-      <p class="text-[11px] text-neutral-muted mt-0.5">Generate a clinical progress PDF report or upload referral letters and consent files.</p>
+      <p class="text-[11px] text-neutral-muted mt-0.5">Upload referral letters, consent files, or share a clinical progress report.</p>
       <div class="mt-3 flex justify-center gap-2">
-        <BaseButton size="sm" variant="secondary" @click="handleDownloadReport">
-          <Download class="h-3.5 w-3.5" />
-          Download PDF Report
+        <BaseButton size="sm" variant="secondary" @click="documentsStore.openUpload">
+          <Plus class="h-3.5 w-3.5" />
+          Upload File
         </BaseButton>
         <BaseButton size="sm" variant="accent" @click="handleShareProgressReport">
           <Share2 class="h-3.5 w-3.5" />
@@ -150,5 +140,19 @@ async function handleToggleShareDoc(doc: any) {
         </div>
       </div>
     </div>
+
+    <!-- Modals -->
+    <UploadDocumentModal
+      :open="documentsStore.isUploadOpen"
+      :default-pet-name="patient.petName"
+      :default-owner-name="patient.ownerName"
+      @close="documentsStore.closeUpload"
+    />
+
+    <PreviewDocumentModal
+      :open="documentsStore.isPreviewOpen"
+      :document="documentsStore.selectedDocument"
+      @close="documentsStore.closePreview"
+    />
   </div>
 </template>

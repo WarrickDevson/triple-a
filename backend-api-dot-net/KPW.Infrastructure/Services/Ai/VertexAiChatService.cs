@@ -57,7 +57,7 @@ public class VertexAiChatService : IAiChatService
             _options.UseEducationChunks);
     }
 
-    public async Task<AiChatResult> ChatAsync(string message, CancellationToken cancellationToken = default)
+    public async Task<AiChatResult> ChatAsync(string message, string? clinicalContext = null, AiChatAttachment? attachment = null, IReadOnlyList<AiChatHistoryTurn>? history = null, CancellationToken cancellationToken = default)
     {
         var trimmed = message.Trim();
         if (string.IsNullOrWhiteSpace(trimmed))

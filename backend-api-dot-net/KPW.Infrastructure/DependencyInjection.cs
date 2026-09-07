@@ -87,12 +87,18 @@ public static class DependencyInjection
 
         if (videoProvider.Equals("Google", StringComparison.OrdinalIgnoreCase) && hasGcpCreds)
         {
+            services.AddSingleton<KPW.Infrastructure.Services.FileStorage.GcsFileStorage>();
+            services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<KPW.Infrastructure.Services.FileStorage.GcsFileStorage>());
+
             services.AddSingleton<GcsVideoStorage>();
             services.AddSingleton<IVideoStorage>(sp => sp.GetRequiredService<GcsVideoStorage>());
             services.AddSingleton<IVideoTranscoder, GoogleVideoTranscoder>();
         }
         else
         {
+            services.AddSingleton<KPW.Infrastructure.Services.FileStorage.LocalFileStorage>();
+            services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<KPW.Infrastructure.Services.FileStorage.LocalFileStorage>());
+
             services.AddSingleton<LocalVideoStorage>();
             services.AddSingleton<IVideoStorage>(sp => sp.GetRequiredService<LocalVideoStorage>());
             services.AddSingleton<IVideoTranscoder, LocalVideoTranscoder>();
@@ -101,6 +107,8 @@ public static class DependencyInjection
 
     private static void RegisterAiServices(IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton<IAiPromptConfigService, AiPromptConfigService>();
+
         var aiProvider = configuration.GetSection(AiOptions.SectionName).Get<AiOptions>()?.Provider ?? "Local";
 
         if (aiProvider.Equals("Vertex", StringComparison.OrdinalIgnoreCase))
@@ -109,7 +117,7 @@ public static class DependencyInjection
         }
         else
         {
-            services.AddSingleton<IAiChatService, LocalAiChatService>();
+            services.AddHttpClient<IAiChatService, GeminiAiChatService>();
         }
 
         services.AddHttpClient<ISoapVoiceTranscriptionService, SoapVoiceTranscriptionService>();

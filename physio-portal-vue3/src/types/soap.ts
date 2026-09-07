@@ -75,6 +75,7 @@ export interface SharedReport {
   species?: string
   breed?: string
   isActive?: boolean
+  fileUrl?: string | null
   periodFrom?: string
   periodTo?: string
   referencedSessions?: ReferencedReportSession[]

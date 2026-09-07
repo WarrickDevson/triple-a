@@ -17,11 +17,12 @@ import { useAuthStore } from '../store/auth'
 import { useNotificationsStore } from '../store/notifications'
 import InviteOwnerModal from '../components/clinic/InviteOwnerModal.vue'
 import EditProfileModal from '../components/profile/EditProfileModal.vue'
+import AiPromptEditor from '../components/admin/AiPromptEditor.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 
-const activeTab = ref<'profile' | 'clinic' | 'notifications' | 'security' | 'privacy'>('profile')
+const activeTab = ref<'profile' | 'clinic' | 'ai-prompt' | 'notifications' | 'security' | 'privacy'>('profile')
 const showStubModal = ref(false)
 const showInviteModal = ref(false)
 const showEditProfileModal = ref(false)
@@ -116,6 +117,7 @@ function logout() {
         v-for="tab in [
           { id: 'profile', label: 'Profile' },
           { id: 'clinic', label: 'Clinic' },
+          { id: 'ai-prompt', label: 'AI Assistant' },
           { id: 'notifications', label: 'Notifications' },
           { id: 'security', label: 'Security' },
           { id: 'privacy', label: 'Privacy & Legal' },
@@ -130,7 +132,11 @@ function logout() {
       </button>
     </div>
 
-    <section v-if="activeTab === 'profile'" class="portal-card p-6">
+    <section v-if="activeTab === 'ai-prompt'">
+      <AiPromptEditor />
+    </section>
+
+    <section v-else-if="activeTab === 'profile'" class="portal-card p-6">
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-bold text-navy">Profile</h2>
         <button type="button" class="text-xs font-semibold text-sage hover:underline" @click="showEditProfileModal = true">

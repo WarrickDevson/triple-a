@@ -72,7 +72,8 @@ public record SharedReportDto(
     string? OwnerName = null,
     string? Species = null,
     string? Breed = null,
-    bool IsActive = true);
+    bool IsActive = true,
+    string? FileUrl = null);
 
 public record OwnerSubjectiveNoteDto(
     int OwnerSubjectiveNoteId,
@@ -89,7 +90,8 @@ public record ShareDocumentRequestDto(
     string Title,
     string ReportType,
     string? Summary,
-    int? SoapNoteId = null);
+    int? SoapNoteId = null,
+    string? FileUrl = null);
 
 public record ToggleSoapNoteShareRequestDto(
     bool ShareWithOwner);

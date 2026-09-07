@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/section_card.dart';
+import '../../ai/providers/ai_preferences_provider.dart';
 import '../../ai/screens/ai_chat_screen.dart';
 import '../../appointments/screens/appointments_screen.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -68,6 +69,7 @@ class MoreScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider.select((s) => s.user));
+    final aiPrefs = ref.watch(aiPreferencesProvider);
 
     return PageWashBackground(
       child: SafeArea(
@@ -167,6 +169,26 @@ class MoreScreen extends ConsumerWidget {
                 MaterialPageRoute(builder: (_) => const AiChatScreen()),
               ),
             ),
+            _MoreSwitchTile(
+              icon: Icons.health_and_safety_outlined,
+              title: 'Share Pet Details with Assistant',
+              subtitle: 'Allow AI to personalize answers with pet medical & rehab records',
+              value: aiPrefs.sharePetData,
+              onChanged: (val) {
+                ref.read(aiPreferencesProvider.notifier).setSharePetData(val);
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      val
+                          ? 'Pet details sharing enabled for Wellness Assistant.'
+                          : 'Pet details sharing disabled. General advice only.',
+                    ),
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              },
+            ),
             _MoreTile(
               icon: Icons.lock_outline,
               title: 'Change password',
@@ -257,6 +279,70 @@ class _MoreTile extends StatelessWidget {
               ),
             ),
             Icon(Icons.chevron_right_rounded, color: AppColors.navy.withValues(alpha: 0.35)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MoreSwitchTile extends StatelessWidget {
+  const _MoreSwitchTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+      child: SectionCard(
+        onTap: () => onChanged(!value),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: value ? AppColors.sageMuted : Colors.grey.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: value ? AppColors.sage : AppColors.neutralMuted),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navy,
+                      fontSize: 15,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: AppColors.neutralMuted, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            Switch.adaptive(
+              value: value,
+              activeTrackColor: AppColors.sage,
+              onChanged: onChanged,
+            ),
           ],
         ),
       ),

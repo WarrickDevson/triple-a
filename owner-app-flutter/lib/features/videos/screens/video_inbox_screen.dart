@@ -4,8 +4,9 @@ import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../exercises/widgets/exercise_video_player.dart';
+import '../../messages/screens/message_thread_screen.dart';
+import '../../pets/models/pet.dart';
 import '../../pets/providers/pets_provider.dart';
-import '../../shell/main_shell.dart';
 import '../models/video_submission.dart';
 import '../providers/videos_provider.dart';
 import 'video_upload_screen.dart';
@@ -445,7 +446,6 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
               ),
             ],
             const SizedBox(height: 12),
-            const SizedBox(height: 12),
             Row(
               children: [
                 OutlinedButton.icon(
@@ -468,26 +468,67 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
                   tooltip: 'Delete Video',
                   onPressed: () => _confirmDeleteVideo(submission),
                 ),
-                if (submission.isReviewed) ...[
-                  const SizedBox(width: 4),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => MainShell(
-                          initialTab: 2,
-                          messagesPetId: submission.petId,
-                          messagesInitialText:
-                              'Hi, I have a question about my ${submission.displayTitle} video feedback.',
-                          messagesVideoSubmissionId: submission.videoSubmissionId,
-                        ),
-                      ),
-                    ),
-                    child: const Text('Ask about this'),
-                  ),
-                ],
               ],
             ),
+            if (submission.isReviewed) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    backgroundColor: AppColors.sage.withValues(alpha: 0.12),
+                    foregroundColor: AppColors.navy,
+                    padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => _askAboutFeedback(submission),
+                  icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16, color: AppColors.sage),
+                  label: const Text(
+                    'Ask Physio About This Feedback',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _askAboutFeedback(VideoSubmission submission) async {
+    var pets = ref.read(petsProvider).pets;
+    if (pets.isEmpty) {
+      await ref.read(petsProvider.notifier).loadPets();
+      pets = ref.read(petsProvider).pets;
+    }
+    Pet pet;
+    try {
+      pet = pets.firstWhere((p) => p.petId == submission.petId);
+    } catch (_) {
+      if (pets.isNotEmpty) {
+        pet = pets.first;
+      } else {
+        pet = Pet(
+          petId: submission.petId,
+          ownerId: 0,
+          ownerName: '',
+          petName: submission.petName,
+          species: 'Canine',
+          medicalHistories: const [],
+        );
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MessageThreadScreen(
+          pet: pet,
+          initialMessage:
+              'Hi, I have a question about my ${submission.displayTitle} video feedback.',
+          initialVideoSubmissionId: submission.videoSubmissionId,
         ),
       ),
     );

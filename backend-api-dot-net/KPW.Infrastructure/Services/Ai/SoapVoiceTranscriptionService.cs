@@ -20,6 +20,7 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
     private readonly AiOptions _options;
     private readonly ILogger<SoapVoiceTranscriptionService> _logger;
     private readonly IHostEnvironment? _environment;
+    private readonly IFileStorageService _fileStorageService;
 
     private static readonly Dictionary<string, string> VeterinaryLexiconCorrections = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -104,11 +105,13 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
         HttpClient httpClient,
         IOptions<AiOptions> options,
         ILogger<SoapVoiceTranscriptionService> logger,
+        IFileStorageService fileStorageService,
         IHostEnvironment? environment = null)
     {
         _httpClient = httpClient;
         _options = options.Value;
         _logger = logger;
+        _fileStorageService = fileStorageService;
         _environment = environment;
 
         if (_options.Provider.Equals("Vertex", StringComparison.OrdinalIgnoreCase) &&
@@ -342,24 +345,22 @@ public class SoapVoiceTranscriptionService : ISoapVoiceTranscriptionService
     {
         var sw = Stopwatch.StartNew();
 
-        // 1. Save audio to persistent voice-notes storage
+        // 1. Save audio to persistent voice-notes storage (GCS / Cloud Storage with local fallback)
         using var ms = new MemoryStream();
         await audioStream.CopyToAsync(ms, cancellationToken);
         var audioBytes = ms.ToArray();
 
-        string ext = Path.GetExtension(fileName);
-        if (string.IsNullOrWhiteSpace(ext)) ext = ".webm";
-        string storedName = $"{Guid.NewGuid():N}{ext}";
+        using var uploadMs = new MemoryStream(audioBytes);
+        string storagePath = await _fileStorageService.UploadAsync(
+            uploadMs,
+            fileName,
+            folder: "voice-notes",
+            contentType: contentType,
+            cancellationToken: cancellationToken);
 
-        string baseDir = _environment?.ContentRootPath ?? AppContext.BaseDirectory;
-        string uploadsDir = Path.Combine(baseDir, "wwwroot", "uploads", "voice-notes");
-        Directory.CreateDirectory(uploadsDir);
-
-        string filePath = Path.Combine(uploadsDir, storedName);
-        await File.WriteAllBytesAsync(filePath, audioBytes, cancellationToken);
-
-        string publicAudioUrl = $"/uploads/voice-notes/{storedName}";
-        _logger.LogInformation("Saved persistent voice note to {FilePath} ({Length} bytes)", filePath, audioBytes.Length);
+        string publicAudioUrl = _fileStorageService.GetPublicUrl(storagePath);
+        _logger.LogInformation("Saved persistent voice note to {StoragePath} ({Length} bytes, URL: {PublicUrl})",
+            storagePath, audioBytes.Length, publicAudioUrl);
 
         // 2. Transcribe Audio
         string transcript = string.Empty;

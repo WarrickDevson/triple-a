@@ -96,9 +96,22 @@ export const useDocumentsStore = defineStore('documents', () => {
     let downloadUrl: string
     let filename: string
 
-    if (doc.fileDataUrl || doc.fileUrl) {
-      downloadUrl = doc.fileDataUrl || doc.fileUrl!
+    if (doc.fileUrl || doc.fileDataUrl) {
+      downloadUrl = doc.fileUrl || doc.fileDataUrl!
       filename = doc.name.includes('.') ? doc.name : `${doc.name}.${getFileExtension(doc.fileType)}`
+
+      if (downloadUrl.startsWith('http://') || downloadUrl.startsWith('https://')) {
+        const a = document.createElement('a')
+        a.href = downloadUrl
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        showToast(`Opening "${filename}"...`)
+        return
+      }
     } else {
       // Generate sample clinical document blob for demo items
       const content = generateDemoDocumentContent(doc)

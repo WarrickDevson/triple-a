@@ -21,7 +21,7 @@ public partial class LocalAiChatService : IAiChatService
         _logger.LogInformation("Loaded {Count} education chunks for local AI chat.", _chunks.Count);
     }
 
-    public Task<AiChatResult> ChatAsync(string message, CancellationToken cancellationToken = default)
+    public Task<AiChatResult> ChatAsync(string message, string? clinicalContext = null, AiChatAttachment? attachment = null, IReadOnlyList<AiChatHistoryTurn>? history = null, CancellationToken cancellationToken = default)
     {
         var topChunks = EducationChunkRetriever.RetrieveTopChunks(_chunks, message);
         if (topChunks.Count == 0)

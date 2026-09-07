@@ -27,7 +27,7 @@ internal static class PetMapper
                 m.ClinicianNotes)).ToList());
 }
 
-internal static class PetAuthorization
+public static class PetAuthorization
 {
     public static void EnsureCanAccessOwner(ICurrentUserService currentUser, int ownerId)
     {

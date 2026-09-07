@@ -103,6 +103,7 @@ public static class SoapNoteMapper
             ownerName,
             species,
             breed,
-            report.IsActive);
+            report.IsActive,
+            report.FileUrl);
     }
 }

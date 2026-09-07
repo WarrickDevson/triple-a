@@ -239,6 +239,7 @@ using (var scope = app.Services.CreateScope())
                     [Title] nvarchar(200) NOT NULL,
                     [ReportType] nvarchar(50) NOT NULL,
                     [Summary] nvarchar(2000) NULL,
+                    [FileUrl] nvarchar(1000) NULL,
                     [SharedAtUtc] datetime2 NOT NULL DEFAULT (GETUTCDATE()),
                     [IsActive] bit NOT NULL DEFAULT CAST(1 AS bit),
                     [CreatedDate] datetime2 NOT NULL DEFAULT (GETUTCDATE()),
@@ -250,6 +251,10 @@ using (var scope = app.Services.CreateScope())
                     CONSTRAINT [FK_SharedReports_SoapNotes_SoapNoteId] FOREIGN KEY ([SoapNoteId]) REFERENCES [SoapNotes] ([SoapNoteId]),
                     CONSTRAINT [FK_SharedReports_Users_SharedByPhysioId] FOREIGN KEY ([SharedByPhysioId]) REFERENCES [Users] ([UserId])
                 );
+            END
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SharedReports' AND COLUMN_NAME = 'FileUrl')
+            BEGIN
+                ALTER TABLE [SharedReports] ADD [FileUrl] nvarchar(1000) NULL;
             END
             IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'OwnerSubjectiveNotes')
             BEGIN

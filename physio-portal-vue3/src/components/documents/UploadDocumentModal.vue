@@ -6,9 +6,12 @@ import { DOCUMENT_CATEGORIES, type DocumentCategory } from '../../data/documents
 import { useDocumentsStore } from '../../store/documents'
 import { usePatientsStore } from '../../store/patients'
 import { shareDocument } from '../../api/reports'
+import { uploadClinicalDocument } from '../../api/documents'
 
 const props = defineProps<{
   open: boolean
+  defaultPetName?: string
+  defaultOwnerName?: string
 }>()
 
 const emit = defineEmits<{
@@ -35,6 +38,10 @@ watch(
   (val) => {
     if (val) {
       resetForm()
+      if (props.defaultPetName) {
+        petName.value = props.defaultPetName
+        ownerName.value = props.defaultOwnerName || ''
+      }
       if (patientsStore.patients.length === 0) {
         patientsStore.fetchClinicPatients().catch(() => undefined)
       }
@@ -98,7 +105,7 @@ function onPatientChange() {
   }
 }
 
-function submitUpload() {
+async function submitUpload() {
   if (!title.value.trim()) {
     errorMessage.value = 'Please enter a document title.'
     return
@@ -109,7 +116,29 @@ function submitUpload() {
     return
   }
 
+  const foundPet = patientsStore.patients.find(
+    (p) => p.petName.toLowerCase() === petName.value.trim().toLowerCase(),
+  )
+
   isSubmitting.value = true
+  errorMessage.value = ''
+
+  let cloudFileUrl: string | undefined
+
+  if (selectedFile.value && foundPet) {
+    try {
+      const uploadRes = await uploadClinicalDocument({
+        file: selectedFile.value,
+        petId: foundPet.petId,
+        title: title.value.trim(),
+        category: category.value,
+        shareWithOwner: shareWithOwner.value,
+      })
+      cloudFileUrl = uploadRes.fileUrl ?? undefined
+    } catch (err: any) {
+      console.warn('Backend document upload failed or running in offline mode. Storing document locally.', err)
+    }
+  }
 
   const sizeKb = selectedFile.value
     ? Math.round(selectedFile.value.size / 1024) || 1
@@ -126,15 +155,14 @@ function submitUpload() {
     uploadedAt: today,
     sizeKb,
     fileType,
+    fileUrl: cloudFileUrl,
     fileDataUrl: fileDataUrl.value || undefined,
     isSharedWithOwner: shareWithOwner.value,
     sharedAt: shareWithOwner.value ? today : undefined,
   })
 
-  const foundPet = patientsStore.patients.find(
-    (p) => p.petName.toLowerCase() === petName.value.trim().toLowerCase(),
-  )
-  if (foundPet && shareWithOwner.value) {
+  // If cloud upload didn't already create a SharedReport and shareWithOwner is on:
+  if (!cloudFileUrl && foundPet && shareWithOwner.value) {
     shareDocument(foundPet.petId, {
       title: title.value.trim(),
       reportType: category.value === 'Home Programs' ? 'HOME_PROGRAM' : 'CLINICAL_DOCUMENT',

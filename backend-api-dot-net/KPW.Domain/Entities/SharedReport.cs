@@ -12,6 +12,7 @@ public class SharedReport : AuditableEntity
     public string Title { get; set; } = string.Empty;
     public string ReportType { get; set; } = "SOAP_SESSION";
     public string? Summary { get; set; }
+    public string? FileUrl { get; set; }
     public DateTime SharedAtUtc { get; set; } = DateTime.UtcNow;
 
     public Pet Pet { get; set; } = null!;

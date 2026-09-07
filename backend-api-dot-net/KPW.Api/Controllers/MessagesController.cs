@@ -3,6 +3,7 @@ using KPW.Application.DTOs.Messages;
 using KPW.Application.Features.Messages.Commands;
 using KPW.Application.Features.Messages.Queries;
 using KPW.Application.Features.Messages.Validators;
+using KPW.Application.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -60,7 +61,10 @@ public class MessagesController : ControllerBase
     }
 
     [HttpPost("attachments/upload")]
-    public async Task<ActionResult> UploadAttachment(IFormFile file, [FromServices] IWebHostEnvironment env)
+    public async Task<ActionResult> UploadAttachment(
+        IFormFile file,
+        [FromServices] IFileStorageService fileStorageService,
+        CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
         {
@@ -73,23 +77,15 @@ public class MessagesController : ControllerBase
             return BadRequest(new { message = "File size exceeds 25 MB limit." });
         }
 
-        var wwwrootFolder = Path.Combine(env.ContentRootPath, "wwwroot", "uploads", "attachments");
-        var directFolder = Path.Combine(env.ContentRootPath, "uploads", "attachments");
-        Directory.CreateDirectory(wwwrootFolder);
-        Directory.CreateDirectory(directFolder);
+        await using var stream = file.OpenReadStream();
+        var storagePath = await fileStorageService.UploadAsync(
+            stream,
+            file.FileName,
+            folder: "attachments",
+            contentType: file.ContentType,
+            cancellationToken: cancellationToken);
 
-        var ext = Path.GetExtension(file.FileName);
-        var uniqueFileName = $"{Guid.NewGuid():N}{ext}";
-        var fullPath = Path.Combine(wwwrootFolder, uniqueFileName);
-        var secondaryPath = Path.Combine(directFolder, uniqueFileName);
-
-        using (var stream = new FileStream(fullPath, FileMode.Create))
-        {
-            await file.CopyToAsync(stream);
-        }
-        System.IO.File.Copy(fullPath, secondaryPath, true);
-
-        var attachmentUrl = $"/uploads/attachments/{uniqueFileName}";
+        var attachmentUrl = fileStorageService.GetPublicUrl(storagePath);
         var attachmentName = file.FileName;
         var attachmentType = file.ContentType;
 

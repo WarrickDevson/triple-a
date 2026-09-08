@@ -8,11 +8,14 @@ import AppTopBar from '../components/layout/AppTopBar.vue'
 import PwaReloadPrompt from '../components/PwaReloadPrompt.vue'
 import { useMessagesStore } from '../store/messages'
 import { useVoiceSessionStore, type VoiceSessionNotification } from '../store/voiceSession'
+import { useDocumentsStore } from '../store/documents'
+import PreviewDocumentModal from '../components/documents/PreviewDocumentModal.vue'
 
 const mobileNavOpen = ref(false)
 const router = useRouter()
 const messagesStore = useMessagesStore()
 const voiceSessionStore = useVoiceSessionStore()
+const documentsStore = useDocumentsStore()
 
 function closeMobileNav() {
   mobileNavOpen.value = false
@@ -259,5 +262,12 @@ function openVoiceSessionReview(notif: VoiceSessionNotification) {
 
     <!-- PWA Service Worker Update Prompt -->
     <PwaReloadPrompt />
+
+    <!-- Global Document Preview Modal -->
+    <PreviewDocumentModal
+      :open="documentsStore.isPreviewOpen"
+      :document="documentsStore.selectedDocument"
+      @close="documentsStore.closePreview"
+    />
   </div>
 </template>

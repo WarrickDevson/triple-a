@@ -8,6 +8,7 @@ import '../models/shared_report_model.dart';
 import '../providers/pets_provider.dart';
 import '../providers/shared_reports_provider.dart';
 import 'soap_note_detail_screen.dart';
+import '../widgets/document_preview_dialog.dart';
 
 class SavedReportsScreen extends ConsumerStatefulWidget {
   const SavedReportsScreen({super.key, this.pet});
@@ -158,6 +159,18 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
         ),
       ),
     );
+  }
+
+  void _previewReport(SharedReportModel report) {
+    if (report.isSoapNote && report.soapNoteId != null) {
+      _openSoapDetail(report);
+    } else {
+      DocumentPreviewDialog.show(
+        context,
+        report: report,
+        onDownload: () => _downloadSharedReport(report),
+      );
+    }
   }
 
   List<SharedReportModel> _filterReports(List<SharedReportModel> reports) {
@@ -571,6 +584,7 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: SectionCard(
+        onTap: () => _previewReport(report),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -736,6 +750,20 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
                       ),
                     ),
                   ] else if (report.isClinicalReport) ...[
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.navy,
+                        side: const BorderSide(color: AppColors.neutralGrey),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => _previewReport(report),
+                      icon: const Icon(Icons.visibility_outlined, size: 16),
+                      label: const Text(
+                        'Preview',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    ),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1E6E8E),
@@ -751,6 +779,20 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
                       ),
                     ),
                   ] else ...[
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.navy,
+                        side: const BorderSide(color: AppColors.neutralGrey),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => _previewReport(report),
+                      icon: const Icon(Icons.visibility_outlined, size: 16),
+                      label: const Text(
+                        'Preview',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    ),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: categoryColor,

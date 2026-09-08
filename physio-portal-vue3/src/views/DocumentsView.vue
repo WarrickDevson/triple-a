@@ -7,7 +7,6 @@ import {
   formatFileSize,
   type DocumentCategory,
 } from '../data/documentsDemo'
-import PreviewDocumentModal from '../components/documents/PreviewDocumentModal.vue'
 import UploadDocumentModal from '../components/documents/UploadDocumentModal.vue'
 import BaseButton from '../components/BaseButton.vue'
 import { useDocumentsStore } from '../store/documents'
@@ -185,12 +184,6 @@ const filtered = computed(() => {
     <UploadDocumentModal
       :open="documentsStore.isUploadOpen"
       @close="documentsStore.closeUpload"
-    />
-
-    <PreviewDocumentModal
-      :open="documentsStore.isPreviewOpen"
-      :document="documentsStore.selectedDocument"
-      @close="documentsStore.closePreview"
     />
   </div>
 </template>

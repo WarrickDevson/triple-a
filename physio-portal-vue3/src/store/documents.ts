@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { DocumentItem } from '../data/documentsDemo'
+import { apiClient, API_BASE_URL } from '../api/client'
 
 const STORAGE_KEY = 'triple-a-documents'
 
@@ -92,41 +93,76 @@ export const useDocumentsStore = defineStore('documents', () => {
     isUploadOpen.value = false
   }
 
-  function downloadDocument(doc: DocumentItem) {
-    let downloadUrl: string
-    let filename: string
-
-    if (doc.fileUrl || doc.fileDataUrl) {
-      downloadUrl = doc.fileUrl || doc.fileDataUrl!
-      filename = doc.name.includes('.') ? doc.name : `${doc.name}.${getFileExtension(doc.fileType)}`
-
-      if (downloadUrl.startsWith('http://') || downloadUrl.startsWith('https://')) {
-        const a = document.createElement('a')
-        a.href = downloadUrl
-        a.target = '_blank'
-        a.rel = 'noopener noreferrer'
-        a.download = filename
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        showToast(`Opening "${filename}"...`)
-        return
-      }
-    } else {
-      // Generate sample clinical document blob for demo items
-      const content = generateDemoDocumentContent(doc)
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-      downloadUrl = URL.createObjectURL(blob)
-      filename = `${doc.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.txt`
+  function resolveFileUrl(url: string): string {
+    if (!url) return ''
+    if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('http://') || url.startsWith('https://')) {
+      return url
     }
+    const base = API_BASE_URL.replace(/\/+$/, '')
+    return `${base}${url.startsWith('/') ? url : `/${url}`}`
+  }
 
+  function triggerBrowserDownload(url: string, filename: string) {
     const a = document.createElement('a')
-    a.href = downloadUrl
+    a.href = url
     a.download = filename
+    a.setAttribute('download', filename)
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
+  }
 
+  async function downloadDocument(doc: DocumentItem) {
+    let filename = doc.name.includes('.')
+      ? doc.name
+      : `${doc.name}.${getFileExtension(doc.fileType)}`
+
+    // Case 1: Data URL (local in-memory base64)
+    if (doc.fileDataUrl && doc.fileDataUrl.startsWith('data:')) {
+      triggerBrowserDownload(doc.fileDataUrl, filename)
+      showToast(`Downloading "${filename}"...`)
+      return
+    }
+
+    // Case 2: Server or Remote File URL
+    if (doc.fileUrl || doc.fileDataUrl) {
+      const rawUrl = doc.fileUrl || doc.fileDataUrl!
+      const resolvedUrl = resolveFileUrl(rawUrl)
+
+      showToast(`Preparing download for "${filename}"...`)
+      try {
+        const res = await apiClient.get<Blob>(resolvedUrl, { responseType: 'blob' })
+        const blobUrl = URL.createObjectURL(res.data)
+        triggerBrowserDownload(blobUrl, filename)
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000)
+        showToast(`Downloaded "${filename}".`)
+        return
+      } catch (clientErr) {
+        console.warn('apiClient blob download failed, attempting native fetch...', clientErr)
+        try {
+          const res = await fetch(resolvedUrl)
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          const blob = await res.blob()
+          const blobUrl = URL.createObjectURL(blob)
+          triggerBrowserDownload(blobUrl, filename)
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 2000)
+          showToast(`Downloaded "${filename}".`)
+          return
+        } catch (fetchErr) {
+          console.warn('Native fetch failed, opening in new tab as fallback...', fetchErr)
+          window.open(resolvedUrl, '_blank')
+          return
+        }
+      }
+    }
+
+    // Case 3: Demo item without attached binary file -> generate clinical document text
+    const content = generateDemoDocumentContent(doc)
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+    const downloadUrl = URL.createObjectURL(blob)
+    filename = `${doc.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.txt`
+    triggerBrowserDownload(downloadUrl, filename)
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 2000)
     showToast(`Downloading "${filename}"...`)
   }
 

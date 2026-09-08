@@ -6,7 +6,6 @@ import { publishProgressReport, shareDocument } from '../../api/reports'
 import { useDocumentsStore } from '../../store/documents'
 import type { Pet } from '../../types/pet'
 import UploadDocumentModal from '../documents/UploadDocumentModal.vue'
-import PreviewDocumentModal from '../documents/PreviewDocumentModal.vue'
 
 const props = defineProps<{
   patient: Pet
@@ -147,12 +146,6 @@ async function handleToggleShareDoc(doc: any) {
       :default-pet-name="patient.petName"
       :default-owner-name="patient.ownerName"
       @close="documentsStore.closeUpload"
-    />
-
-    <PreviewDocumentModal
-      :open="documentsStore.isPreviewOpen"
-      :document="documentsStore.selectedDocument"
-      @close="documentsStore.closePreview"
     />
   </div>
 </template>

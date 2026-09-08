@@ -341,28 +341,36 @@ class DocumentPreviewDialog extends StatelessWidget {
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'TRIPLE A VETERINARY PHYSIOTHERAPY',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.8,
-                                      color: AppColors.sage,
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'TRIPLE A VETERINARY PHYSIOTHERAPY',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.8,
+                                        color: AppColors.sage,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                  Text(
-                                    'Clinical Rehabilitation & Care Record',
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      color: AppColors.neutralMuted,
+                                    Text(
+                                      'Clinical Rehabilitation & Care Record',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        color: AppColors.neutralMuted,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
+                              const SizedBox(width: 8),
                               Container(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -415,6 +423,8 @@ class DocumentPreviewDialog extends StatelessWidget {
                                             fontSize: 13,
                                             fontWeight: FontWeight.w700,
                                             color: AppColors.navy),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
                                   ),
@@ -502,50 +512,53 @@ class DocumentPreviewDialog extends StatelessWidget {
 
             // 3. Bottom Action Bar
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(top: BorderSide(color: AppColors.neutralGrey)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   if (hasFile)
                     TextButton.icon(
                       onPressed: () => _openExternal(context),
-                      icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                      label: const Text('Open in Browser', style: TextStyle(fontSize: 13)),
+                      icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                      label: const Text('Open in Browser', style: TextStyle(fontSize: 12.5)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
                     ),
-                  if (onDownload != null) ...[
-                    const SizedBox(width: 8),
+                  if (onDownload != null)
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.sage,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                       onPressed: () {
                         Navigator.of(context).pop();
                         onDownload?.call();
                       },
-                      icon: const Icon(Icons.download_rounded, size: 16),
+                      icon: const Icon(Icons.download_rounded, size: 15),
                       label: const Text('Download File',
-                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
                     ),
-                  ],
-                  const SizedBox(width: 8),
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.navy,
                       side: const BorderSide(color: AppColors.neutralGrey),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                          borderRadius: BorderRadius.circular(8)),
                     ),
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Close', style: TextStyle(fontSize: 13)),
+                    child: const Text('Close', style: TextStyle(fontSize: 12.5)),
                   ),
                 ],
               ),

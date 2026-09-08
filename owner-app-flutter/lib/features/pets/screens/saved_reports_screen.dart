@@ -8,7 +8,7 @@ import '../models/shared_report_model.dart';
 import '../providers/pets_provider.dart';
 import '../providers/shared_reports_provider.dart';
 import 'soap_note_detail_screen.dart';
-import '../widgets/document_preview_dialog.dart';
+import 'document_detail_screen.dart';
 
 class SavedReportsScreen extends ConsumerStatefulWidget {
   const SavedReportsScreen({super.key, this.pet});
@@ -161,15 +161,38 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
     );
   }
 
+  void _openDocumentDetail(SharedReportModel report) {
+    final pets = ref.read(petsProvider).pets;
+    final targetPet = widget.pet ??
+        (pets.any((p) => p.petId == report.petId)
+            ? pets.firstWhere((p) => p.petId == report.petId)
+            : (pets.isNotEmpty
+                ? pets.first
+                : Pet(
+                    petId: report.petId,
+                    ownerId: 0,
+                    ownerName: 'Owner',
+                    petName: report.petName ?? 'Companion',
+                    species: 'Canine',
+                    medicalHistories: const [],
+                  )));
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DocumentDetailScreen(
+          report: report,
+          pet: targetPet,
+          onDownload: () => _downloadSharedReport(report),
+        ),
+      ),
+    );
+  }
+
   void _previewReport(SharedReportModel report) {
     if (report.isSoapNote && report.soapNoteId != null) {
       _openSoapDetail(report);
     } else {
-      DocumentPreviewDialog.show(
-        context,
-        report: report,
-        onDownload: () => _downloadSharedReport(report),
-      );
+      _openDocumentDetail(report);
     }
   }
 
@@ -757,10 +780,10 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: () => _previewReport(report),
+                      onPressed: () => _openDocumentDetail(report),
                       icon: const Icon(Icons.visibility_outlined, size: 16),
                       label: const Text(
-                        'Preview',
+                        'View Details',
                         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),
@@ -786,10 +809,10 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: () => _previewReport(report),
+                      onPressed: () => _openDocumentDetail(report),
                       icon: const Icon(Icons.visibility_outlined, size: 16),
                       label: const Text(
-                        'Preview',
+                        'View Details',
                         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),
@@ -801,10 +824,13 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () => _downloadSharedReport(report),
-                      icon: const Icon(Icons.file_download_outlined, size: 16),
-                      label: const Text(
-                        'Download PDF',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                      icon: const Icon(Icons.download_rounded, size: 16),
+                      label: Text(
+                        (report.fileType?.toLowerCase().contains('pdf') ?? false) ||
+                                (report.fileUrl?.toLowerCase().contains('.pdf') ?? false)
+                            ? 'Download PDF'
+                            : 'Download File',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                     ),
                   ],

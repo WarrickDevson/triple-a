@@ -27,18 +27,20 @@ const showReschedule = ref(false)
 const rescheduleDate = ref('')
 const rescheduleTime = ref('09:00')
 
+import {
+  formatSaDateTime,
+  formatSaDate,
+  formatSaTime,
+  getZonedParts,
+  saTimeToUtcIso,
+} from '../../utils/dateTime'
+
 const sessionType = computed(() =>
   props.appointment ? getAppointmentType(props.appointment.appointmentId) : null,
 )
 
-function parseUtcDate(value: string) {
-  const str = value.endsWith('Z') || value.includes('+') ? value : `${value}Z`
-  return new Date(str)
-}
-
 function formatDateTime(value: string) {
-  return parseUtcDate(value).toLocaleString([], {
-    timeZone: 'UTC',
+  return formatSaDateTime(value, {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -49,12 +51,12 @@ function formatDateTime(value: string) {
 
 function openReschedule() {
   if (!props.appointment) return
-  const d = parseUtcDate(props.appointment.scheduledDateTime)
-  const y = d.getUTCFullYear()
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(d.getUTCDate()).padStart(2, '0')
-  const hh = String(d.getUTCHours()).padStart(2, '0')
-  const mm = String(d.getUTCMinutes()).padStart(2, '0')
+  const parts = getZonedParts(props.appointment.scheduledDateTime)
+  const y = String(parts.year).padStart(4, '0')
+  const m = String(parts.month + 1).padStart(2, '0')
+  const day = String(parts.day).padStart(2, '0')
+  const hh = String(parts.hour).padStart(2, '0')
+  const mm = String(parts.minute).padStart(2, '0')
   rescheduleDate.value = `${y}-${m}-${day}`
   rescheduleTime.value = `${hh}:${mm}`
   showReschedule.value = true
@@ -62,7 +64,7 @@ function openReschedule() {
 
 function submitReschedule() {
   if (!props.appointment || !rescheduleDate.value) return
-  const newDatetime = `${rescheduleDate.value}T${rescheduleTime.value}:00Z`
+  const newDatetime = saTimeToUtcIso(rescheduleDate.value, rescheduleTime.value)
   emit('reschedule', props.appointment, newDatetime)
   showReschedule.value = false
 }
@@ -202,8 +204,8 @@ function submitReschedule() {
         >
           <span class="font-medium text-navy">{{ item.petName }}</span>
           <span class="text-xs text-neutral-muted">
-            {{ parseUtcDate(item.scheduledDateTime).toLocaleDateString([], { timeZone: 'UTC', month: 'short', day: 'numeric' }) }}
-            {{ parseUtcDate(item.scheduledDateTime).toLocaleTimeString([], { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' }) }}
+            {{ formatSaDate(item.scheduledDateTime, { month: 'short', day: 'numeric' }) }}
+            {{ formatSaTime(item.scheduledDateTime) }}
           </span>
         </li>
       </ul>

@@ -342,7 +342,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Appointment? _nextUpcoming(List<Appointment> appointments) {
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
     final upcoming = appointments
         .where((a) =>
             a.scheduledDateTime.isAfter(now) &&

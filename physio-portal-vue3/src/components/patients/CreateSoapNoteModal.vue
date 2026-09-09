@@ -23,6 +23,7 @@ import { polishSoapSection, getAiConfigStatus, type AiConfigStatus } from '../..
 import { useVoiceSessionStore } from '../../store/voiceSession'
 import VoiceDictationButton from '../soap/VoiceDictationButton.vue'
 import VoiceSoapDictationModal from '../soap/VoiceSoapDictationModal.vue'
+import { getSaTodayDateString, formatSaDate, formatSaTime } from '../../utils/dateTime'
 
 const props = defineProps<{
   petId: number
@@ -53,7 +54,7 @@ const isReSummarizing = ref(false)
 const aiSourceNotice = ref<string>('')
 const copiedNotice = ref(false)
 
-const sessionDate = ref<string>(new Date().toISOString().slice(0, 10))
+const sessionDate = ref<string>(getSaTodayDateString())
 const subjective = ref<string>('')
 const objective = ref<string>('')
 const action = ref<string>('')
@@ -113,7 +114,7 @@ watch(
       if (voiceSessionStore.pendingReviewNote && voiceSessionStore.pendingReviewNote.petId === props.petId) {
         const pending = voiceSessionStore.pendingReviewNote
         currentNoteId.value = null
-        sessionDate.value = new Date().toISOString().slice(0, 10)
+        sessionDate.value = getSaTodayDateString()
         subjective.value = pending.structuredNote.subjective || ''
         objective.value = pending.structuredNote.objective || ''
         action.value = pending.structuredNote.action || ''
@@ -141,7 +142,7 @@ watch(
         voiceSessionStore.clearPendingReview()
       } else if (props.editingNote) {
         currentNoteId.value = props.editingNote.soapNoteId
-        sessionDate.value = props.editingNote.sessionDate ? props.editingNote.sessionDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
+        sessionDate.value = props.editingNote.sessionDate ? props.editingNote.sessionDate.slice(0, 10) : getSaTodayDateString()
         subjective.value = props.editingNote.subjective || ''
         objective.value = props.editingNote.objective || ''
         action.value = props.editingNote.action || ''
@@ -156,7 +157,7 @@ watch(
         activeTab.value = 'S'
       } else {
         currentNoteId.value = null
-        sessionDate.value = new Date().toISOString().slice(0, 10)
+        sessionDate.value = getSaTodayDateString()
         subjective.value = ''
         objective.value = ''
         action.value = ''
@@ -180,7 +181,7 @@ watch(
 )
 
 function importOwnerNote(note: OwnerSubjectiveNote) {
-  const dateFormatted = new Date(note.noteDate).toLocaleDateString()
+  const dateFormatted = formatSaDate(note.noteDate)
   const snippet = `[Owner Update (${note.ownerName} on ${dateFormatted})]: "${note.notes}"`
   if (!subjective.value.trim()) {
     subjective.value = snippet
@@ -510,7 +511,7 @@ async function autoSaveNote() {
     }
 
     const now = new Date()
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    const timeStr = formatSaTime(now, { second: '2-digit' })
     autoSaveStatus.value = `Auto-saved at ${timeStr}`
   } catch (err) {
     console.warn('Auto-save SOAP note error:', err)
@@ -763,7 +764,7 @@ async function handleSubmit() {
                 <div>
                   <div class="flex items-center gap-2">
                     <span class="font-bold text-navy">{{ note.ownerName }}</span>
-                    <span class="text-[10px] text-neutral-muted">{{ new Date(note.noteDate).toLocaleDateString() }}</span>
+                    <span class="text-[10px] text-neutral-muted">{{ formatSaDate(note.noteDate) }}</span>
                   </div>
                   <p class="mt-1 text-navy leading-normal italic">"{{ note.notes }}"</p>
                 </div>

@@ -28,6 +28,7 @@ import { fetchAppointments } from '../../api/appointments'
 import { fetchSoapNotesByPet } from '../../api/soapNotes'
 import { getRehabProgramsByPet } from '../../api/rehab-programs'
 import { getPetProgress } from '../../api/progress'
+import { formatSaDate, getSaTodayDateString } from '../../utils/dateTime'
 
 interface SelectableSession {
   id: string
@@ -74,7 +75,7 @@ const activeSection = ref<'scope' | 'sessions' | 'narrative'>('scope')
 
 // Dates & Care Period
 const periodFrom = ref('')
-const periodTo = ref(new Date().toISOString().slice(0, 10))
+const periodTo = ref(getSaTodayDateString())
 const activePeriodPreset = ref<'14days' | '30days' | '60days' | 'all' | 'custom'>('30days')
 
 // Content
@@ -134,7 +135,7 @@ const selectedSessionsCount = computed(
 function applyPeriodPreset(preset: '14days' | '30days' | '60days' | 'all') {
   activePeriodPreset.value = preset
   const today = new Date()
-  periodTo.value = today.toISOString().slice(0, 10)
+  periodTo.value = getSaTodayDateString()
 
   if (preset === '14days') {
     const from = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000)
@@ -391,7 +392,7 @@ function insertCheckedSynthesisDetails(categoryMode: 'active' | 'all' = 'active'
     const selected = availableSessions.value.filter((s) => s.selected)
     if (selected.length > 0) {
       const lines = selected.map((s) => {
-        const d = new Date(s.date).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
+        const d = formatSaDate(s.date, { day: 'numeric', month: 'short', year: 'numeric' })
         const comment = s.clinicianComment ? ` [Clinician Note: "${s.clinicianComment}"]` : ''
         return `• ${d} (${s.sessionType}): ${s.sessionNotes}${comment}`
       }).join('\n')
@@ -745,7 +746,7 @@ function handleQuickDownload() {
                   <div>
                     <div class="flex flex-wrap items-center gap-2">
                       <span class="font-bold text-navy">
-                        {{ new Date(session.date).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) }}
+                        {{ formatSaDate(session.date, { day: 'numeric', month: 'short', year: 'numeric' }) }}
                       </span>
                       <span class="rounded bg-navy/5 px-2 py-0.5 text-[10px] font-semibold text-navy">
                         {{ session.sessionType }}
@@ -989,7 +990,7 @@ function handleQuickDownload() {
                   />
                   <div class="flex-1">
                     <span class="font-bold text-navy">
-                      {{ new Date(s.date).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) }}
+                      {{ formatSaDate(s.date, { day: 'numeric', month: 'short', year: 'numeric' }) }}
                     </span>
                     <span class="ml-1 rounded bg-navy/5 px-1.5 py-0.2 text-[10px] font-semibold text-navy">
                       {{ s.sessionType }}

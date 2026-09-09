@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/utils/south_africa_time.dart';
 
 class TrackingState {
   const TrackingState({
@@ -73,9 +74,8 @@ class TrackingNotifier extends StateNotifier<TrackingState> {
       );
 
       if (response.data != null && response.data!.isNotEmpty) {
-        final now = DateTime.now().toUtc();
-        final todayStr =
-            '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+        final now = SouthAfricaTime.now();
+        final todayStr = SouthAfricaTime.toDateString(now);
 
         final firstLog = response.data!.first as Map<String, dynamic>;
         final logDate = firstLog['logDate']?.toString();

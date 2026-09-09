@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
@@ -506,6 +507,46 @@ class _MessageBubble extends StatelessWidget {
     return '${AppConfig.fromEnvironment().apiBaseUrl}${path.startsWith('/') ? path : '/$path'}';
   }
 
+  void _openImagePreview(BuildContext context, String url, String? name) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  _resolveAttachmentUrl(url),
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const CircleAvatar(
+                backgroundColor: Colors.black54,
+                child: Icon(Icons.close, color: Colors.white, size: 20),
+              ),
+              onPressed: () => Navigator.of(ctx).pop(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openFileUrl(String url) async {
+    final uri = Uri.parse(_resolveAttachmentUrl(url));
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Align(
@@ -539,7 +580,6 @@ class _MessageBubble extends StatelessWidget {
             if (message.videoSubmissionId != null) ...[
               Container(
                 margin: const EdgeInsets.only(bottom: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: isMine ? Colors.white.withValues(alpha: 0.2) : Colors.white,
                   borderRadius: BorderRadius.circular(10),
@@ -547,24 +587,58 @@ class _MessageBubble extends StatelessWidget {
                     color: isMine ? Colors.white30 : AppColors.neutralGrey,
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.play_circle_fill,
-                      size: 18,
-                      color: isMine ? Colors.white : AppColors.sage,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      message.videoTitle ?? 'Video #${message.videoSubmissionId}',
-                      style: TextStyle(
-                        color: isMine ? Colors.white : AppColors.navy,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Video #${message.videoSubmissionId}: ${message.videoTitle ?? "Attached Video"}'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.play_circle_fill,
+                            size: 20,
+                            color: isMine ? Colors.white : AppColors.sage,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  message.videoTitle ?? 'Video #${message.videoSubmissionId}',
+                                  style: TextStyle(
+                                    color: isMine ? Colors.white : AppColors.navy,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  'Video Submission #${message.videoSubmissionId}',
+                                  style: TextStyle(
+                                    color: isMine ? Colors.white70 : AppColors.neutralMuted,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -579,53 +653,69 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
                 child: _isImageAttachment(message.attachmentType, message.attachmentUrl)
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          _resolveAttachmentUrl(message.attachmentUrl!),
-                          fit: BoxFit.cover,
-                          height: 160,
-                          width: double.infinity,
-                          errorBuilder: (context, error, stackTrace) => Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.broken_image_rounded, size: 18, color: isMine ? Colors.white : AppColors.navy),
-                                const SizedBox(width: 6),
-                                Text(
-                                  message.attachmentName ?? 'Attached Image',
-                                  style: TextStyle(color: isMine ? Colors.white : AppColors.navy, fontSize: 12),
-                                ),
-                              ],
+                    ? GestureDetector(
+                        onTap: () => _openImagePreview(context, message.attachmentUrl!, message.attachmentName),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            _resolveAttachmentUrl(message.attachmentUrl!),
+                            fit: BoxFit.cover,
+                            height: 160,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) => Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.broken_image_rounded, size: 18, color: isMine ? Colors.white : AppColors.navy),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    message.attachmentName ?? 'Attached Image',
+                                    style: TextStyle(color: isMine ? Colors.white : AppColors.navy, fontSize: 12),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       )
-                    : Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.insert_drive_file_rounded,
-                              size: 18,
-                              color: isMine ? Colors.white : AppColors.navy,
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                message.attachmentName ?? 'Attached File',
-                                style: TextStyle(
+                    : Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: () => _openFileUrl(message.attachmentUrl!),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.insert_drive_file_rounded,
+                                  size: 18,
                                   color: isMine ? Colors.white : AppColors.navy,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    message.attachmentName ?? 'Attached File',
+                                    style: TextStyle(
+                                      color: isMine ? Colors.white : AppColors.navy,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Icon(
+                                  Icons.open_in_new,
+                                  size: 14,
+                                  color: isMine ? Colors.white70 : AppColors.neutralMuted,
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       ),
               ),

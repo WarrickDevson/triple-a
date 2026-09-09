@@ -4,6 +4,7 @@ import BaseButton from '../BaseButton.vue'
 import BaseInput from '../BaseInput.vue'
 import { useAppointmentsStore } from '../../store/appointments'
 import { usePatientsStore } from '../../store/patients'
+import { saTimeToUtcIso, getSaTodayDateString } from '../../utils/dateTime'
 
 const props = defineProps<{
   open: boolean
@@ -20,7 +21,7 @@ const patientsStore = usePatientsStore()
 const saving = ref(false)
 const form = reactive({
   petId: '',
-  date: '',
+  date: getSaTodayDateString(),
   time: '09:00',
   clientNotes: '',
   clinicianNotes: '',
@@ -32,7 +33,7 @@ async function onSubmit() {
   if (!form.petId || !form.date) return
   saving.value = true
   try {
-    const scheduledDateTime = `${form.date}T${form.time}:00Z`
+    const scheduledDateTime = saTimeToUtcIso(form.date, form.time)
     await appointmentsStore.scheduleAppointment({
       petId: Number(form.petId),
       scheduledDateTime,

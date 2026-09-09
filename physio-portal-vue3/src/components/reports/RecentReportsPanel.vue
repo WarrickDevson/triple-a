@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { FileText, Download, Eye, Search, Sparkles } from '@lucide/vue'
 import type { SharedReport } from '../../types/soap'
 import { formatReportType, reportStatusClass } from '../../data/reportsDemo'
+import { formatSaDate } from '../../utils/dateTime'
 
 const props = defineProps<{
   reports: SharedReport[]
@@ -136,7 +137,7 @@ const filteredReports = computed(() => {
 
         <div class="mt-2.5 flex items-center justify-between text-[10px] text-neutral-muted border-t border-neutral-grey/40 pt-2">
           <span>
-            {{ new Date(report.sharedAtUtc).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) }}
+            {{ formatSaDate(report.sharedAtUtc, { day: 'numeric', month: 'short', year: 'numeric' }) }}
           </span>
 
           <div class="flex items-center gap-2 font-semibold">

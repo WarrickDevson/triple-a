@@ -2,14 +2,15 @@
 import { RouterLink } from 'vue-router'
 import type { DashboardAppointment } from '../../types/dashboard'
 
+import { formatSaTime } from '../../utils/dateTime'
+
 defineProps<{
   appointments: DashboardAppointment[]
   loading?: boolean
 }>()
 
 function formatTime(value: string) {
-  const str = value.endsWith('Z') || value.includes('+') ? value : `${value}Z`
-  return new Date(str).toLocaleTimeString([], { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' })
+  return formatSaTime(value)
 }
 
 function statusColor(status: string) {

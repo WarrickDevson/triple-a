@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { Clock, Calendar, Plus, Trash2 } from '@lucide/vue'
 import BaseButton from '../BaseButton.vue'
 import type { Pet } from '../../types/pet'
+import { getSaTodayDateString } from '../../utils/dateTime'
 
 const props = defineProps<{
   patients: Pet[]
@@ -84,7 +85,7 @@ function handleAddWaitlist() {
     petName: selectedPet.petName,
     ownerName: selectedPet.ownerName,
     ownerPhone: (selectedPet as any).ownerPhone || '+27 80 000 0000',
-    requestedDate: new Date().toISOString().slice(0, 10),
+    requestedDate: getSaTodayDateString(),
     urgency: newEntry.value.urgency,
     preferredSlot: newEntry.value.preferredSlot,
     notes: newEntry.value.notes.trim() || 'Waitlist entry recorded by clinician.',

@@ -15,6 +15,7 @@ import { fetchSoapNotesByPet, downloadSoapPdf } from '../../api/soapNotes'
 import { usePatientsStore } from '../../store/patients'
 import CreateSoapNoteModal from '../patients/CreateSoapNoteModal.vue'
 import VoiceSoapDictationModal from '../soap/VoiceSoapDictationModal.vue'
+import { formatSaDate } from '../../utils/dateTime'
 
 const patientsStore = usePatientsStore()
 
@@ -285,7 +286,7 @@ function handleNoteSaved() {
                 </span>
               </div>
               <p class="text-[11px] text-neutral-muted">
-                Session Date: {{ new Date(item.note.sessionDate).toLocaleDateString() }}
+                Session Date: {{ formatSaDate(item.note.sessionDate) }}
               </p>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { FileText, Download } from '@lucide/vue'
 import type { SoapNote } from '../../types/soap'
 import { fetchSoapNotesByPet, downloadSoapPdf } from '../../api/soapNotes'
 import { usePatientsStore } from '../../store/patients'
+import { formatSaDate } from '../../utils/dateTime'
 
 const patientsStore = usePatientsStore()
 const recentSoapNotes = ref<{ note: SoapNote; petName: string }[]>([])
@@ -66,7 +67,7 @@ function handleDownload(soapNoteId: number) {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <span class="font-bold text-navy text-sm">{{ item.petName }}</span>
-            <span class="text-neutral-muted">· {{ new Date(item.note.sessionDate).toLocaleDateString() }}</span>
+            <span class="text-neutral-muted">· {{ formatSaDate(item.note.sessionDate) }}</span>
           </div>
           <button
             type="button"

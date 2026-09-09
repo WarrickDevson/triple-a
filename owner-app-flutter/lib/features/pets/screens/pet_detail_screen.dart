@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/south_africa_time.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/pet_avatar.dart';
 import '../../../core/widgets/progress_ring.dart';
@@ -578,13 +579,13 @@ class _NotesTab extends ConsumerWidget {
   final Pet pet;
 
   String _formatDate(DateTime dt) {
-    final local = dt.toLocal();
+    final sa = SouthAfricaTime.toSouthAfricaTime(dt);
     final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    final m = monthNames[local.month - 1];
-    final h = local.hour > 12 ? local.hour - 12 : (local.hour == 0 ? 12 : local.hour);
-    final ampm = local.hour >= 12 ? 'PM' : 'AM';
-    final min = local.minute.toString().padLeft(2, '0');
-    return '$m ${local.day}, ${local.year} · $h:$min $ampm';
+    final m = monthNames[sa.month - 1];
+    final h = sa.hour > 12 ? sa.hour - 12 : (sa.hour == 0 ? 12 : sa.hour);
+    final ampm = sa.hour >= 12 ? 'PM' : 'AM';
+    final min = sa.minute.toString().padLeft(2, '0');
+    return '$m ${sa.day}, ${sa.year} · $h:$min $ampm';
   }
 
   @override

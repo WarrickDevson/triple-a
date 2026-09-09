@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/section_card.dart';
+import '../../../core/utils/south_africa_time.dart';
 import '../models/pet.dart';
 import '../models/shared_report_model.dart';
 import '../providers/pets_provider.dart';
@@ -197,7 +198,7 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
   }
 
   List<SharedReportModel> _filterReports(List<SharedReportModel> reports) {
-    final now = DateTime.now();
+    final now = SouthAfricaTime.now();
 
     final filtered = reports.where((r) {
       // 1. Companion filter (if not "All Pets")
@@ -222,7 +223,7 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
         final ninetyDaysAgo = now.subtract(const Duration(days: 90));
         if (r.sharedAtUtc.isBefore(ninetyDaysAgo)) return false;
       } else if (_selectedDateRange == 'This Year') {
-        if (r.sharedAtUtc.year != now.year) return false;
+        if (SouthAfricaTime.toSouthAfricaTime(r.sharedAtUtc).year != now.year) return false;
       }
 
       // 4. Search Query
@@ -599,8 +600,7 @@ class _SavedReportsScreenState extends ConsumerState<SavedReportsScreen> {
   }
 
   Widget _buildReportCard(SharedReportModel report) {
-    final dateStr =
-        '${report.sharedAtUtc.year}-${report.sharedAtUtc.month.toString().padLeft(2, '0')}-${report.sharedAtUtc.day.toString().padLeft(2, '0')}';
+    final dateStr = SouthAfricaTime.toDateString(report.sharedAtUtc);
     final categoryColor = _getCategoryColor(report);
     final categoryIcon = _getCategoryIcon(report);
 

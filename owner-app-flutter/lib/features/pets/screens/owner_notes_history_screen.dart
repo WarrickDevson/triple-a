@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/south_africa_time.dart';
 import '../../../core/widgets/section_card.dart';
 import '../models/pet.dart';
 import '../providers/owner_notes_provider.dart';
@@ -12,13 +13,13 @@ class OwnerNotesHistoryScreen extends ConsumerWidget {
   final Pet pet;
 
   String _formatDate(DateTime dt) {
-    final local = dt.toLocal();
+    final sa = SouthAfricaTime.toSouthAfricaTime(dt);
     final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    final m = monthNames[local.month - 1];
-    final h = local.hour > 12 ? local.hour - 12 : (local.hour == 0 ? 12 : local.hour);
-    final ampm = local.hour >= 12 ? 'PM' : 'AM';
-    final min = local.minute.toString().padLeft(2, '0');
-    return '$m ${local.day}, ${local.year} · $h:$min $ampm';
+    final m = monthNames[sa.month - 1];
+    final h = sa.hour > 12 ? sa.hour - 12 : (sa.hour == 0 ? 12 : sa.hour);
+    final ampm = sa.hour >= 12 ? 'PM' : 'AM';
+    final min = sa.minute.toString().padLeft(2, '0');
+    return '$m ${sa.day}, ${sa.year} · $h:$min $ampm';
   }
 
   @override

@@ -6,6 +6,7 @@ import type { PatientDemoMeta } from '../../data/patientDemo'
 import { statusBadgeClass, statusLabel } from '../../data/patientDemo'
 import type { RehabProgram } from '../../types/exercise'
 import type { Pet } from '../../types/pet'
+import { formatSaDate, formatSaTime } from '../../utils/dateTime'
 
 const props = defineProps<{
   patient: Pet
@@ -27,7 +28,7 @@ const ageLabel = computed(() => {
 })
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleDateString([], {
+  return formatSaDate(value, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -35,7 +36,7 @@ function formatDate(value: string) {
 }
 
 function formatTime(value: string) {
-  return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return formatSaTime(value)
 }
 </script>
 

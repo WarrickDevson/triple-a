@@ -9,6 +9,7 @@ import { resolveMediaUrl, reviewVideo, deleteVideo } from '../../api/videos'
 import type { PetProgressSummary } from '../../types/dashboard'
 import type { VideoSubmission } from '../../types/video'
 import { getVideoTitle } from '../../types/video'
+import { formatSaDate, formatSaDateTime } from '../../utils/dateTime'
 
 const emit = defineEmits<{
   (e: 'video-deleted', videoId: number): void
@@ -220,7 +221,7 @@ async function handleDeleteVideo() {
             :key="vid.videoSubmissionId"
             :value="vid.videoSubmissionId"
           >
-            {{ idx === 0 ? '★ Latest: ' : '' }}{{ getVideoTitle(vid) }} — {{ new Date(vid.createdDate).toLocaleDateString() }} ({{ vid.isReviewed ? '✓ Reviewed' : '⏳ Pending' }})
+            {{ idx === 0 ? '★ Latest: ' : '' }}{{ getVideoTitle(vid) }} — {{ formatSaDate(vid.createdDate) }} ({{ vid.isReviewed ? '✓ Reviewed' : '⏳ Pending' }})
           </option>
         </select>
       </div>
@@ -262,7 +263,7 @@ async function handleDeleteVideo() {
             <span class="font-semibold not-italic text-neutral-muted">Owner Note:</span> "{{ currentVideo.notes }}"
           </p>
           <p class="mt-1 text-[11px] text-neutral-muted">
-            Uploaded {{ new Date(currentVideo.createdDate).toLocaleString() }}
+            Uploaded {{ formatSaDateTime(currentVideo.createdDate) }}
           </p>
         </div>
 

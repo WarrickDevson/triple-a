@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/south_africa_time.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../pets/providers/pets_provider.dart';
 import '../models/appointment.dart';
@@ -19,7 +20,7 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
   final _notesController = TextEditingController();
   bool _isSubmitting = false;
   bool _showCalendarView = false;
-  DateTime _selectedCalendarDay = DateTime.now();
+  DateTime _selectedCalendarDay = SouthAfricaTime.now();
 
   @override
   void initState() {
@@ -37,7 +38,7 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
   }
 
   Future<void> _pickDateTime() async {
-    final now = DateTime.now();
+    final now = SouthAfricaTime.now();
     final date = await showDatePicker(
       context: context,
       initialDate: now.add(const Duration(days: 1)),
@@ -106,11 +107,11 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
   }
 
   String _formatDateTime(DateTime value) {
-    final utc = value.toUtc();
+    final sa = SouthAfricaTime.toSouthAfricaTime(value);
     final date =
-        '${utc.year}-${utc.month.toString().padLeft(2, '0')}-${utc.day.toString().padLeft(2, '0')}';
+        '${sa.year}-${sa.month.toString().padLeft(2, '0')}-${sa.day.toString().padLeft(2, '0')}';
     final time =
-        '${utc.hour.toString().padLeft(2, '0')}:${utc.minute.toString().padLeft(2, '0')}';
+        '${sa.hour.toString().padLeft(2, '0')}:${sa.minute.toString().padLeft(2, '0')}';
     return '$date at $time';
   }
 
@@ -179,17 +180,17 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
   }
 
   bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+    return SouthAfricaTime.isSameDay(a, b);
   }
 
   Widget _buildCalendarView(List<Appointment> allAppointments) {
-    final now = DateTime.now();
+    final now = SouthAfricaTime.now();
     final firstDayOfMonth = DateTime(_selectedCalendarDay.year, _selectedCalendarDay.month, 1);
     final daysInMonth = DateUtils.getDaysInMonth(_selectedCalendarDay.year, _selectedCalendarDay.month);
     final startingWeekday = firstDayOfMonth.weekday; // 1 = Monday, 7 = Sunday
 
     final appointmentsOnSelectedDay = allAppointments.where((a) {
-      return _isSameDay(a.scheduledDateTime.toLocal(), _selectedCalendarDay);
+      return _isSameDay(a.scheduledDateTime, _selectedCalendarDay);
     }).toList();
 
     return Column(
@@ -273,7 +274,7 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen> {
                   final isToday = _isSameDay(dayDate, now);
 
                   final dayAppointments = allAppointments.where((a) {
-                    return _isSameDay(a.scheduledDateTime.toLocal(), dayDate);
+                    return _isSameDay(a.scheduledDateTime, dayDate);
                   }).toList();
 
                   final hasBooked = dayAppointments.any((a) => a.appointmentStatus == 'Scheduled');

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/south_africa_time.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../exercises/widgets/exercise_video_player.dart';
 import '../../messages/screens/message_thread_screen.dart';
@@ -59,8 +60,7 @@ class _VideoInboxScreenState extends ConsumerState<VideoInboxScreen> {
   }
 
   String _formatDate(DateTime value) {
-    final local = value.toLocal();
-    return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
+    return SouthAfricaTime.toDateString(value);
   }
 
   @override

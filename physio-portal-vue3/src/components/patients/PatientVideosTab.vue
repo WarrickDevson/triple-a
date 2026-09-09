@@ -20,6 +20,7 @@ import BaseButton from '../BaseButton.vue'
 import { resolveMediaUrl, reviewVideo, deleteVideo, updateVideo } from '../../api/videos'
 import { getVideoTitle, type VideoSubmission } from '../../types/video'
 import type { Pet } from '../../types/pet'
+import { formatSaDate, formatSaTime, formatSaDateTime } from '../../utils/dateTime'
 
 const props = withDefaults(
   defineProps<{
@@ -59,7 +60,7 @@ const modalError = ref('')
 watch(
   () => [props.videos, route.query.videoId, route.query.tab],
   () => {
-    if (route.query.tab === 'videos' && route.query.videoId && props.videos.length > 0) {
+    if (route.query.videoId && props.videos.length > 0) {
       const match = props.videos.find((v) => v.videoSubmissionId === Number(route.query.videoId))
       if (match) {
         openReviewModal(match)
@@ -490,7 +491,7 @@ async function handleSaveEditVideo() {
                   {{ video.exerciseTitle }}
                 </span>
                 <span>
-                  Uploaded {{ new Date(video.createdDate).toLocaleDateString() }} at {{ new Date(video.createdDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                  Uploaded {{ formatSaDate(video.createdDate) }} at {{ formatSaTime(video.createdDate) }}
                 </span>
               </div>
 
@@ -577,7 +578,7 @@ async function handleSaveEditVideo() {
               </button>
             </div>
             <p class="text-xs text-neutral-muted">
-              Uploaded {{ new Date(activeModalVideo.createdDate).toLocaleString() }} · #{{ activeModalVideo.videoSubmissionId }}
+              Uploaded {{ formatSaDateTime(activeModalVideo.createdDate) }} · #{{ activeModalVideo.videoSubmissionId }}
             </p>
           </div>
           <button

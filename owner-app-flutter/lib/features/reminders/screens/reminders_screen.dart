@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/south_africa_time.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../appointments/screens/appointments_screen.dart';
 import '../../pets/models/pet.dart';
@@ -26,9 +27,9 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
   String _formatDueAt(DateTime? value) {
     if (value == null) return 'Due today';
-    final local = value.toLocal();
-    return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')} '
-        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    final sa = SouthAfricaTime.toSouthAfricaTime(value);
+    return '${sa.year}-${sa.month.toString().padLeft(2, '0')}-${sa.day.toString().padLeft(2, '0')} '
+        '${sa.hour.toString().padLeft(2, '0')}:${sa.minute.toString().padLeft(2, '0')}';
   }
 
   Future<void> _openReminder(Reminder reminder) async {

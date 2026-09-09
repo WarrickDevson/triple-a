@@ -44,7 +44,7 @@ const tabs = [
 const activeTab = ref<(typeof tabs)[number]['id']>(
   route.query.openSoap === 'true' || route.query.tab === 'soap'
     ? 'soap'
-    : route.query.tab === 'videos'
+    : route.query.tab === 'videos' || route.query.videoId
       ? 'videos'
       : 'overview',
 )
@@ -54,7 +54,7 @@ watch(
   (q) => {
     if (q.openSoap === 'true' || q.tab === 'soap') {
       activeTab.value = 'soap'
-    } else if (q.tab === 'videos') {
+    } else if (q.tab === 'videos' || q.videoId) {
       activeTab.value = 'videos'
     }
   },

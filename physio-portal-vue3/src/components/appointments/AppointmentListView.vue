@@ -2,6 +2,8 @@
 import { getAppointmentLocation, getAppointmentType, statusBadgeClass } from '../../data/appointmentDemo'
 import type { Appointment } from '../../types/appointment'
 
+import { formatSaDateTime } from '../../utils/dateTime'
+
 defineProps<{
   appointments: Appointment[]
   selectedId: number | null
@@ -12,9 +14,7 @@ const emit = defineEmits<{
 }>()
 
 function formatDateTime(value: string) {
-  const str = value.endsWith('Z') || value.includes('+') ? value : `${value}Z`
-  return new Date(str).toLocaleString([], {
-    timeZone: 'UTC',
+  return formatSaDateTime(value, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',

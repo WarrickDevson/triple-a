@@ -16,6 +16,7 @@ import {
 import BaseButton from '../BaseButton.vue'
 import type { SharedReport } from '../../types/soap'
 import { formatReportType, reportStatusClass } from '../../data/reportsDemo'
+import { formatSaDate } from '../../utils/dateTime'
 
 const props = defineProps<{
   report: SharedReport | null
@@ -89,7 +90,7 @@ const isShared = computed(() => {
               <Calendar class="h-3.5 w-3.5 text-sage" /> Date
             </p>
             <p class="mt-0.5 font-bold text-navy">
-              {{ new Date(report.sharedAtUtc).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) }}
+              {{ formatSaDate(report.sharedAtUtc, { day: 'numeric', month: 'short', year: 'numeric' }) }}
             </p>
           </div>
           <div>
@@ -125,9 +126,9 @@ const isShared = computed(() => {
             Treatment Period Covered:
           </span>
           <span class="font-semibold text-sage">
-            {{ report.periodFrom ? new Date(report.periodFrom).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : 'Initial' }}
+            {{ report.periodFrom ? formatSaDate(report.periodFrom, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Initial' }}
             –
-            {{ report.periodTo ? new Date(report.periodTo).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : 'Current' }}
+            {{ report.periodTo ? formatSaDate(report.periodTo, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Current' }}
           </span>
         </div>
 
@@ -150,7 +151,7 @@ const isShared = computed(() => {
               <tbody class="divide-y divide-neutral-grey/60">
                 <tr v-for="(sess, idx) in report.referencedSessions" :key="idx" class="hover:bg-surface/50">
                   <td class="p-2.5 font-bold text-navy whitespace-nowrap">
-                    {{ new Date(sess.date).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) }}
+                    {{ formatSaDate(sess.date, { day: 'numeric', month: 'short', year: 'numeric' }) }}
                   </td>
                   <td class="p-2.5 font-semibold text-sage">
                     {{ sess.sessionType }}

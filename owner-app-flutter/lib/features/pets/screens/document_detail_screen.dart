@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/pet_avatar.dart';
 import '../../../core/widgets/section_card.dart';
+import '../../../core/utils/south_africa_time.dart';
 import '../models/pet.dart';
 import '../models/shared_report_model.dart';
 import '../providers/pets_provider.dart';
@@ -271,8 +272,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen> {
   }
 
   Widget _buildHeaderCard(Pet pet, SharedReportModel report) {
-    final dateStr =
-        '${report.sharedAtUtc.year}-${report.sharedAtUtc.month.toString().padLeft(2, '0')}-${report.sharedAtUtc.day.toString().padLeft(2, '0')}';
+    final dateStr = SouthAfricaTime.toDateString(report.sharedAtUtc);
 
     return SectionCard(
       child: Column(

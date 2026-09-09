@@ -14,6 +14,7 @@ import {
 import BaseButton from '../BaseButton.vue'
 import CreateSoapNoteModal from './CreateSoapNoteModal.vue'
 import VoiceSoapDictationModal from '../soap/VoiceSoapDictationModal.vue'
+import { formatSaDate, formatSaDateTime } from '../../utils/dateTime'
 
 const props = defineProps<{
   petId: number
@@ -91,7 +92,7 @@ async function handleDeleteNote(soapNoteId: number) {
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString([], {
+  return formatSaDate(dateStr, {
     weekday: 'short',
     year: 'numeric',
     month: 'short',
@@ -240,7 +241,7 @@ async function handleSaveEditOwnerNote() {
           <div class="flex items-center justify-between gap-2">
             <span class="font-bold text-navy">{{ on.ownerName }}</span>
             <div class="flex items-center gap-2">
-              <span class="text-[10px] text-neutral-muted">{{ new Date(on.noteDate).toLocaleString() }}</span>
+              <span class="text-[10px] text-neutral-muted">{{ formatSaDateTime(on.noteDate) }}</span>
               <button
                 type="button"
                 class="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold text-neutral-muted hover:bg-neutral-grey/40 hover:text-navy"

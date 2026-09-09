@@ -4,6 +4,8 @@ import { MoreVertical } from '@lucide/vue'
 import { getAppointmentLocation, getAppointmentType } from '../../data/appointmentDemo'
 import type { Appointment } from '../../types/appointment'
 
+import { getZonedParts, formatSaTime, formatSaDate, parseDate } from '../../utils/dateTime'
+
 const props = defineProps<{
   appointments: Appointment[]
   selectedDate: Date
@@ -18,36 +20,31 @@ const emit = defineEmits<{
 
 const hours = Array.from({ length: 11 }, (_, i) => 8 + i)
 
-function parseUtcDate(value: string) {
-  const str = value.endsWith('Z') || value.includes('+') ? value : `${value}Z`
-  return new Date(str)
-}
-
 const dayAppointments = computed(() => {
   return props.appointments
     .filter((a) => {
-      const d = parseUtcDate(a.scheduledDateTime)
+      const parts = getZonedParts(a.scheduledDateTime)
       const sameDay =
-        d.getUTCFullYear() === props.selectedDate.getFullYear() &&
-        d.getUTCMonth() === props.selectedDate.getMonth() &&
-        d.getUTCDate() === props.selectedDate.getDate()
+        parts.year === props.selectedDate.getFullYear() &&
+        parts.month === props.selectedDate.getMonth() &&
+        parts.day === props.selectedDate.getDate()
       if (!sameDay) return false
       const status = a.appointmentStatus.toLowerCase()
       if (!props.showCancelled && status.includes('cancel')) return false
       if (!props.showCompleted && status.includes('complete')) return false
       return true
     })
-    .sort((a, b) => parseUtcDate(a.scheduledDateTime).getTime() - parseUtcDate(b.scheduledDateTime).getTime())
+    .sort((a, b) => parseDate(a.scheduledDateTime).getTime() - parseDate(b.scheduledDateTime).getTime())
 })
 
 function formatTime(value: string) {
-  return parseUtcDate(value).toLocaleTimeString([], { timeZone: 'UTC', hour: '2-digit', minute: '2-digit' })
+  return formatSaTime(value)
 }
 
 function blockTop(datetime: string) {
-  const d = parseUtcDate(datetime)
-  const minutes = (d.getUTCHours() - 8) * 60 + d.getUTCMinutes()
-  return `${(minutes / 600) * 100}%`
+  const parts = getZonedParts(datetime)
+  const minutes = (parts.hour - 8) * 60 + parts.minute
+  return `${Math.max(0, Math.min(100, (minutes / 600) * 100))}%`
 }
 
 function blockHeight() {
@@ -59,7 +56,7 @@ function blockHeight() {
   <section class="portal-card overflow-hidden">
     <div class="border-b border-neutral-grey/80 px-4 py-3">
       <h2 class="text-sm font-bold text-navy">
-        {{ selectedDate.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}
+        {{ formatSaDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}
       </h2>
     </div>
 

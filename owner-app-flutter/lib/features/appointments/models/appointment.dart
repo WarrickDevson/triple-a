@@ -34,7 +34,11 @@ class Appointment {
       ownerName: json['ownerName'] as String,
       petId: json['petId'] as int,
       petName: json['petName'] as String,
-      scheduledDateTime: DateTime.parse(json['scheduledDateTime'] as String),
+      scheduledDateTime: () {
+        final raw = json['scheduledDateTime'] as String;
+        final normalized = (raw.endsWith('Z') || raw.contains('+')) ? raw : '${raw}Z';
+        return DateTime.parse(normalized);
+      }(),
       appointmentStatus: json['appointmentStatus'] as String,
       clientNotes: json['clientNotes'] as String?,
       clinicianNotes: json['clinicianNotes'] as String?,

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../../core/utils/south_africa_time.dart';
 import '../models/appointment.dart';
 
 class AppointmentsState {
@@ -44,12 +45,8 @@ class AppointmentsNotifier extends StateNotifier<AppointmentsState> {
   }) async {
     state = AppointmentsState(appointments: state.appointments, isLoading: true);
     try {
-      final y = scheduledDateTime.year.toString().padLeft(4, '0');
-      final m = scheduledDateTime.month.toString().padLeft(2, '0');
-      final d = scheduledDateTime.day.toString().padLeft(2, '0');
-      final h = scheduledDateTime.hour.toString().padLeft(2, '0');
-      final min = scheduledDateTime.minute.toString().padLeft(2, '0');
-      final isoString = '$y-$m-$d' 'T' '$h:$min:00Z';
+      final utc = SouthAfricaTime.fromSouthAfricaTimeToUtc(scheduledDateTime);
+      final isoString = utc.toIso8601String();
 
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/appointments',

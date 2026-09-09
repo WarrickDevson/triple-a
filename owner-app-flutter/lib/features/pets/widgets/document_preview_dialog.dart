@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/south_africa_time.dart';
 import '../models/shared_report_model.dart';
 
 class DocumentPreviewDialog extends StatelessWidget {
@@ -83,8 +84,7 @@ class DocumentPreviewDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr =
-        '${report.sharedAtUtc.year}-${report.sharedAtUtc.month.toString().padLeft(2, '0')}-${report.sharedAtUtc.day.toString().padLeft(2, '0')}';
+    final dateStr = SouthAfricaTime.toDateString(report.sharedAtUtc);
     final hasFile = _resolvedFileUrl != null && _resolvedFileUrl!.isNotEmpty;
 
     return Dialog(

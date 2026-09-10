@@ -65,7 +65,8 @@ public class AdminController : ControllerBase
                 u.IsEmailVerified,
                 u.IsApproved,
                 u.IsActive,
-                u.CreatedDate))
+                u.CreatedDate,
+                u.ProfilePictureUrl))
             .ToListAsync(cancellationToken);
 
         return Ok(physios);
@@ -293,7 +294,8 @@ public class AdminController : ControllerBase
                 u.IsApproved,
                 u.Pets.Count,
                 u.CreatedDate,
-                u.IsEmailVerified))
+                u.IsEmailVerified,
+                u.ProfilePictureUrl))
             .ToListAsync(cancellationToken);
 
         return Ok(users);

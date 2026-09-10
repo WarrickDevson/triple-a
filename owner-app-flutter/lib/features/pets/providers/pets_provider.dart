@@ -87,6 +87,46 @@ class PetsNotifier extends StateNotifier<PetsState> {
     final day = date.day.toString().padLeft(2, '0');
     return '${date.year}-$month-$day';
   }
+
+  Future<bool> uploadPetPhoto(int petId, String filePath, String fileName) async {
+    state = PetsState(pets: state.pets, isLoading: true);
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+      });
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/pets/$petId/photo',
+        data: formData,
+      );
+      final updatedPet = Pet.fromJson(response.data!);
+      final updatedList = state.pets.map((p) => p.petId == petId ? updatedPet : p).toList();
+      state = PetsState(pets: updatedList);
+      return true;
+    } on DioException catch (e) {
+      final serverMsg = e.response?.data is Map
+          ? (e.response?.data['message'] ?? e.response?.data['title']?.toString())
+          : null;
+      state = PetsState(pets: state.pets, error: serverMsg?.toString() ?? 'Unable to upload pet photo.');
+      return false;
+    }
+  }
+
+  Future<bool> deletePetPhoto(int petId) async {
+    state = PetsState(pets: state.pets, isLoading: true);
+    try {
+      final response = await _dio.delete<Map<String, dynamic>>('/api/pets/$petId/photo');
+      final updatedPet = Pet.fromJson(response.data!);
+      final updatedList = state.pets.map((p) => p.petId == petId ? updatedPet : p).toList();
+      state = PetsState(pets: updatedList);
+      return true;
+    } on DioException catch (e) {
+      final serverMsg = e.response?.data is Map
+          ? (e.response?.data['message'] ?? e.response?.data['title']?.toString())
+          : null;
+      state = PetsState(pets: state.pets, error: serverMsg?.toString() ?? 'Unable to remove pet photo.');
+      return false;
+    }
+  }
 }
 
 final petsProvider = StateNotifierProvider<PetsNotifier, PetsState>((ref) {

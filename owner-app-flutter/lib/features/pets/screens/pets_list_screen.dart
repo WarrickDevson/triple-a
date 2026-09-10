@@ -122,7 +122,12 @@ class PetsListScreen extends ConsumerWidget {
           ),
           child: Row(
             children: [
-              PetAvatar(name: pet.petName, species: pet.species, size: 52),
+              PetAvatar(
+                name: pet.petName,
+                species: pet.species,
+                imageUrl: pet.profilePictureUrl,
+                size: 52,
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

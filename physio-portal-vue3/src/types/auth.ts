@@ -3,6 +3,7 @@ export interface AuthUser {
   email: string
   firstName: string
   lastName: string
+  phoneNumber?: string | null
   userRole: string
   subscriptionTier: string
   clinicId: number | null
@@ -10,6 +11,7 @@ export interface AuthUser {
   clinicInviteCode?: string | null
   isEmailVerified?: boolean
   isApproved?: boolean
+  profilePictureUrl?: string | null
 }
 
 export interface AuthResponse {
@@ -121,4 +123,5 @@ export interface UpdateProfileRequest {
   lastName: string
   phoneNumber?: string
   clinicName?: string
+  profilePictureUrl?: string | null
 }

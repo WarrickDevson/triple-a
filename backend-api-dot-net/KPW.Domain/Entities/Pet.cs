@@ -11,6 +11,7 @@ public class Pet : AuditableEntity
     public string? Breed { get; set; }
     public DateOnly? BirthDate { get; set; }
     public decimal? WeightKg { get; set; }
+    public string? ProfilePictureUrl { get; set; }
 
     public User Owner { get; set; } = null!;
     public ICollection<MedicalHistory> MedicalHistories { get; set; } = [];

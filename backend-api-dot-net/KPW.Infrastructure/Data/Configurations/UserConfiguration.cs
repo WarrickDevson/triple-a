@@ -21,6 +21,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.RefreshTokenHash).HasMaxLength(500);
         builder.Property(u => u.IsEmailVerified).HasDefaultValue(false);
         builder.Property(u => u.EmailVerificationTokenHash).HasMaxLength(500);
+        builder.Property(u => u.ProfilePictureUrl).HasMaxLength(1000);
 
         builder.HasOne(u => u.Clinic)
             .WithMany(c => c.Users)

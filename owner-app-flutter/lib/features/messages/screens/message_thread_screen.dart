@@ -12,6 +12,7 @@ import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/pet_avatar.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../pets/models/pet.dart';
+import '../../pets/providers/pets_provider.dart';
 import '../../videos/models/video_submission.dart';
 import '../models/message.dart';
 import '../providers/messages_provider.dart';
@@ -324,6 +325,11 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
   Widget build(BuildContext context) {
     final userId = ref.watch(authProvider).user?.userId;
     final messagesState = ref.watch(messagesProvider);
+    final pet = ref.watch(
+      petsProvider.select(
+        (s) => s.pets.firstWhere((p) => p.petId == widget.pet.petId, orElse: () => widget.pet),
+      ),
+    );
 
     ref.listen<MessagesState>(messagesProvider, (previous, next) {
       if ((previous?.messages.length ?? 0) < next.messages.length) {
@@ -332,14 +338,19 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
     });
 
     return AppPageScaffold(
-      title: widget.pet.petName,
+      title: pet.petName,
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
             child: Row(
               children: [
-                PetAvatar(name: widget.pet.petName, species: widget.pet.species, size: 40),
+                PetAvatar(
+                  name: pet.petName,
+                  species: pet.species,
+                  imageUrl: pet.profilePictureUrl,
+                  size: 40,
+                ),
                 const SizedBox(width: 10),
                 const Expanded(
                   child: Text(

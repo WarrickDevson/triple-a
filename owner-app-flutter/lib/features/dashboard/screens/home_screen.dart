@@ -92,7 +92,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onTap: () => _openPet(pet),
                   child: Row(
                     children: [
-                      PetAvatar(name: pet.petName, species: pet.species),
+                      PetAvatar(
+                        name: pet.petName,
+                        species: pet.species,
+                        imageUrl: pet.profilePictureUrl,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(

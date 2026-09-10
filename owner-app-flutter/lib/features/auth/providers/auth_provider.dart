@@ -130,6 +130,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (auth.user.clinicId != null) {
       await prefs.setInt('${_userKeyPrefix}clinicId', auth.user.clinicId!);
     }
+    if (auth.user.profilePictureUrl != null) {
+      await prefs.setString('${_userKeyPrefix}profilePictureUrl', auth.user.profilePictureUrl!);
+    } else {
+      await prefs.remove('${_userKeyPrefix}profilePictureUrl');
+    }
 
     state = AuthState(user: auth.user);
   }
@@ -155,6 +160,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         subscriptionTier: prefs.getString('${_userKeyPrefix}subscriptionTier') ?? 'Free',
         clinicId: prefs.getInt('${_userKeyPrefix}clinicId'),
         isEmailVerified: prefs.getBool('${_userKeyPrefix}isEmailVerified') ?? false,
+        profilePictureUrl: prefs.getString('${_userKeyPrefix}profilePictureUrl'),
       ),
     );
   }
@@ -415,6 +421,50 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final message = e.response?.data is Map
           ? (e.response?.data['message'] as String?) ?? 'Failed to update profile.'
           : 'Failed to update profile.';
+      state = AuthState(user: state.user, error: message);
+      return false;
+    }
+  }
+
+  Future<bool> uploadProfilePicture(String filePath, String fileName) async {
+    state = AuthState(user: state.user, isLoading: true);
+    try {
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+      });
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/auth/profile-picture',
+        data: formData,
+      );
+      final updatedUser = AuthUser.fromJson(response.data!);
+      final prefs = await SharedPreferences.getInstance();
+      if (updatedUser.profilePictureUrl != null) {
+        await prefs.setString('${_userKeyPrefix}profilePictureUrl', updatedUser.profilePictureUrl!);
+      }
+      state = AuthState(user: updatedUser, message: 'Profile picture updated successfully!');
+      return true;
+    } on DioException catch (e) {
+      final message = e.response?.data is Map
+          ? (e.response?.data['message'] as String?) ?? 'Failed to upload profile picture.'
+          : 'Failed to upload profile picture.';
+      state = AuthState(user: state.user, error: message);
+      return false;
+    }
+  }
+
+  Future<bool> deleteProfilePicture() async {
+    state = AuthState(user: state.user, isLoading: true);
+    try {
+      final response = await _dio.delete<Map<String, dynamic>>('/api/auth/profile-picture');
+      final updatedUser = AuthUser.fromJson(response.data!);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('${_userKeyPrefix}profilePictureUrl');
+      state = AuthState(user: updatedUser, message: 'Profile picture removed.');
+      return true;
+    } on DioException catch (e) {
+      final message = e.response?.data is Map
+          ? (e.response?.data['message'] as String?) ?? 'Failed to remove profile picture.'
+          : 'Failed to remove profile picture.';
       state = AuthState(user: state.user, error: message);
       return false;
     }

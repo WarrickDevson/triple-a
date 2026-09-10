@@ -16,6 +16,7 @@ export interface Pet {
   birthDate: string | null
   weightKg: number | null
   medicalHistories: MedicalHistory[]
+  profilePictureUrl?: string | null
 }
 
 export interface CreateMedicalHistory {
@@ -42,6 +43,7 @@ export interface CreatePetRequest {
   weightKg?: number
   initialMedicalHistory?: CreateMedicalHistory
   newOwner?: CreateOwner
+  profilePictureUrl?: string | null
 }
 
 export interface UpdatePetRequest {
@@ -50,6 +52,7 @@ export interface UpdatePetRequest {
   breed?: string
   birthDate?: string
   weightKg?: number
+  profilePictureUrl?: string | null
 }
 
 export const PET_SPECIES = ['Canine', 'Feline', 'Equine', 'Avian', 'Other'] as const

@@ -158,6 +158,38 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function uploadProfilePicture(file: File) {
+    loading.value = true
+    error.value = null
+    try {
+      const updatedUser = await authApi.uploadProfilePicture(file)
+      user.value = updatedUser
+      persist()
+      return true
+    } catch (err: any) {
+      error.value = err?.response?.data?.message || 'Failed to upload profile picture.'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function removeProfilePicture() {
+    loading.value = true
+    error.value = null
+    try {
+      const updatedUser = await authApi.deleteProfilePicture()
+      user.value = updatedUser
+      persist()
+      return true
+    } catch (err: any) {
+      error.value = err?.response?.data?.message || 'Failed to remove profile picture.'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function forgotPassword(email: string) {
     loading.value = true
     error.value = null
@@ -351,6 +383,8 @@ export const useAuthStore = defineStore('auth', () => {
     resendVerification,
     fetchCurrentUser,
     updateProfile,
+    uploadProfilePicture,
+    removeProfilePicture,
     forgotPassword,
     resetPassword,
     changePassword,

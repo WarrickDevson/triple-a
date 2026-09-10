@@ -16,7 +16,8 @@ public record PetDto(
     string? Breed,
     DateOnly? BirthDate,
     decimal? WeightKg,
-    IReadOnlyList<MedicalHistoryDto> MedicalHistories);
+    IReadOnlyList<MedicalHistoryDto> MedicalHistories,
+    string? ProfilePictureUrl = null);
 
 public record CreateMedicalHistoryDto(
     string Diagnosis,
@@ -39,11 +40,13 @@ public record CreatePetRequestDto(
     DateOnly? BirthDate,
     decimal? WeightKg,
     CreateMedicalHistoryDto? InitialMedicalHistory,
-    CreateOwnerDto? NewOwner);
+    CreateOwnerDto? NewOwner,
+    string? ProfilePictureUrl = null);
 
 public record UpdatePetRequestDto(
     string PetName,
     string Species,
     string? Breed,
     DateOnly? BirthDate,
-    decimal? WeightKg);
+    decimal? WeightKg,
+    string? ProfilePictureUrl = null);

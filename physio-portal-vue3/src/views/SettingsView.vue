@@ -17,10 +17,61 @@ import { useAuthStore } from '../store/auth'
 import { useNotificationsStore } from '../store/notifications'
 import InviteOwnerModal from '../components/clinic/InviteOwnerModal.vue'
 import EditProfileModal from '../components/profile/EditProfileModal.vue'
+import { Camera, Trash2, Upload } from '@lucide/vue'
 import AiPromptEditor from '../components/admin/AiPromptEditor.vue'
+import { resolveMediaUrl } from '../api/videos'
 
 const auth = useAuthStore()
 const router = useRouter()
+const imageError = ref(false)
+const profileFileInput = ref<HTMLInputElement | null>(null)
+const uploadingProfilePhoto = ref(false)
+const photoMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null)
+
+watch(() => auth.user?.profilePictureUrl, () => {
+  imageError.value = false
+})
+
+async function onProfilePhotoSelected(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  uploadingProfilePhoto.value = true
+  photoMessage.value = null
+  imageError.value = false
+
+  const ok = await auth.uploadProfilePicture(file)
+  uploadingProfilePhoto.value = false
+
+  if (ok) {
+    photoMessage.value = { type: 'success', text: 'Profile picture updated successfully.' }
+    setTimeout(() => {
+      photoMessage.value = null
+    }, 3500)
+  } else {
+    photoMessage.value = { type: 'error', text: auth.error || 'Failed to upload photo.' }
+  }
+
+  target.value = ''
+}
+
+async function removeProfilePhoto() {
+  uploadingProfilePhoto.value = true
+  photoMessage.value = null
+
+  const ok = await auth.removeProfilePicture()
+  uploadingProfilePhoto.value = false
+
+  if (ok) {
+    photoMessage.value = { type: 'success', text: 'Profile picture removed.' }
+    setTimeout(() => {
+      photoMessage.value = null
+    }, 3500)
+  } else {
+    photoMessage.value = { type: 'error', text: auth.error || 'Failed to remove photo.' }
+  }
+}
 
 const activeTab = ref<'profile' | 'clinic' | 'ai-prompt' | 'notifications' | 'security' | 'privacy'>('profile')
 const showStubModal = ref(false)
@@ -140,19 +191,87 @@ function logout() {
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-bold text-navy">Profile</h2>
         <button type="button" class="text-xs font-semibold text-sage hover:underline" @click="showEditProfileModal = true">
-          Edit
+          Edit Details
         </button>
       </div>
-      <div v-if="auth.user" class="mt-6 space-y-4">
-        <div class="flex items-center gap-4">
-          <div class="flex h-16 w-16 items-center justify-center rounded-full bg-sage-muted text-xl font-bold text-sage">
-            {{ auth.user.firstName?.[0] }}{{ auth.user.lastName?.[0] }}
+
+      <div v-if="auth.user" class="mt-6 space-y-6">
+        <!-- Direct Profile Picture Management on Settings Page -->
+        <div class="flex flex-col sm:flex-row sm:items-center gap-5 rounded-2xl border border-neutral-grey/70 bg-surface/80 p-5">
+          <div class="relative group h-20 w-20 shrink-0">
+            <div class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-sage-muted text-2xl font-bold text-sage ring-2 ring-sage/30 shadow-sm">
+              <img
+                v-if="auth.user.profilePictureUrl && !imageError"
+                :src="resolveMediaUrl(auth.user.profilePictureUrl)!"
+                :alt="`${auth.user.firstName} ${auth.user.lastName}`"
+                class="h-full w-full object-cover"
+                @error="imageError = true"
+              />
+              <span v-else>
+                {{ auth.user.firstName?.[0] }}{{ auth.user.lastName?.[0] }}
+              </span>
+            </div>
+            <button
+              type="button"
+              class="absolute inset-0 flex items-center justify-center rounded-full bg-navy/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+              title="Click to change photo"
+              :disabled="uploadingProfilePhoto"
+              @click="profileFileInput?.click()"
+            >
+              <Camera class="h-6 w-6" />
+            </button>
           </div>
-          <div>
-            <p class="text-lg font-bold text-navy">{{ auth.user.firstName }} {{ auth.user.lastName }}</p>
-            <p class="text-sm text-neutral-muted">{{ displayRole(auth.user.userRole) }}</p>
+
+          <div class="flex-1 space-y-2">
+            <div>
+              <p class="text-lg font-bold text-navy">{{ auth.user.firstName }} {{ auth.user.lastName }}</p>
+              <p class="text-xs text-neutral-muted">{{ displayRole(auth.user.userRole) }}</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <input
+                ref="profileFileInput"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                class="hidden"
+                @change="onProfilePhotoSelected"
+              />
+              <BaseButton
+                size="sm"
+                variant="secondary"
+                :disabled="uploadingProfilePhoto"
+                @click="profileFileInput?.click()"
+              >
+                <Upload class="mr-1.5 h-3.5 w-3.5 inline" />
+                {{ uploadingProfilePhoto ? 'Uploading...' : (auth.user.profilePictureUrl ? 'Change Photo' : 'Upload Photo') }}
+              </BaseButton>
+
+              <button
+                v-if="auth.user.profilePictureUrl"
+                type="button"
+                class="inline-flex items-center gap-1 text-xs font-semibold text-alert-red hover:underline px-2 py-1"
+                :disabled="uploadingProfilePhoto"
+                @click="removeProfilePhoto"
+              >
+                <Trash2 class="h-3.5 w-3.5" />
+                Remove
+              </button>
+            </div>
+
+            <p class="text-[11px] text-neutral-muted">
+              JPG, PNG or WebP, up to 5 MB.
+            </p>
+
+            <p
+              v-if="photoMessage"
+              class="text-xs font-semibold"
+              :class="photoMessage.type === 'success' ? 'text-success-green' : 'text-alert-red'"
+            >
+              {{ photoMessage.text }}
+            </p>
           </div>
         </div>
+
         <dl class="grid gap-3 text-sm sm:grid-cols-2">
           <div>
             <dt class="text-neutral-muted">Email</dt>

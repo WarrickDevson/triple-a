@@ -40,6 +40,12 @@ public class UpdatePetCommandHandler : IRequestHandler<UpdatePetCommand, PetDto>
         pet.Breed = request.Breed?.Trim();
         pet.BirthDate = request.BirthDate;
         pet.WeightKg = request.WeightKg;
+        if (request.ProfilePictureUrl != null)
+        {
+            pet.ProfilePictureUrl = string.IsNullOrWhiteSpace(request.ProfilePictureUrl)
+                ? null
+                : request.ProfilePictureUrl.Trim();
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 

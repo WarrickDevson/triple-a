@@ -1,6 +1,6 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/south_africa_time.dart';
@@ -15,6 +15,7 @@ import '../../shell/main_shell.dart';
 import '../../tracking/screens/tracking_screen.dart';
 import '../models/pet.dart';
 import '../providers/owner_notes_provider.dart';
+import '../providers/pets_provider.dart';
 import 'owner_notes_history_screen.dart';
 import 'saved_reports_screen.dart';
 import 'submit_owner_note_dialog.dart';
@@ -72,7 +73,11 @@ class _PetDetailScreenState extends ConsumerState<PetDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final pet = widget.pet;
+    final petsState = ref.watch(petsProvider);
+    final pet = petsState.pets.firstWhere(
+      (p) => p.petId == widget.pet.petId,
+      orElse: () => widget.pet,
+    );
     final subtitle = formatPetSubtitle(breed: pet.breed, birthDate: pet.birthDate);
 
     return Scaffold(
@@ -80,7 +85,12 @@ class _PetDetailScreenState extends ConsumerState<PetDetailScreen>
       appBar: AppBar(
         title: Row(
           children: [
-            PetAvatar(name: pet.petName, species: pet.species, size: 36),
+            PetAvatar(
+              name: pet.petName,
+              species: pet.species,
+              imageUrl: pet.profilePictureUrl,
+              size: 36,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -155,6 +165,51 @@ class _OverviewTab extends ConsumerWidget {
   final VoidCallback onOpenPlan;
   final VoidCallback onOpenNotes;
 
+  Future<void> _pickAndUploadPhoto(BuildContext context, WidgetRef ref, Pet pet) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
+      );
+      if (result == null || result.files.single.path == null) return;
+
+      final path = result.files.single.path!;
+      final name = result.files.single.name;
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Uploading pet photo...'), duration: Duration(seconds: 2)),
+      );
+
+      final ok = await ref.read(petsProvider.notifier).uploadPetPhoto(pet.petId, path, name);
+      if (!context.mounted) return;
+      if (ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pet photo updated successfully.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ref.read(petsProvider).error ?? 'Failed to upload photo.')),
+        );
+      }
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to pick photo.')),
+      );
+    }
+  }
+
+  Future<void> _removePhoto(BuildContext context, WidgetRef ref, Pet pet) async {
+    final ok = await ref.read(petsProvider.notifier).deletePetPhoto(pet.petId);
+    if (!context.mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pet photo removed.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final progress = placeholderWeeklyProgress(pet.petId);
@@ -169,24 +224,83 @@ class _OverviewTab extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
         children: [
           SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
+                Stack(
+                  alignment: Alignment.bottomRight,
                   children: [
-                    PetAvatar(name: pet.petName, species: pet.species, size: 56),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        'Helping every pet move better.',
-                        style: GoogleFonts.caveat(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.sage,
+                    PetAvatar(
+                      name: pet.petName,
+                      species: pet.species,
+                      imageUrl: pet.profilePictureUrl,
+                      size: 64,
+                    ),
+                    GestureDetector(
+                      onTap: () => _pickAndUploadPhoto(context, ref, pet),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.navy,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
                         ),
+                        child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pet.petName,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Text(
+                            pet.species.toUpperCase(),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.sage),
+                          ),
+                          if (pet.breed != null && pet.breed!.isNotEmpty) ...[
+                            const Text(' • ', style: TextStyle(color: AppColors.neutralMuted)),
+                            Flexible(
+                              child: Text(
+                                pet.breed!,
+                                style: const TextStyle(fontSize: 12, color: AppColors.neutralMuted),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          InkWell(
+                            onTap: () => _pickAndUploadPhoto(context, ref, pet),
+                            child: Text(
+                              pet.profilePictureUrl != null ? 'Change photo' : 'Add photo',
+                              style: const TextStyle(fontSize: 12, color: AppColors.sage, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                          if (pet.profilePictureUrl != null) ...[
+                            const SizedBox(width: 12),
+                            InkWell(
+                              onTap: () => _removePhoto(context, ref, pet),
+                              child: const Text(
+                                'Remove',
+                                style: TextStyle(fontSize: 12, color: AppColors.alertRed, fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

@@ -4,6 +4,7 @@ import { Search } from '@lucide/vue'
 import { getPatientDemoMeta, statusDotClass } from '../../data/patientDemo'
 import { PET_SPECIES } from '../../types/pet'
 import type { Pet } from '../../types/pet'
+import { resolveMediaUrl } from '../../api/videos'
 
 const props = defineProps<{
   patients: Pet[]
@@ -95,10 +96,21 @@ function selectPatient(petId: number) {
           :class="selectedPetId === patient.petId ? 'border-l-[3px] border-l-sage bg-sage-muted/40' : 'border-l-[3px] border-l-transparent'"
           @click="selectPatient(patient.petId)"
         >
-          <span
-            class="mt-1.5 h-2 w-2 shrink-0 rounded-full"
-            :class="statusDotClass(getPatientDemoMeta(patient.petId, patient.species).status)"
-          />
+          <div class="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sage-muted text-xs font-bold text-sage ring-1 ring-sage/20">
+            <img
+              v-if="patient.profilePictureUrl"
+              :src="resolveMediaUrl(patient.profilePictureUrl)!"
+              :alt="patient.petName"
+              class="h-full w-full object-cover"
+            />
+            <span v-else>
+              {{ patient.petName.slice(0, 2).toUpperCase() }}
+            </span>
+            <span
+              class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-white"
+              :class="statusDotClass(getPatientDemoMeta(patient.petId, patient.species).status)"
+            />
+          </div>
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-semibold text-navy">{{ patient.petName }}</p>
             <p class="truncate text-xs text-neutral-muted">

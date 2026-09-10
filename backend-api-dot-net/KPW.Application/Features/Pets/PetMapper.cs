@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KPW.Application.Features.Pets;
 
-internal static class PetMapper
+public static class PetMapper
 {
     public static PetDto ToDto(Pet pet) =>
         new(
@@ -24,7 +24,8 @@ internal static class PetMapper
                 m.Diagnosis,
                 m.InjuryOrCondition,
                 m.SurgeryDate,
-                m.ClinicianNotes)).ToList());
+                m.ClinicianNotes)).ToList(),
+            pet.ProfilePictureUrl);
 }
 
 public static class PetAuthorization

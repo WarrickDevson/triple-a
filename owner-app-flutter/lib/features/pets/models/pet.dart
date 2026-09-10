@@ -43,6 +43,7 @@ class Pet {
     this.birthDate,
     this.weightKg,
     required this.medicalHistories,
+    this.profilePictureUrl,
   });
 
   final int petId;
@@ -54,6 +55,7 @@ class Pet {
   final String? birthDate;
   final double? weightKg;
   final List<PetMedicalHistory> medicalHistories;
+  final String? profilePictureUrl;
 
   factory Pet.fromJson(Map<String, dynamic> json) {
     return Pet(
@@ -68,6 +70,7 @@ class Pet {
       medicalHistories: (json['medicalHistories'] as List<dynamic>? ?? [])
           .map((item) => PetMedicalHistory.fromJson(item as Map<String, dynamic>))
           .toList(),
+      profilePictureUrl: json['profilePictureUrl'] as String?,
     );
   }
 

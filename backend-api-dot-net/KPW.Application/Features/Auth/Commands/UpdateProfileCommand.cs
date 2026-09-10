@@ -42,6 +42,12 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
         {
             user.PhoneNumber = command.Request.PhoneNumber.Trim();
         }
+        if (command.Request.ProfilePictureUrl != null)
+        {
+            user.ProfilePictureUrl = string.IsNullOrWhiteSpace(command.Request.ProfilePictureUrl)
+                ? null
+                : command.Request.ProfilePictureUrl.Trim();
+        }
 
         Clinic? clinic = null;
         if (!string.IsNullOrWhiteSpace(command.Request.ClinicName))

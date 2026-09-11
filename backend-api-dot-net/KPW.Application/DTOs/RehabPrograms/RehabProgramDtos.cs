@@ -13,6 +13,7 @@ public record RehabProgramExerciseDto(
     string? SafetyNotes,
     string? CommonMistakes,
     string? VideoUrl,
+    string? CoverImageUrl,
     IReadOnlyList<ExerciseStepDto> Steps);
 
 public record RehabProgramDto(

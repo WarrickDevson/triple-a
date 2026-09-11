@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../models/rehab_program.dart';
@@ -55,6 +56,81 @@ class ExerciseRoutineScreen extends ConsumerWidget {
   }
 }
 
+String _resolveMediaUrl(String url) {
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  final base = AppConfig.fromEnvironment().apiBaseUrl;
+  if (url.startsWith('/')) {
+    return '$base$url';
+  }
+  return '$base/$url';
+}
+
+void _showImageLightbox(BuildContext context, String imageUrl, String title) {
+  showDialog(
+    context: context,
+    builder: (ctx) => Dialog(
+      backgroundColor: Colors.black.withValues(alpha: 0.92),
+      insetPadding: const EdgeInsets.all(12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.8,
+              maxScale: 4.0,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (_, child, progress) {
+                  if (progress == null) return child;
+                  return const Center(child: CircularProgressIndicator(color: Colors.white));
+                },
+                errorBuilder: (_, _, _) => const Center(
+                  child: Text('Unable to load image', style: TextStyle(color: Colors.white70)),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Material(
+                color: Colors.black45,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 12,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _OverviewPane extends StatelessWidget {
   const _OverviewPane({required this.session, required this.onStart});
 
@@ -64,6 +140,9 @@ class _OverviewPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final exercise = session.currentExercise;
+    final coverUrl = exercise.coverImageUrl ??
+        (exercise.steps.isNotEmpty ? exercise.steps.first.imageUrl : null);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       child: Column(
@@ -72,6 +151,50 @@ class _OverviewPane extends StatelessWidget {
           Expanded(
             child: ListView(
               children: [
+                if (coverUrl != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Stack(
+                      children: [
+                        AspectRatio(
+                          aspectRatio: 16 / 9,
+                          child: Image.network(
+                            _resolveMediaUrl(coverUrl),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              color: AppColors.primaryDark.withValues(alpha: 0.08),
+                              child: const Icon(Icons.fitness_center, size: 48, color: AppColors.primaryDark),
+                            ),
+                          ),
+                        ),
+                        if (exercise.videoUrl != null)
+                          Positioned(
+                            top: 12,
+                            right: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.videocam, color: Colors.white, size: 16),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Video Guide',
+                                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 AppPanel(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,15 +237,24 @@ class _OverviewPane extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Safety',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primaryDark,
-                              ),
+                        Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 20),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Safety & Precautions',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.primaryDark,
+                                  ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(exercise.safetyNotes!),
+                        const SizedBox(height: 8),
+                        Text(
+                          exercise.safetyNotes!,
+                          style: TextStyle(color: AppColors.neutralDark.withValues(alpha: 0.8), height: 1.4),
+                        ),
                       ],
                     ),
                   ),
@@ -133,15 +265,24 @@ class _OverviewPane extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Common mistakes',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primaryDark,
-                              ),
+                        Row(
+                          children: [
+                            const Icon(Icons.info_outline, color: Colors.blueAccent, size: 20),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Common mistakes',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.primaryDark,
+                                  ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(exercise.commonMistakes!),
+                        const SizedBox(height: 8),
+                        Text(
+                          exercise.commonMistakes!,
+                          style: TextStyle(color: AppColors.neutralDark.withValues(alpha: 0.8), height: 1.4),
+                        ),
                       ],
                     ),
                   ),
@@ -190,7 +331,7 @@ class _StepPane extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 'Step ${step.stepNumber} of ${exercise.steps.length} · Set ${session.completedSets + 1} of ${exercise.sets}',
-                style: TextStyle(color: AppColors.neutralDark.withValues(alpha: 0.65)),
+                style: TextStyle(color: AppColors.neutralDark.withValues(alpha: 0.65), fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -201,15 +342,88 @@ class _StepPane extends StatelessWidget {
             padding: EdgeInsets.zero,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: ExerciseVideoPlayer(videoUrl: exercise.videoUrl!),
+              child: ExerciseVideoPlayer(videoUrl: _resolveMediaUrl(exercise.videoUrl!)),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (step.imageUrl != null) ...[
+          GestureDetector(
+            onTap: () => _showImageLightbox(
+              context,
+              _resolveMediaUrl(step.imageUrl!),
+              'Step ${step.stepNumber}: ${exercise.title}',
+            ),
+            child: AppPanel(
+              padding: EdgeInsets.zero,
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: Image.network(
+                        _resolveMediaUrl(step.imageUrl!),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          color: AppColors.primaryDark.withValues(alpha: 0.05),
+                          child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.zoom_in, color: Colors.white, size: 16),
+                        SizedBox(width: 4),
+                        Text(
+                          'Pinch to Zoom',
+                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
         ],
         AppPanel(
-          child: Text(
-            step.stepInstruction,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryDark.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'INSTRUCTION',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: AppColors.primaryDark.withValues(alpha: 0.8),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                step.stepInstruction,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.55, fontWeight: FontWeight.w500),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 24),

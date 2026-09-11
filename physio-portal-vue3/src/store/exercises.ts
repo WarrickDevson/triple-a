@@ -1,6 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { createExercise, getExercises } from '../api/exercises'
+import {
+  createExercise,
+  customizeExercise as apiCustomizeExercise,
+  deleteExercise as apiDeleteExercise,
+  getExercises,
+  toggleActiveExercise as apiToggleActiveExercise,
+  updateExercise as apiUpdateExercise,
+  uploadExerciseMedia,
+} from '../api/exercises'
 import type { CreateExerciseRequest, Exercise } from '../types/exercise'
 
 const FAVOURITES_KEY = 'triple-a-exercise-favourites'
@@ -51,32 +59,84 @@ export const useExercisesStore = defineStore('exercises', () => {
       const created = await createExercise(request)
       exercises.value = [created, ...exercises.value]
       return created
-    } catch {
-      // Local fallback for client side / demo mode if API fails
-      const fallback: Exercise = {
-        exerciseId: Date.now(),
-        title: request.title,
-        shortDescription: request.shortDescription || null,
-        targetedMuscles: request.targetedMuscles || null,
-        clinicalPurpose: request.clinicalPurpose || null,
-        safetyNotes: request.safetyNotes || null,
-        commonMistakes: request.commonMistakes || null,
-        videoUrl: request.videoUrl || null,
-        targetSpecies: request.targetSpecies || 'All',
-        conditionCategory: request.conditionCategory || 'General',
-        difficultyLevel: request.difficultyLevel || 1,
-        steps: (request.steps || []).map((s, idx) => ({
-          exerciseStepId: Date.now() + idx,
-          stepNumber: s.stepNumber || idx + 1,
-          stepInstruction: s.stepInstruction,
-          imageUrl: s.imageUrl || null,
-        })),
-      }
-      exercises.value = [fallback, ...exercises.value]
-      return fallback
     } finally {
       loading.value = false
     }
+  }
+
+  async function editExercise(id: number, request: CreateExerciseRequest): Promise<Exercise> {
+    loading.value = true
+    error.value = null
+    try {
+      const updated = await apiUpdateExercise(id, request)
+      const index = exercises.value.findIndex((e) => e.exerciseId === id)
+      if (index !== -1) {
+        exercises.value[index] = updated
+      }
+      return updated
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function customizeExercise(id: number): Promise<Exercise> {
+    loading.value = true
+    error.value = null
+    try {
+      const cloned = await apiCustomizeExercise(id)
+      // Update the base exercise status in the list
+      const baseIndex = exercises.value.findIndex((e) => e.exerciseId === id)
+      if (baseIndex !== -1) {
+        exercises.value[baseIndex] = {
+          ...exercises.value[baseIndex],
+          hasCustomOverride: true,
+          customExerciseId: cloned.exerciseId,
+          isCustomActive: true,
+        }
+      }
+      // Also add the new cloned custom exercise to the list if not present
+      if (!exercises.value.some((e) => e.exerciseId === cloned.exerciseId)) {
+        exercises.value = [cloned, ...exercises.value]
+      }
+      return cloned
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function toggleActive(id: number): Promise<boolean> {
+    try {
+      const res = await apiToggleActiveExercise(id)
+      // Update any exercise matching this id or with this base id
+      exercises.value = exercises.value.map((e) => {
+        if (e.exerciseId === res.exerciseId || e.customExerciseId === res.exerciseId || (res.baseExerciseId && e.exerciseId === res.baseExerciseId)) {
+          return {
+            ...e,
+            isCustomActive: res.isActiveForOwners,
+            isActiveForOwners: res.isActiveForOwners,
+          }
+        }
+        return e
+      })
+      return res.isActiveForOwners
+    } catch (err) {
+      console.error('Failed to toggle exercise active state', err)
+      throw err
+    }
+  }
+
+  async function removeExercise(id: number): Promise<void> {
+    loading.value = true
+    try {
+      await apiDeleteExercise(id)
+      exercises.value = exercises.value.filter((e) => e.exerciseId !== id)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function uploadMedia(file: File) {
+    return await uploadExerciseMedia(file)
   }
 
   function isFavourite(exerciseId: number) {
@@ -99,7 +159,13 @@ export const useExercisesStore = defineStore('exercises', () => {
     error,
     fetchExercises,
     addExercise,
+    editExercise,
+    customizeExercise,
+    toggleActive,
+    removeExercise,
+    uploadMedia,
     isFavourite,
     toggleFavourite,
   }
 })
+

@@ -5,6 +5,7 @@ using KPW.Infrastructure.Data;
 using KPW.Infrastructure.Services;
 using KPW.Infrastructure.Services.Ai;
 using KPW.Infrastructure.Services.Reports;
+using KPW.Infrastructure.Services.Species;
 using KPW.Infrastructure.Services.Video;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -30,6 +31,8 @@ public static class DependencyInjection
         services.AddSingleton<LoggingEmailSender>();
         services.AddHttpClient<SendGridEmailSender>();
         services.AddTransient<IEmailSender>(sp => sp.GetRequiredService<SendGridEmailSender>());
+
+        services.AddSingleton<ISpeciesBreedConfigService, SpeciesBreedConfigService>();
 
         RegisterVideoServices(services, configuration);
         RegisterAiServices(services, configuration);

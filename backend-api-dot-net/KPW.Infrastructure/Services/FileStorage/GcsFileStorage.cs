@@ -58,7 +58,25 @@ public class GcsFileStorage : IFileStorageService
 
     public string GetPublicUrl(string storagePath, TimeSpan? duration = null)
     {
+        if (string.IsNullOrWhiteSpace(storagePath)) return string.Empty;
+
+        // If it's a local upload path, return directly
+        if (storagePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase) ||
+            storagePath.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            return storagePath.StartsWith('/') ? storagePath : $"/{storagePath}";
+        }
+
+        // If it is an external URL not from our bucket, return directly
+        if ((storagePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+             storagePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) &&
+            !storagePath.Contains(_options.Bucket, StringComparison.OrdinalIgnoreCase))
+        {
+            return storagePath;
+        }
+
         var objectName = NormalizeObjectPath(storagePath);
+        if (string.IsNullOrWhiteSpace(objectName)) return storagePath;
         
         // Google Cloud Storage V4 signers allow up to 7 days max
         var maxV4Duration = TimeSpan.FromDays(7);
@@ -68,7 +86,15 @@ public class GcsFileStorage : IFileStorageService
             requestedDuration = maxV4Duration;
         }
 
-        return _urlSigner.Sign(_options.Bucket, objectName, requestedDuration, HttpMethod.Get);
+        try
+        {
+            return _urlSigner.Sign(_options.Bucket, objectName, requestedDuration, HttpMethod.Get);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to sign URL for GCS object {Object}, returning original path", objectName);
+            return storagePath;
+        }
     }
 
     public string GetGsUri(string storagePath)

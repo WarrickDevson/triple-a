@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import BaseButton from '../BaseButton.vue'
-import { PET_SPECIES } from '../../types/pet'
 import type { CreatePetRequest } from '../../types/pet'
 import { usePatientsStore } from '../../store/patients'
+import { useSpeciesBreedStore } from '../../store/speciesBreed'
 
 const emit = defineEmits<{
   close: []
@@ -11,8 +11,15 @@ const emit = defineEmits<{
 }>()
 
 const patientsStore = usePatientsStore()
+const speciesStore = useSpeciesBreedStore()
 const saving = ref(false)
 const error = ref<string | null>(null)
+
+onMounted(() => {
+  speciesStore.loadConfig()
+})
+
+const availableBreeds = computed(() => speciesStore.breedsForSpecies(form.species))
 
 const form = reactive({
   ownerFirstName: '',
@@ -48,8 +55,8 @@ async function submit() {
     const pet = await patientsStore.createPatient(request)
     emit('created', pet.petId)
     emit('close')
-  } catch {
-    error.value = 'Unable to create patient. Check the form and try again.'
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to create patient.'
   } finally {
     saving.value = false
   }
@@ -57,15 +64,15 @@ async function submit() {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4" @click.self="emit('close')">
-    <div class="portal-card w-full max-w-lg p-6">
-      <h2 class="text-lg font-bold text-navy">Add patient</h2>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div class="portal-card max-h-[90vh] w-full max-w-lg overflow-y-auto p-6">
+      <h2 class="text-lg font-bold text-navy">Add Patient</h2>
       <p class="mt-1 text-sm text-neutral-muted">
-        Creates a new owner account and pet. Share the temporary password with the owner.
+        Create a new patient and owner account. An invite email will be sent to the owner with their temporary password.
       </p>
 
-      <form class="mt-4 space-y-4" @submit.prevent="submit">
-        <div class="grid gap-3 sm:grid-cols-2">
+      <form class="mt-6 space-y-4" @submit.prevent="submit">
+        <div class="grid grid-cols-2 gap-3">
           <label class="block text-sm">
             <span class="font-medium text-navy">Owner first name</span>
             <input v-model="form.ownerFirstName" required class="mt-1 w-full rounded-lg border border-neutral-grey px-3 py-2 text-sm" />
@@ -94,12 +101,31 @@ async function submit() {
         <label class="block text-sm">
           <span class="font-medium text-navy">Species</span>
           <select v-model="form.species" class="mt-1 w-full rounded-lg border border-neutral-grey px-3 py-2 text-sm">
-            <option v-for="s in PET_SPECIES" :key="s" :value="s">{{ s }}</option>
+            <option v-for="s in speciesStore.speciesOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
           </select>
         </label>
         <label class="block text-sm">
-          <span class="font-medium text-navy">Breed (optional)</span>
-          <input v-model="form.breed" class="mt-1 w-full rounded-lg border border-neutral-grey px-3 py-2 text-sm" />
+          <div class="flex items-center justify-between">
+            <span class="font-medium text-navy">Breed (optional)</span>
+            <span v-if="availableBreeds.length > 0" class="text-xs text-neutral-muted">
+              {{ availableBreeds.length }} breeds available
+            </span>
+          </div>
+          <input
+            v-model="form.breed"
+            list="available-breeds-datalist"
+            placeholder="Select from list or type custom..."
+            class="mt-1 w-full rounded-lg border border-neutral-grey px-3 py-2 text-sm"
+          />
+          <datalist id="available-breeds-datalist">
+            <option
+              v-for="b in availableBreeds"
+              :key="b.name"
+              :value="b.name"
+            >
+              {{ b.sizeCategory ? `${b.name} (${b.sizeCategory})` : b.name }}
+            </option>
+          </datalist>
         </label>
         <label class="block text-sm">
           <span class="font-medium text-navy">Diagnosis (optional)</span>

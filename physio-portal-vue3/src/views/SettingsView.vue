@@ -18,11 +18,12 @@ import { useNotificationsStore } from '../store/notifications'
 import InviteOwnerModal from '../components/clinic/InviteOwnerModal.vue'
 import EditProfileModal from '../components/profile/EditProfileModal.vue'
 import AiPromptEditor from '../components/admin/AiPromptEditor.vue'
+import SpeciesBreedManager from '../components/admin/SpeciesBreedManager.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 
-const activeTab = ref<'profile' | 'clinic' | 'ai-prompt' | 'notifications' | 'security' | 'privacy'>('profile')
+const activeTab = ref<'profile' | 'clinic' | 'species-breeds' | 'ai-prompt' | 'notifications' | 'security' | 'privacy'>('profile')
 const showStubModal = ref(false)
 const showInviteModal = ref(false)
 const showEditProfileModal = ref(false)
@@ -111,12 +112,13 @@ function logout() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-3xl space-y-4">
+  <div class="mx-auto space-y-4" :class="activeTab === 'species-breeds' ? 'max-w-5xl' : 'max-w-3xl'">
     <div class="flex gap-1 overflow-x-auto border-b border-neutral-grey/80">
       <button
         v-for="tab in [
           { id: 'profile', label: 'Profile' },
           { id: 'clinic', label: 'Clinic' },
+          { id: 'species-breeds', label: 'Species & Breeds' },
           { id: 'ai-prompt', label: 'AI Assistant' },
           { id: 'notifications', label: 'Notifications' },
           { id: 'security', label: 'Security' },
@@ -132,7 +134,11 @@ function logout() {
       </button>
     </div>
 
-    <section v-if="activeTab === 'ai-prompt'">
+    <section v-if="activeTab === 'species-breeds'">
+      <SpeciesBreedManager />
+    </section>
+
+    <section v-else-if="activeTab === 'ai-prompt'">
       <AiPromptEditor />
     </section>
 

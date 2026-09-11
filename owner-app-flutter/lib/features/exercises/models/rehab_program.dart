@@ -33,6 +33,7 @@ class RehabProgramExercise {
     this.safetyNotes,
     this.commonMistakes,
     this.videoUrl,
+    this.coverImageUrl,
     required this.steps,
   });
 
@@ -46,6 +47,7 @@ class RehabProgramExercise {
   final String? safetyNotes;
   final String? commonMistakes;
   final String? videoUrl;
+  final String? coverImageUrl;
   final List<ExerciseStep> steps;
 
   factory RehabProgramExercise.fromJson(Map<String, dynamic> json) {
@@ -60,6 +62,7 @@ class RehabProgramExercise {
       safetyNotes: json['safetyNotes'] as String?,
       commonMistakes: json['commonMistakes'] as String?,
       videoUrl: json['videoUrl'] as String?,
+      coverImageUrl: json['coverImageUrl'] as String?,
       steps: (json['steps'] as List<dynamic>? ?? [])
           .map((item) => ExerciseStep.fromJson(item as Map<String, dynamic>))
           .toList(),

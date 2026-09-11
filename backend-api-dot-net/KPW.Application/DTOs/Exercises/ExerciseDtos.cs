@@ -15,9 +15,17 @@ public record ExerciseDto(
     string? SafetyNotes,
     string? CommonMistakes,
     string? VideoUrl,
+    string? CoverImageUrl,
     string? TargetSpecies,
     string? ConditionCategory,
     int DifficultyLevel,
+    bool IsSystemDefault,
+    int? ClinicId,
+    int? BaseExerciseId,
+    bool IsActiveForOwners,
+    bool HasCustomOverride,
+    int? CustomExerciseId,
+    bool IsCustomActive,
     IReadOnlyList<ExerciseStepDto> Steps);
 
 public record CreateExerciseStepRequestDto(
@@ -33,7 +41,29 @@ public record CreateExerciseRequestDto(
     string? SafetyNotes,
     string? CommonMistakes,
     string? VideoUrl,
+    string? CoverImageUrl,
     string? TargetSpecies,
     string? ConditionCategory,
     int DifficultyLevel,
     IReadOnlyList<CreateExerciseStepRequestDto>? Steps);
+
+public record UpdateExerciseRequestDto(
+    string Title,
+    string? ShortDescription,
+    string? TargetedMuscles,
+    string? ClinicalPurpose,
+    string? SafetyNotes,
+    string? CommonMistakes,
+    string? VideoUrl,
+    string? CoverImageUrl,
+    string? TargetSpecies,
+    string? ConditionCategory,
+    int DifficultyLevel,
+    IReadOnlyList<CreateExerciseStepRequestDto>? Steps);
+
+public record UploadExerciseMediaResultDto(
+    string Url,
+    string FileName,
+    string ContentType,
+    bool IsVideo);
+

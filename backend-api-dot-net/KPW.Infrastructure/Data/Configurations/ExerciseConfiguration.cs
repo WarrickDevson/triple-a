@@ -17,5 +17,18 @@ public class ExerciseConfiguration : IEntityTypeConfiguration<Exercise>
         builder.Property(e => e.VideoUrl).HasMaxLength(500);
         builder.Property(e => e.TargetSpecies).HasMaxLength(50);
         builder.Property(e => e.ConditionCategory).HasMaxLength(100);
+        builder.Property(e => e.CoverImageUrl).HasMaxLength(500);
+        builder.Property(e => e.IsSystemDefault).HasDefaultValue(true);
+        builder.Property(e => e.IsActiveForOwners).HasDefaultValue(true);
+
+        builder.HasOne(e => e.Clinic)
+            .WithMany()
+            .HasForeignKey(e => e.ClinicId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.BaseExercise)
+            .WithMany(e => e.CustomOverrides)
+            .HasForeignKey(e => e.BaseExerciseId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

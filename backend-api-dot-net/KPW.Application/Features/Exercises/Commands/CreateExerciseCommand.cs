@@ -33,6 +33,17 @@ public class CreateExerciseCommandHandler : IRequestHandler<CreateExerciseComman
         }
 
         var request = command.Request;
+        var role = _currentUserService.Role;
+        int? clinicId = null;
+        var isSystemDefault = role == UserRole.SysAdmin;
+
+        if (!isSystemDefault)
+        {
+            var user = await _dbContext.Set<User>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.UserId == _currentUserService.UserId, cancellationToken);
+            clinicId = user?.ClinicId;
+        }
 
         var exercise = new Exercise
         {
@@ -43,9 +54,13 @@ public class CreateExerciseCommandHandler : IRequestHandler<CreateExerciseComman
             SafetyNotes = request.SafetyNotes?.Trim(),
             CommonMistakes = request.CommonMistakes?.Trim(),
             VideoUrl = request.VideoUrl?.Trim(),
+            CoverImageUrl = request.CoverImageUrl?.Trim(),
             TargetSpecies = request.TargetSpecies?.Trim(),
             ConditionCategory = request.ConditionCategory?.Trim(),
-            DifficultyLevel = Math.Clamp(request.DifficultyLevel, 1, 5)
+            DifficultyLevel = Math.Clamp(request.DifficultyLevel, 1, 5),
+            IsSystemDefault = isSystemDefault,
+            ClinicId = clinicId,
+            IsActiveForOwners = true
         };
 
         if (request.Steps is not null && request.Steps.Count > 0)

@@ -14,9 +14,17 @@ export interface Exercise {
   safetyNotes: string | null
   commonMistakes: string | null
   videoUrl: string | null
+  coverImageUrl?: string | null
   targetSpecies: string | null
   conditionCategory: string | null
   difficultyLevel: number
+  isSystemDefault?: boolean
+  clinicId?: number | null
+  baseExerciseId?: number | null
+  isActiveForOwners?: boolean
+  hasCustomOverride?: boolean
+  customExerciseId?: number | null
+  isCustomActive?: boolean
   steps: ExerciseStep[]
 }
 
@@ -34,11 +42,20 @@ export interface CreateExerciseRequest {
   safetyNotes?: string
   commonMistakes?: string
   videoUrl?: string
+  coverImageUrl?: string
   targetSpecies?: string
   conditionCategory?: string
   difficultyLevel: number
   steps?: CreateExerciseStepRequest[]
 }
+
+export interface UploadExerciseMediaResponse {
+  url: string
+  fileName: string
+  contentType: string
+  isVideo: boolean
+}
+
 
 export interface ProgramBuilderExercise {
   exerciseId: number

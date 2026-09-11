@@ -28,6 +28,7 @@ internal static class RehabProgramMapper
                     e.Exercise.SafetyNotes,
                     e.Exercise.CommonMistakes,
                     e.Exercise.VideoUrl,
+                    e.Exercise.CoverImageUrl,
                     e.Exercise.Steps
                         .OrderBy(s => s.StepNumber)
                         .Select(s => new ExerciseStepDto(

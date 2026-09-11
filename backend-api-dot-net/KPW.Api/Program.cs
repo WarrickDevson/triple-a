@@ -277,6 +277,26 @@ using (var scope = app.Services.CreateScope())
                     CONSTRAINT [FK_OwnerSubjectiveNotes_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [Users] ([UserId])
                 );
             END
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'CoverImageUrl')
+            BEGIN
+                ALTER TABLE [Exercises] ADD [CoverImageUrl] nvarchar(500) NULL;
+            END
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'IsSystemDefault')
+            BEGIN
+                ALTER TABLE [Exercises] ADD [IsSystemDefault] bit NOT NULL CONSTRAINT [DF_Exercises_IsSystemDefault] DEFAULT (1);
+            END
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'ClinicId')
+            BEGIN
+                ALTER TABLE [Exercises] ADD [ClinicId] int NULL;
+            END
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'BaseExerciseId')
+            BEGIN
+                ALTER TABLE [Exercises] ADD [BaseExerciseId] int NULL;
+            END
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'IsActiveForOwners')
+            BEGIN
+                ALTER TABLE [Exercises] ADD [IsActiveForOwners] bit NOT NULL CONSTRAINT [DF_Exercises_IsActiveForOwners] DEFAULT (1);
+            END
             UPDATE u
             SET u.ClinicId = (SELECT TOP 1 ClinicId FROM Clinics ORDER BY ClinicId ASC)
             FROM Users u

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, onMounted, reactive } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { LockKeyhole } from '@lucide/vue'
 import BaseButton from '../components/BaseButton.vue'
@@ -14,6 +14,12 @@ const route = useRoute()
 const form = reactive({
   email: '',
   password: '',
+})
+
+onMounted(() => {
+  if (route.query.error === 'owner_access_denied') {
+    auth.error = 'Owner accounts cannot access the clinician portal. Please use the Triple A Owner mobile app.'
+  }
 })
 
 const isSignInValid = computed(() => form.email.trim().length > 0 && form.password.length > 0)

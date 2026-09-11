@@ -34,11 +34,13 @@ class PetsNotifier extends StateNotifier<PetsState> {
     }
     try {
       final response = await _dio.get<List<dynamic>>('/api/pets/owner/$_ownerId');
+      if (!mounted) return;
       final pets = response.data!
           .map((item) => Pet.fromJson(item as Map<String, dynamic>))
           .toList();
       state = PetsState(pets: pets);
     } on DioException {
+      if (!mounted) return;
       state = PetsState(pets: state.pets, error: 'Unable to load pets.');
     }
   }

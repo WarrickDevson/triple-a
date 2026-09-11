@@ -154,6 +154,11 @@ router.beforeEach((to) => {
   const auth = useAuthStore()
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
 
+  if (auth.isAuthenticated && auth.user?.userRole === 'Owner') {
+    auth.logout()
+    return { name: 'login', query: { error: 'owner_access_denied' } }
+  }
+
   if (requiresAuth && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }

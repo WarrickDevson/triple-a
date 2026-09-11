@@ -58,6 +58,10 @@ export const useAuthStore = defineStore('auth', () => {
   function initialize() {
     const stored = loadStoredAuth()
     if (stored) {
+      if (stored.user?.userRole === 'Owner') {
+        localStorage.removeItem(STORAGE_KEY)
+        return
+      }
       accessToken.value = stored.accessToken
       refreshToken.value = stored.refreshToken
       user.value = stored.user
@@ -70,8 +74,17 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       const data = await authApi.login(payload)
+      if (data.user?.userRole === 'Owner') {
+        logout()
+        const msg = 'Owner accounts cannot access the clinician portal. Please use the Triple A Owner mobile app.'
+        error.value = msg
+        throw new Error(msg)
+      }
       applyAuth(data)
     } catch (err: any) {
+      if (err?.message === 'Owner accounts cannot access the clinician portal. Please use the Triple A Owner mobile app.') {
+        throw err
+      }
       error.value = err?.response?.data?.message || 'Invalid email or password.'
       throw err
     } finally {
@@ -135,9 +148,18 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchCurrentUser() {
-    const data = await authApi.fetchCurrentUser()
-    user.value = data
-    persist()
+    try {
+      const data = await authApi.fetchCurrentUser()
+      if (data?.userRole === 'Owner') {
+        logout()
+        error.value = 'Owner accounts cannot access the clinician portal.'
+        return
+      }
+      user.value = data
+      persist()
+    } catch {
+      // ignore
+    }
   }
 
   async function updateProfile(payload: UpdateProfileRequest) {

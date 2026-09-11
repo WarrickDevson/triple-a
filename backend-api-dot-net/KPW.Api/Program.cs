@@ -300,7 +300,15 @@ using (var scope = app.Services.CreateScope())
             UPDATE u
             SET u.ClinicId = (SELECT TOP 1 ClinicId FROM Clinics ORDER BY ClinicId ASC)
             FROM Users u
-            WHERE u.UserRole = 'Owner' AND u.ClinicId IS NULL AND EXISTS (SELECT 1 FROM Clinics);");
+            WHERE u.UserRole = 'Owner' AND u.ClinicId IS NULL AND EXISTS (SELECT 1 FROM Clinics);
+            UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=FBy2E1f10WM' WHERE [ExerciseId] = 1 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');
+            UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=Z8UYivdkyhM' WHERE [ExerciseId] = 2 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');
+            UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=aC_QNY5t8n8' WHERE [ExerciseId] = 3 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');
+            UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=TRDnqYOtlKM' WHERE [ExerciseId] = 4 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');
+            UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=1byv8TzSEbU' WHERE [ExerciseId] = 5 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');
+            UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=h-IQU8mPqZM' WHERE [ExerciseId] = 6 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');
+            UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=-XRBJ7oPw74' WHERE [ExerciseId] = 7 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');
+            UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=FeoKoM7D5SI' WHERE [ExerciseId] = 8 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');");
     }
     catch (Exception ex)
     {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Plus, Trash2, X } from '@lucide/vue'
 import BaseButton from '../BaseButton.vue'
 import type { CreateExerciseRequest, CreateExerciseStepRequest } from '../../types/exercise'
@@ -38,6 +38,17 @@ const steps = ref<LocalStep[]>([
 
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+
+function getYouTubeEmbedUrl(url: string | undefined | null): string | null {
+  if (!url) return null
+  const regExp = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/
+  const match = url.match(regExp)
+  return match && match[1]
+    ? `https://www.youtube-nocookie.com/embed/${match[1]}?rel=0&modestbranding=1`
+    : null
+}
+
+const youtubeEmbedUrl = computed(() => getYouTubeEmbedUrl(videoUrl.value))
 
 watch(
   () => props.open,
@@ -246,13 +257,26 @@ async function submitExercise() {
               />
             </div>
             <div>
-              <label class="block text-xs font-semibold text-navy mb-1">Video Demo URL (Optional)</label>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-semibold text-navy">Video Demo URL (Optional)</label>
+                <span v-if="youtubeEmbedUrl" class="rounded bg-red-100 px-1.5 py-0.2 text-[9px] font-bold text-red-700">
+                  YouTube (Plays Inline)
+                </span>
+              </div>
               <input
                 v-model="videoUrl"
                 type="url"
                 placeholder="https://youtube.com/watch?v=..."
                 class="w-full rounded-lg border border-neutral-grey bg-surface px-3 py-2 text-sm outline-none focus:border-sage"
               />
+              <div v-if="youtubeEmbedUrl" class="mt-2 aspect-video w-full rounded-lg overflow-hidden bg-black shadow-xs">
+                <iframe
+                  :src="youtubeEmbedUrl"
+                  class="h-full w-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen
+                />
+              </div>
             </div>
           </div>
 

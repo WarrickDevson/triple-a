@@ -1,0 +1,365 @@
+{
+  "Species": [
+    {
+      "Name": "Canine",
+      "DisplayName": "Canine (Dog)",
+      "Icon": "dog",
+      "Breeds": [
+        {
+          "Name": "Dachshund",
+          "SizeCategory": "Small",
+          "Conformation": "Chondrodystrophic",
+          "Notes": "High risk IVDD; modified spinal mechanics"
+        },
+        {
+          "Name": "Corgi (Pembroke / Cardigan)",
+          "SizeCategory": "Small",
+          "Conformation": "Chondrodystrophic",
+          "Notes": "Long back; low ground clearance"
+        },
+        {
+          "Name": "French Bulldog",
+          "SizeCategory": "Small",
+          "Conformation": "Brachycephalic",
+          "Notes": "Spinal hemivertebrae; heat sensitivity"
+        },
+        {
+          "Name": "Pug",
+          "SizeCategory": "Small",
+          "Conformation": "Brachycephalic",
+          "Notes": "Respiratory consideration; luxating patella risk"
+        },
+        {
+          "Name": "Cavalier King Charles Spaniel",
+          "SizeCategory": "Small",
+          "Conformation": "Standard",
+          "Notes": "Cardiac and Chiari monitoring"
+        },
+        {
+          "Name": "Yorkshire Terrier",
+          "SizeCategory": "Toy",
+          "Conformation": "Standard",
+          "Notes": "Patellar luxation prone"
+        },
+        {
+          "Name": "Chihuahua",
+          "SizeCategory": "Toy",
+          "Conformation": "Standard",
+          "Notes": "Fragile cervical mechanics"
+        },
+        {
+          "Name": "Poodle (Toy / Miniature)",
+          "SizeCategory": "Toy",
+          "Conformation": "Standard",
+          "Notes": "Lightweight; agile"
+        },
+        {
+          "Name": "Beagle",
+          "SizeCategory": "Medium",
+          "Conformation": "Standard",
+          "Notes": "Disc disease prone"
+        },
+        {
+          "Name": "Cocker Spaniel",
+          "SizeCategory": "Medium",
+          "Conformation": "Standard",
+          "Notes": "Ear/balance, orthopedic monitoring"
+        },
+        {
+          "Name": "Border Collie",
+          "SizeCategory": "Medium",
+          "Conformation": "Athletic",
+          "Notes": "High drive; agility \u0026 proprioception focus"
+        },
+        {
+          "Name": "Australian Shepherd",
+          "SizeCategory": "Medium",
+          "Conformation": "Athletic",
+          "Notes": "Agile; working canine"
+        },
+        {
+          "Name": "Bulldog (English)",
+          "SizeCategory": "Medium",
+          "Conformation": "Brachycephalic",
+          "Notes": "Cruciate ligament and joint loading"
+        },
+        {
+          "Name": "Boxer",
+          "SizeCategory": "Medium",
+          "Conformation": "Athletic",
+          "Notes": "Cardiomyopathy \u0026 spondylosis prone"
+        },
+        {
+          "Name": "Golden Retriever",
+          "SizeCategory": "Large",
+          "Conformation": "Athletic",
+          "Notes": "Hip/elbow dysplasia, cruciate tear risk"
+        },
+        {
+          "Name": "Labrador Retriever",
+          "SizeCategory": "Large",
+          "Conformation": "Athletic",
+          "Notes": "Weight management; common CCL tear"
+        },
+        {
+          "Name": "German Shepherd",
+          "SizeCategory": "Large",
+          "Conformation": "Athletic",
+          "Notes": "Lumbosacral stenosis, degenerative myelopathy"
+        },
+        {
+          "Name": "Belgian Malinois",
+          "SizeCategory": "Large",
+          "Conformation": "Athletic",
+          "Notes": "High performance rehabilitation"
+        },
+        {
+          "Name": "Rottweiler",
+          "SizeCategory": "Large",
+          "Conformation": "Heavy / Muscular",
+          "Notes": "High bone density; cruciate loading"
+        },
+        {
+          "Name": "Doberman Pinscher",
+          "SizeCategory": "Large",
+          "Conformation": "Athletic",
+          "Notes": "Cervical spondylomyelopathy (Wobbler) prone"
+        },
+        {
+          "Name": "Siberian Husky",
+          "SizeCategory": "Large",
+          "Conformation": "Athletic",
+          "Notes": "Endurance; gait conditioning"
+        },
+        {
+          "Name": "Poodle (Standard)",
+          "SizeCategory": "Large",
+          "Conformation": "Athletic",
+          "Notes": "Light frame; athletic"
+        },
+        {
+          "Name": "Bernese Mountain Dog",
+          "SizeCategory": "Large",
+          "Conformation": "Heavy",
+          "Notes": "Orthopedic arthritis monitoring"
+        },
+        {
+          "Name": "Great Dane",
+          "SizeCategory": "Giant",
+          "Conformation": "Giant",
+          "Notes": "Long levers; joint space stress"
+        },
+        {
+          "Name": "Irish Wolfhound",
+          "SizeCategory": "Giant",
+          "Conformation": "Giant",
+          "Notes": "Cardiovascular \u0026 mobility support"
+        },
+        {
+          "Name": "Newfoundland",
+          "SizeCategory": "Giant",
+          "Conformation": "Giant / Water",
+          "Notes": "Excellent hydrotherapy candidate"
+        },
+        {
+          "Name": "Saint Bernard",
+          "SizeCategory": "Giant",
+          "Conformation": "Giant",
+          "Notes": "Heavy joint loading"
+        },
+        {
+          "Name": "Mixed Breed / Crossbreed",
+          "SizeCategory": "Medium",
+          "Conformation": "Variable",
+          "Notes": "General companion canine"
+        }
+      ]
+    },
+    {
+      "Name": "Feline",
+      "DisplayName": "Feline (Cat)",
+      "Icon": "cat",
+      "Breeds": [
+        {
+          "Name": "Domestic Shorthair",
+          "SizeCategory": "Medium",
+          "Conformation": "Standard",
+          "Notes": "General companion feline"
+        },
+        {
+          "Name": "Domestic Longhair",
+          "SizeCategory": "Medium",
+          "Conformation": "Standard",
+          "Notes": "General companion feline"
+        },
+        {
+          "Name": "Maine Coon",
+          "SizeCategory": "Large",
+          "Conformation": "Large Frame",
+          "Notes": "Hip dysplasia and HCM risk"
+        },
+        {
+          "Name": "British Shorthair",
+          "SizeCategory": "Medium",
+          "Conformation": "Stocky",
+          "Notes": "Sturdy frame"
+        },
+        {
+          "Name": "Ragdoll",
+          "SizeCategory": "Medium",
+          "Conformation": "Large Frame",
+          "Notes": "Relaxed muscle tone"
+        },
+        {
+          "Name": "Siamese",
+          "SizeCategory": "Medium",
+          "Conformation": "Slender / Athletic",
+          "Notes": "High activity; slender frame"
+        },
+        {
+          "Name": "Persian",
+          "SizeCategory": "Medium",
+          "Conformation": "Brachycephalic",
+          "Notes": "Respiratory management"
+        },
+        {
+          "Name": "Bengal",
+          "SizeCategory": "Medium",
+          "Conformation": "Athletic",
+          "Notes": "High mobility drive"
+        },
+        {
+          "Name": "Scottish Fold",
+          "SizeCategory": "Medium",
+          "Conformation": "Osteochondrodysplasia Prone",
+          "Notes": "Cartilage and joint pain monitoring"
+        },
+        {
+          "Name": "Sphynx",
+          "SizeCategory": "Medium",
+          "Conformation": "Slender",
+          "Notes": "Temperature sensitivity"
+        }
+      ]
+    },
+    {
+      "Name": "Equine",
+      "DisplayName": "Equine (Horse)",
+      "Icon": "horse",
+      "Breeds": [
+        {
+          "Name": "Thoroughbred",
+          "SizeCategory": "Large",
+          "Conformation": "Sport / Racing",
+          "Notes": "High speed tendon/ligament rehabilitation"
+        },
+        {
+          "Name": "Warmblood",
+          "SizeCategory": "Large",
+          "Conformation": "Dressage / Jumping",
+          "Notes": "Hock \u0026 stifle loading; spinal mobilization"
+        },
+        {
+          "Name": "Quarter Horse",
+          "SizeCategory": "Large",
+          "Conformation": "Muscular / Stock",
+          "Notes": "Navicular and muscular conditioning"
+        },
+        {
+          "Name": "Arabian",
+          "SizeCategory": "Medium",
+          "Conformation": "Endurance",
+          "Notes": "Light framed athletic conditioning"
+        },
+        {
+          "Name": "Friesian",
+          "SizeCategory": "Large",
+          "Conformation": "Draft / Sport",
+          "Notes": "High stepping gait mechanics"
+        },
+        {
+          "Name": "Standardbred",
+          "SizeCategory": "Large",
+          "Conformation": "Harness / Racing",
+          "Notes": "Pacing/trotting stride rehab"
+        },
+        {
+          "Name": "Pony (Welsh / Shetland)",
+          "SizeCategory": "Small",
+          "Conformation": "Pony Frame",
+          "Notes": "Laminitis management"
+        },
+        {
+          "Name": "Draft (Clydesdale / Percheron / Shire)",
+          "SizeCategory": "Giant",
+          "Conformation": "Draft / Heavy",
+          "Notes": "Heavy mass joint support"
+        }
+      ]
+    },
+    {
+      "Name": "Avian",
+      "DisplayName": "Avian (Bird)",
+      "Icon": "bird",
+      "Breeds": [
+        {
+          "Name": "Parrot (African Grey / Amazon / Macaw)",
+          "SizeCategory": "Medium",
+          "Conformation": "Standard",
+          "Notes": "Wing \u0026 perch balance rehab"
+        },
+        {
+          "Name": "Cockatiel / Parakeet / Conure",
+          "SizeCategory": "Small",
+          "Conformation": "Small",
+          "Notes": "Pododermatitis \u0026 perch mobility"
+        },
+        {
+          "Name": "Raptor / Bird of Prey",
+          "SizeCategory": "Medium",
+          "Conformation": "Sport / Working",
+          "Notes": "Flight muscle recovery"
+        }
+      ]
+    },
+    {
+      "Name": "Other",
+      "DisplayName": "Other / Exotic",
+      "Icon": "paw",
+      "Breeds": [
+        {
+          "Name": "Rabbit (Domestic / Lop)",
+          "SizeCategory": "Small",
+          "Conformation": "Lagomorph",
+          "Notes": "Spinal fragility; splay leg"
+        },
+        {
+          "Name": "Guinea Pig",
+          "SizeCategory": "Small",
+          "Conformation": "Rodent",
+          "Notes": "Hypovitaminosis C \u0026 arthritis"
+        },
+        {
+          "Name": "Ferret",
+          "SizeCategory": "Small",
+          "Conformation": "Carnivore",
+          "Notes": "Spinal flexibility"
+        },
+        {
+          "Name": "Caprine / Goat",
+          "SizeCategory": "Medium",
+          "Conformation": "Ruminant",
+          "Notes": "Hoof \u0026 joint rehabilitation"
+        },
+        {
+          "Name": "Camelid (Alpaca / Llama)",
+          "SizeCategory": "Large",
+          "Conformation": "Camelid",
+          "Notes": "Stifle \u0026 gait conditioning"
+        }
+      ]
+    }
+  ],
+  "LastModifiedAt": "2026-09-11T14:03:56.2346988+00:00",
+  "LastModifiedBy": "System (Default Seeding)"
+}

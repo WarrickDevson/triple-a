@@ -3,11 +3,13 @@ import { computed, onMounted, ref, watch } from 'vue'
 import {
   AlertTriangle,
   Eye,
+  Film,
   FileVideo,
   Image as ImageIcon,
   Loader2,
   Maximize2,
   Plus,
+  Sparkles,
   Trash2,
   UploadCloud,
   X,
@@ -16,7 +18,7 @@ import BaseButton from '../BaseButton.vue'
 import { useAuthStore } from '../../store/auth'
 import { useExercisesStore } from '../../store/exercises'
 import { useSpeciesBreedStore } from '../../store/speciesBreed'
-import type { CreateExerciseRequest, CreateExerciseStepRequest, Exercise } from '../../types/exercise'
+import type { CreateExerciseRequest, CreateExerciseStepRequest, Exercise, ExerciseVideoVariation } from '../../types/exercise'
 
 const props = withDefaults(
   defineProps<{
@@ -57,6 +59,10 @@ const safetyNotes = ref('')
 const commonMistakes = ref('')
 const videoUrl = ref('')
 const coverImageUrl = ref('')
+const videoVariations = ref<ExerciseVideoVariation[]>([])
+
+const previewVariationIndex = ref<number>(-1)
+const uploadingVariationIndex = ref<number | null>(null)
 
 interface LocalStep {
   stepNumber: number
@@ -99,6 +105,69 @@ const isDirectVideoUrl = computed(() => {
   )
 })
 
+function addVideoVariation() {
+  videoVariations.value.push({
+    species: targetSpecies.value || 'Canine',
+    breedCategory: 'Chondrodystrophic (Dachshund/Corgi)',
+    videoUrl: '',
+    title: '',
+    notes: '',
+  })
+}
+
+function removeVideoVariation(index: number) {
+  videoVariations.value.splice(index, 1)
+  if (previewVariationIndex.value >= videoVariations.value.length) {
+    previewVariationIndex.value = -1
+  }
+}
+
+async function handleVariationVideoUpload(index: number, e: Event) {
+  const input = e.target as HTMLInputElement
+  if (!input.files || input.files.length === 0) return
+
+  const file = input.files[0]
+  uploadingVariationIndex.value = index
+  errorMessage.value = ''
+  try {
+    const res = await exercisesStore.uploadMedia(file)
+    videoVariations.value[index].videoUrl = res.url
+  } catch (err: any) {
+    errorMessage.value = err?.response?.data?.message || 'Failed to upload variation video.'
+  } finally {
+    uploadingVariationIndex.value = null
+    input.value = ''
+  }
+}
+
+const activePreviewVariation = computed<ExerciseVideoVariation | null>(() => {
+  if (previewVariationIndex.value >= 0 && previewVariationIndex.value < videoVariations.value.length) {
+    return videoVariations.value[previewVariationIndex.value]
+  }
+  return null
+})
+
+const currentPreviewVideoUrl = computed(() => {
+  if (activePreviewVariation.value && activePreviewVariation.value.videoUrl) {
+    return activePreviewVariation.value.videoUrl
+  }
+  return videoUrl.value
+})
+
+const currentPreviewYoutubeEmbed = computed(() => getYouTubeEmbedUrl(currentPreviewVideoUrl.value))
+const isCurrentPreviewDirectVideo = computed(() => {
+  if (!currentPreviewVideoUrl.value) return false
+  const lower = currentPreviewVideoUrl.value.toLowerCase()
+  return (
+    lower.endsWith('.mp4') ||
+    lower.endsWith('.webm') ||
+    lower.endsWith('.mov') ||
+    lower.includes('/uploads/') ||
+    lower.includes('storage.googleapis.com') ||
+    lower.includes('.mp4?')
+  )
+})
+
 watch(
   () => [props.open, props.exercise, props.mode],
   () => {
@@ -113,6 +182,7 @@ function initForm() {
   errorMessage.value = ''
   isSubmitting.value = false
   activeTab.value = props.initialTab || 'editor'
+  previewVariationIndex.value = -1
 
   if (props.exercise && (props.mode === 'edit' || props.mode === 'customize')) {
     title.value = props.exercise.title
@@ -126,6 +196,12 @@ function initForm() {
     commonMistakes.value = props.exercise.commonMistakes || ''
     videoUrl.value = props.exercise.videoUrl || ''
     coverImageUrl.value = props.exercise.coverImageUrl || ''
+
+    if (props.exercise.videoVariations && props.exercise.videoVariations.length > 0) {
+      videoVariations.value = props.exercise.videoVariations.map((v) => ({ ...v }))
+    } else {
+      videoVariations.value = []
+    }
 
     if (props.exercise.steps && props.exercise.steps.length > 0) {
       steps.value = props.exercise.steps.map((s) => ({
@@ -149,6 +225,7 @@ function initForm() {
     commonMistakes.value = ''
     videoUrl.value = ''
     coverImageUrl.value = ''
+    videoVariations.value = []
     steps.value = [{ stepNumber: 1, stepInstruction: '', imageUrl: '' }]
   }
 }
@@ -253,6 +330,15 @@ async function saveExercise() {
     videoUrl: videoUrl.value.trim() || undefined,
     coverImageUrl: coverImageUrl.value.trim() || undefined,
     steps: filteredSteps.length > 0 ? filteredSteps : undefined,
+    videoVariations: videoVariations.value
+      .filter((v) => v.videoUrl.trim().length > 0)
+      .map((v) => ({
+        species: v.species?.trim() || null,
+        breedCategory: v.breedCategory?.trim() || null,
+        videoUrl: v.videoUrl.trim(),
+        title: v.title?.trim() || null,
+        notes: v.notes?.trim() || null,
+      })),
   }
 
   try {
@@ -568,6 +654,146 @@ const modalSubtitle = computed(() => {
                   </button>
                 </div>
               </div>
+
+              <!-- 2.1 Video Variations by Species & Breed Section -->
+              <div class="rounded-xl border border-neutral-grey/90 bg-surface/60 p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-xs font-bold text-navy flex items-center gap-1.5">
+                      <Film class="h-3.5 w-3.5 text-sage" />
+                      Species & Breed Video Variations (Optional)
+                    </h4>
+                    <p class="text-[11px] text-neutral-muted">
+                      Attach specific videos for different animal species, conformations (e.g. Dachshund/Corgi), or sizes.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 rounded-lg border border-sage bg-sage/10 px-2.5 py-1 text-xs font-bold text-sage transition-colors hover:bg-sage/20"
+                    @click="addVideoVariation"
+                  >
+                    <Plus class="h-3 w-3" /> Add Variation
+                  </button>
+                </div>
+
+                <div v-if="videoVariations.length === 0" class="rounded-lg border border-dashed border-neutral-grey/80 p-3 text-center text-xs text-neutral-muted">
+                  No variations configured yet. The default video above will be used for all patients.
+                </div>
+
+                <div
+                  v-for="(variation, vIdx) in videoVariations"
+                  :key="vIdx"
+                  class="rounded-lg border border-neutral-grey/80 bg-white p-3 space-y-3 shadow-2xs"
+                >
+                  <div class="flex items-center justify-between border-b border-neutral-grey/40 pb-2">
+                    <div class="flex items-center gap-2">
+                      <span class="rounded bg-navy/10 px-1.5 py-0.5 text-[10px] font-bold text-navy">
+                        Variation #{{ vIdx + 1 }}
+                      </span>
+                      <span v-if="variation.species" class="text-[11px] font-semibold text-sage">
+                        {{ variation.species }}
+                      </span>
+                      <span v-if="variation.breedCategory" class="text-[11px] text-neutral-muted">
+                        • {{ variation.breedCategory }}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      class="text-xs text-red-600 hover:text-red-800 flex items-center gap-1 font-semibold"
+                      @click="removeVideoVariation(vIdx)"
+                    >
+                      <Trash2 class="h-3.5 w-3.5" /> Remove
+                    </button>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[11px] font-semibold text-navy mb-0.5">Target Species</label>
+                      <select
+                        v-model="variation.species"
+                        class="w-full rounded-md border border-neutral-grey bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-sage"
+                      >
+                        <option v-for="sp in speciesStore.speciesList" :key="sp.name" :value="sp.name">
+                          {{ sp.displayName || sp.name }}
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-semibold text-navy mb-0.5">Breed / Conformation Tag</label>
+                      <input
+                        v-model="variation.breedCategory"
+                        type="text"
+                        placeholder="e.g. Chondrodystrophic (Dachshund/Corgi), Giant, Toy"
+                        class="w-full rounded-md border border-neutral-grey bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-sage"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-[11px] font-semibold text-navy mb-0.5">Variation Title (Optional)</label>
+                    <input
+                      v-model="variation.title"
+                      type="text"
+                      placeholder="e.g. Low-Rider / Long-Backed Dogs"
+                      class="w-full rounded-md border border-neutral-grey bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-sage"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-[11px] font-semibold text-navy mb-0.5">Video URL (YouTube, MP4, or Upload)</label>
+                    <div class="flex gap-2">
+                      <input
+                        v-model="variation.videoUrl"
+                        type="url"
+                        placeholder="https://youtube.com/watch?v=... or MP4 URL"
+                        class="flex-1 rounded-md border border-neutral-grey bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-sage"
+                      />
+                      <label
+                        class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-neutral-grey bg-surface px-2.5 py-1.5 text-xs font-bold text-navy hover:bg-neutral-grey/30 shrink-0"
+                        :class="{ 'pointer-events-none opacity-50': uploadingVariationIndex === vIdx }"
+                      >
+                        <Loader2 v-if="uploadingVariationIndex === vIdx" class="h-3.5 w-3.5 animate-spin" />
+                        <UploadCloud v-else class="h-3.5 w-3.5 text-sage" />
+                        Upload
+                        <input
+                          type="file"
+                          accept="video/mp4,video/quicktime,video/webm"
+                          class="hidden"
+                          @change="handleVariationVideoUpload(vIdx, $event)"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Inline preview for variation -->
+                  <div v-if="variation.videoUrl" class="rounded border border-neutral-grey/60 bg-black/5 p-2">
+                    <div v-if="getYouTubeEmbedUrl(variation.videoUrl)" class="aspect-video w-full rounded overflow-hidden shadow-xs bg-black">
+                      <iframe
+                        :src="getYouTubeEmbedUrl(variation.videoUrl)!"
+                        class="h-full w-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen
+                      ></iframe>
+                    </div>
+                    <video
+                      v-else
+                      :src="variation.videoUrl"
+                      controls
+                      class="aspect-video w-full rounded object-contain bg-black"
+                    ></video>
+                  </div>
+
+                  <div>
+                    <label class="block text-[11px] font-semibold text-navy mb-0.5">Clinical Modification Notes</label>
+                    <textarea
+                      v-model="variation.notes"
+                      rows="1.5"
+                      placeholder="e.g. Set poles 2-3 inches max from ground to prevent spine hyperextension."
+                      class="w-full rounded-md border border-neutral-grey bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-sage"
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -724,13 +950,31 @@ const modalSubtitle = computed(() => {
 
         <!-- TAB 2: LIVE OWNER SCREEN MOBILE PREVIEW -->
         <div v-else class="flex flex-col items-center justify-center py-4">
-          <div class="mb-4 text-center">
+          <div class="mb-4 text-center max-w-md">
             <span class="rounded-full bg-sage/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-sage">
               Live Owner Screen Preview
             </span>
             <p class="text-xs text-neutral-muted mt-1">
               This preview shows how your exercise, instructions, video, and step images look to the pet owner on mobile.
             </p>
+
+            <!-- Preview As Variation Selector -->
+            <div v-if="videoVariations.length > 0" class="mt-3 flex items-center justify-center gap-2">
+              <label class="text-xs font-bold text-navy whitespace-nowrap">Preview As:</label>
+              <select
+                v-model="previewVariationIndex"
+                class="rounded-lg border border-neutral-grey bg-white px-3 py-1.5 text-xs font-semibold text-navy outline-none focus:border-sage shadow-xs"
+              >
+                <option :value="-1">Default / General ({{ targetSpecies }})</option>
+                <option
+                  v-for="(v, vIdx) in videoVariations"
+                  :key="vIdx"
+                  :value="vIdx"
+                >
+                  {{ v.species }} {{ v.breedCategory ? `(${v.breedCategory})` : '' }} - {{ v.title || 'Variation' }}
+                </option>
+              </select>
+            </div>
           </div>
 
           <!-- Mobile Phone Mockup Frame -->
@@ -749,6 +993,15 @@ const modalSubtitle = computed(() => {
 
             <!-- Mobile Screen Content (Simulating Exercise Routine Screen) -->
             <div class="p-4 space-y-3 max-h-[520px] overflow-y-auto">
+              <!-- Active Variation Badge if previewing variation -->
+              <div v-if="activePreviewVariation" class="rounded-xl border border-sage/40 bg-sage/10 p-2.5 flex items-start gap-2">
+                <Sparkles class="h-4 w-4 text-sage shrink-0 mt-0.5" />
+                <div class="text-[11px]">
+                  <span class="font-bold text-navy block">Showing {{ activePreviewVariation.species }} {{ activePreviewVariation.breedCategory ? `(${activePreviewVariation.breedCategory})` : '' }} Form</span>
+                  <span v-if="activePreviewVariation.notes" class="text-neutral-muted block text-[10px] mt-0.5">{{ activePreviewVariation.notes }}</span>
+                </div>
+              </div>
+
               <!-- Exercise Title Card -->
               <div class="rounded-2xl border border-neutral-grey/80 bg-white p-4 shadow-xs space-y-2">
                 <div class="flex items-start justify-between gap-2">
@@ -767,19 +1020,19 @@ const modalSubtitle = computed(() => {
                 </div>
               </div>
 
-              <!-- Exercise Video Card -->
-              <div v-if="videoUrl" class="rounded-2xl border border-neutral-grey/80 bg-black overflow-hidden shadow-xs">
+              <!-- Exercise Video Card (Using currentPreviewVideoUrl) -->
+              <div v-if="currentPreviewVideoUrl" class="rounded-2xl border border-neutral-grey/80 bg-black overflow-hidden shadow-xs">
                 <div class="relative aspect-video flex items-center justify-center bg-neutral-900">
                   <iframe
-                    v-if="youtubeEmbedUrl"
-                    :src="youtubeEmbedUrl"
+                    v-if="currentPreviewYoutubeEmbed"
+                    :src="currentPreviewYoutubeEmbed"
                     class="h-full w-full border-0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen
                   ></iframe>
                   <video
-                    v-else-if="isDirectVideoUrl"
-                    :src="videoUrl"
+                    v-else-if="isCurrentPreviewDirectVideo"
+                    :src="currentPreviewVideoUrl"
                     controls
                     class="h-full w-full object-contain"
                   ></video>

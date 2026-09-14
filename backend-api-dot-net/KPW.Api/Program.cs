@@ -297,7 +297,14 @@ using (var scope = app.Services.CreateScope())
             BEGIN
                 ALTER TABLE [Exercises] ADD [IsActiveForOwners] bit NOT NULL CONSTRAINT [DF_Exercises_IsActiveForOwners] DEFAULT (1);
             END
-            UPDATE u
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'VideoVariationsJson')
+            BEGIN
+                ALTER TABLE [Exercises] ADD [VideoVariationsJson] nvarchar(max) NULL;
+            END");
+
+        await Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRawAsync(
+            dbContext.Database,
+            @"UPDATE u
             SET u.ClinicId = (SELECT TOP 1 ClinicId FROM Clinics ORDER BY ClinicId ASC)
             FROM Users u
             WHERE u.UserRole = 'Owner' AND u.ClinicId IS NULL AND EXISTS (SELECT 1 FROM Clinics);
@@ -308,7 +315,13 @@ using (var scope = app.Services.CreateScope())
             UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=1byv8TzSEbU' WHERE [ExerciseId] = 5 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');
             UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=h-IQU8mPqZM' WHERE [ExerciseId] = 6 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');
             UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=-XRBJ7oPw74' WHERE [ExerciseId] = 7 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');
-            UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=FeoKoM7D5SI' WHERE [ExerciseId] = 8 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');");
+            UPDATE [Exercises] SET [VideoUrl] = 'https://www.youtube.com/watch?v=FeoKoM7D5SI' WHERE [ExerciseId] = 8 AND ([VideoUrl] LIKE '%sample%' OR [VideoUrl] LIKE '%ForBiggerBlazes%');
+            
+            IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'VideoVariationsJson')
+            BEGIN
+                EXEC(N'UPDATE [Exercises] SET [VideoVariationsJson] = ''[{""""Species"""":""""Canine"""",""""BreedCategory"""":""""Chondrodystrophic (Dachshund/Corgi/Basset)"""",""""VideoUrl"""":""""https://www.youtube.com/watch?v=TRDnqYOtlKM"""",""""Title"""":""""Cavaletti for Low-Rider / Long-Backed Dogs"""",""""Notes"""":""""Poles set at wrist/hock height (2-3 inches max) with 1.5x body length spacing.""""},{""""Species"""":""""Canine"""",""""BreedCategory"""":""""Large / Giant Breeds"""",""""VideoUrl"""":""""https://www.youtube.com/watch?v=TRDnqYOtlKM"""",""""Title"""":""""Cavaletti for Large Dogs"""",""""Notes"""":""""Poles spaced at standard shoulder-height stride distance to promote full extension.""""} ]'' WHERE [ExerciseId] = 4 AND [VideoVariationsJson] IS NULL');
+                EXEC(N'UPDATE [Exercises] SET [VideoVariationsJson] = ''[{""""Species"""":""""Feline"""",""""BreedCategory"""":""""All Cats"""",""""VideoUrl"""":""""https://www.youtube.com/watch?v=-XRBJ7oPw74"""",""""Title"""":""""Feline Passive Range of Motion"""",""""Notes"""":""""Gentle low-stress handling with towel wrap; small amplitude flexion/extension.""""} ]'' WHERE [ExerciseId] = 2 AND [VideoVariationsJson] IS NULL');
+            END");
     }
     catch (Exception ex)
     {

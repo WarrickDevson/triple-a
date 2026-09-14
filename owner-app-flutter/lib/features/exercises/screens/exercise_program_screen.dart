@@ -6,6 +6,7 @@ import '../../../core/widgets/app_chrome.dart';
 import '../../pets/models/pet.dart';
 import '../models/rehab_program.dart';
 import '../providers/exercise_providers.dart';
+import '../widgets/exercise_video_player.dart';
 import 'exercise_routine_screen.dart';
 
 String _resolveMediaUrl(String url) {
@@ -38,6 +39,8 @@ class _ExerciseProgramScreenState extends ConsumerState<ExerciseProgramScreen> {
   }
 
   void _showExerciseDetails(BuildContext context, RehabProgramExercise exercise) {
+    final activeVideoUrl = exercise.resolveVideoUrl(species: widget.pet.species, breed: widget.pet.breed);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -84,7 +87,13 @@ class _ExerciseProgramScreenState extends ConsumerState<ExerciseProgramScreen> {
                         _MetaChip(label: '${exercise.frequencyPerDay}x daily'),
                       ],
                     ),
-                    if (exercise.coverImageUrl != null) ...[
+                    if (activeVideoUrl != null && activeVideoUrl.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: ExerciseVideoPlayer(videoUrl: _resolveMediaUrl(activeVideoUrl)),
+                      ),
+                    ] else if (exercise.coverImageUrl != null) ...[
                       const SizedBox(height: 16),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(12),

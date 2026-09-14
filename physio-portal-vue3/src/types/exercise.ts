@@ -5,6 +5,14 @@ export interface ExerciseStep {
   imageUrl: string | null
 }
 
+export interface ExerciseVideoVariation {
+  species?: string | null
+  breedCategory?: string | null
+  videoUrl: string
+  title?: string | null
+  notes?: string | null
+}
+
 export interface Exercise {
   exerciseId: number
   title: string
@@ -26,6 +34,7 @@ export interface Exercise {
   customExerciseId?: number | null
   isCustomActive?: boolean
   steps: ExerciseStep[]
+  videoVariations?: ExerciseVideoVariation[] | null
 }
 
 export interface CreateExerciseStepRequest {
@@ -47,6 +56,7 @@ export interface CreateExerciseRequest {
   conditionCategory?: string
   difficultyLevel: number
   steps?: CreateExerciseStepRequest[]
+  videoVariations?: ExerciseVideoVariation[]
 }
 
 export interface UploadExerciseMediaResponse {

@@ -74,6 +74,7 @@ public class CustomizeExerciseCommandHandler : IRequestHandler<CustomizeExercise
             CommonMistakes = baseExercise.CommonMistakes,
             VideoUrl = baseExercise.VideoUrl,
             CoverImageUrl = baseExercise.CoverImageUrl,
+            VideoVariationsJson = baseExercise.VideoVariationsJson,
             TargetSpecies = baseExercise.TargetSpecies,
             ConditionCategory = baseExercise.ConditionCategory,
             DifficultyLevel = baseExercise.DifficultyLevel,

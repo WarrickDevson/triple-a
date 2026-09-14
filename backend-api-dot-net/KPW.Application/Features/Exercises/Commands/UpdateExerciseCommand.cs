@@ -75,6 +75,9 @@ public class UpdateExerciseCommandHandler : IRequestHandler<UpdateExerciseComman
         exercise.TargetSpecies = request.TargetSpecies?.Trim();
         exercise.ConditionCategory = request.ConditionCategory?.Trim();
         exercise.DifficultyLevel = Math.Clamp(request.DifficultyLevel, 1, 5);
+        exercise.VideoVariationsJson = request.VideoVariations is { Count: > 0 }
+            ? System.Text.Json.JsonSerializer.Serialize(request.VideoVariations)
+            : null;
 
         // Replace or update steps
         _dbContext.Set<ExerciseStep>().RemoveRange(exercise.Steps);

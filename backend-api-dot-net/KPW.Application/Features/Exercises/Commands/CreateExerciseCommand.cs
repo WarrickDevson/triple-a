@@ -58,6 +58,9 @@ public class CreateExerciseCommandHandler : IRequestHandler<CreateExerciseComman
             TargetSpecies = request.TargetSpecies?.Trim(),
             ConditionCategory = request.ConditionCategory?.Trim(),
             DifficultyLevel = Math.Clamp(request.DifficultyLevel, 1, 5),
+            VideoVariationsJson = request.VideoVariations is { Count: > 0 }
+                ? System.Text.Json.JsonSerializer.Serialize(request.VideoVariations)
+                : null,
             IsSystemDefault = isSystemDefault,
             ClinicId = clinicId,
             IsActiveForOwners = true

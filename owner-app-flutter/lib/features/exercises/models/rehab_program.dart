@@ -21,6 +21,32 @@ class ExerciseStep {
   }
 }
 
+class ExerciseVideoVariation {
+  const ExerciseVideoVariation({
+    required this.species,
+    this.breedCategory,
+    required this.videoUrl,
+    this.title,
+    this.notes,
+  });
+
+  final String species;
+  final String? breedCategory;
+  final String videoUrl;
+  final String? title;
+  final String? notes;
+
+  factory ExerciseVideoVariation.fromJson(Map<String, dynamic> json) {
+    return ExerciseVideoVariation(
+      species: json['species'] as String? ?? 'Canine',
+      breedCategory: json['breedCategory'] as String?,
+      videoUrl: json['videoUrl'] as String? ?? '',
+      title: json['title'] as String?,
+      notes: json['notes'] as String?,
+    );
+  }
+}
+
 class RehabProgramExercise {
   const RehabProgramExercise({
     required this.rehabProgramExerciseId,
@@ -34,6 +60,7 @@ class RehabProgramExercise {
     this.commonMistakes,
     this.videoUrl,
     this.coverImageUrl,
+    this.videoVariations = const [],
     required this.steps,
   });
 
@@ -48,7 +75,49 @@ class RehabProgramExercise {
   final String? commonMistakes;
   final String? videoUrl;
   final String? coverImageUrl;
+  final List<ExerciseVideoVariation> videoVariations;
   final List<ExerciseStep> steps;
+
+  String? resolveVideoUrl({String? species, String? breed}) {
+    if (videoVariations.isNotEmpty && (species != null || breed != null)) {
+      final s = species?.trim().toLowerCase();
+      final b = breed?.trim().toLowerCase();
+
+      // 1. Exact breed or conformation match
+      if (b != null && b.isNotEmpty) {
+        final breedMatch = videoVariations.firstWhere(
+          (v) {
+            final vb = v.breedCategory?.trim().toLowerCase();
+            final vs = v.species.trim().toLowerCase();
+            if (vb == null || vb.isEmpty) return false;
+            final speciesMatches = s == null || s.isEmpty || vs == s;
+            return speciesMatches && (b.contains(vb) || vb.contains(b));
+          },
+          orElse: () => const ExerciseVideoVariation(species: '', videoUrl: ''),
+        );
+        if (breedMatch.videoUrl.isNotEmpty) {
+          return breedMatch.videoUrl;
+        }
+      }
+
+      // 2. Species-only match
+      if (s != null && s.isNotEmpty) {
+        final speciesMatch = videoVariations.firstWhere(
+          (v) {
+            final vs = v.species.trim().toLowerCase();
+            final vb = v.breedCategory?.trim().toLowerCase();
+            return vs == s && (vb == null || vb.isEmpty);
+          },
+          orElse: () => const ExerciseVideoVariation(species: '', videoUrl: ''),
+        );
+        if (speciesMatch.videoUrl.isNotEmpty) {
+          return speciesMatch.videoUrl;
+        }
+      }
+    }
+
+    return videoUrl;
+  }
 
   factory RehabProgramExercise.fromJson(Map<String, dynamic> json) {
     return RehabProgramExercise(
@@ -63,6 +132,9 @@ class RehabProgramExercise {
       commonMistakes: json['commonMistakes'] as String?,
       videoUrl: json['videoUrl'] as String?,
       coverImageUrl: json['coverImageUrl'] as String?,
+      videoVariations: (json['videoVariations'] as List<dynamic>? ?? [])
+          .map((item) => ExerciseVideoVariation.fromJson(item as Map<String, dynamic>))
+          .toList(),
       steps: (json['steps'] as List<dynamic>? ?? [])
           .map((item) => ExerciseStep.fromJson(item as Map<String, dynamic>))
           .toList(),

@@ -16,6 +16,7 @@ public class Exercise : AuditableEntity
     public string? ConditionCategory { get; set; }
     public int DifficultyLevel { get; set; } = 1;
     public string? CoverImageUrl { get; set; }
+    public string? VideoVariationsJson { get; set; }
 
     public bool IsSystemDefault { get; set; } = true;
     public int? ClinicId { get; set; }

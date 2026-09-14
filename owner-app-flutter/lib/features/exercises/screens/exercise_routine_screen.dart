@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
+import '../../pets/models/pet.dart';
+import '../../pets/providers/pets_provider.dart';
 import '../models/rehab_program.dart';
 import '../providers/exercise_providers.dart';
 import '../widgets/exercise_video_player.dart';
@@ -16,6 +18,8 @@ class ExerciseRoutineScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(exerciseSessionProvider(program));
     final notifier = ref.read(exerciseSessionProvider(program).notifier);
+    final pets = ref.watch(petsProvider).pets;
+    final pet = pets.where((p) => p.petId == program.petId).firstOrNull;
 
     if (session == null) {
       return const Scaffold(
@@ -34,7 +38,7 @@ class ExerciseRoutineScreen extends ConsumerWidget {
           child: const Text('RESET'),
         ),
       ],
-      body: _buildBody(context, session, notifier),
+      body: _buildBody(context, session, notifier, pet),
     );
   }
 
@@ -42,14 +46,15 @@ class ExerciseRoutineScreen extends ConsumerWidget {
     BuildContext context,
     ExerciseSessionState session,
     ExerciseSessionNotifier notifier,
+    Pet? pet,
   ) {
     switch (session.phase) {
       case ExerciseEnginePhase.overview:
-        return _OverviewPane(session: session, onStart: notifier.startExercise);
+        return _OverviewPane(session: session, onStart: notifier.startExercise, pet: pet);
       case ExerciseEnginePhase.stepActive:
-        return _StepPane(session: session, onNext: notifier.nextStep);
+        return _StepPane(session: session, onNext: notifier.nextStep, pet: pet);
       case ExerciseEnginePhase.exerciseComplete:
-        return _OverviewPane(session: session, onStart: notifier.startExercise);
+        return _OverviewPane(session: session, onStart: notifier.startExercise, pet: pet);
       case ExerciseEnginePhase.programComplete:
         return _CompletePane(session: session);
     }
@@ -132,14 +137,16 @@ void _showImageLightbox(BuildContext context, String imageUrl, String title) {
 }
 
 class _OverviewPane extends StatelessWidget {
-  const _OverviewPane({required this.session, required this.onStart});
+  const _OverviewPane({required this.session, required this.onStart, this.pet});
 
   final ExerciseSessionState session;
   final VoidCallback onStart;
+  final Pet? pet;
 
   @override
   Widget build(BuildContext context) {
     final exercise = session.currentExercise;
+    final activeVideoUrl = exercise.resolveVideoUrl(species: pet?.species, breed: pet?.breed);
     final coverUrl = exercise.coverImageUrl ??
         (exercise.steps.isNotEmpty ? exercise.steps.first.imageUrl : null);
 
@@ -167,7 +174,7 @@ class _OverviewPane extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (exercise.videoUrl != null)
+                        if (activeVideoUrl != null && activeVideoUrl.isNotEmpty)
                           Positioned(
                             top: 12,
                             right: 12,
@@ -235,29 +242,29 @@ class _OverviewPane extends StatelessWidget {
                   const SizedBox(height: 12),
                   AppPanel(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 20),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Safety & Precautions',
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.primaryDark,
-                                  ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          exercise.safetyNotes!,
-                          style: TextStyle(color: AppColors.neutralDark.withValues(alpha: 0.8), height: 1.4),
-                        ),
-                      ],
-                    ),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 20),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Safety & Precautions',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.primaryDark,
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        exercise.safetyNotes!,
+                        style: TextStyle(color: AppColors.neutralDark.withValues(alpha: 0.8), height: 1.4),
+                      ),
+                    ],
                   ),
+                ),
                 ],
                 if (exercise.commonMistakes != null) ...[
                   const SizedBox(height: 12),
@@ -304,15 +311,17 @@ class _OverviewPane extends StatelessWidget {
 }
 
 class _StepPane extends StatelessWidget {
-  const _StepPane({required this.session, required this.onNext});
+  const _StepPane({required this.session, required this.onNext, this.pet});
 
   final ExerciseSessionState session;
   final VoidCallback onNext;
+  final Pet? pet;
 
   @override
   Widget build(BuildContext context) {
     final exercise = session.currentExercise;
     final step = session.currentStep;
+    final activeVideoUrl = exercise.resolveVideoUrl(species: pet?.species, breed: pet?.breed);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
@@ -337,12 +346,12 @@ class _StepPane extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        if (exercise.videoUrl != null) ...[
+        if (activeVideoUrl != null && activeVideoUrl.isNotEmpty) ...[
           AppPanel(
             padding: EdgeInsets.zero,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: ExerciseVideoPlayer(videoUrl: _resolveMediaUrl(exercise.videoUrl!)),
+              child: ExerciseVideoPlayer(videoUrl: _resolveMediaUrl(activeVideoUrl)),
             ),
           ),
           const SizedBox(height: 16),

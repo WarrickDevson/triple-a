@@ -6,6 +6,13 @@ public record ExerciseStepDto(
     string StepInstruction,
     string? ImageUrl);
 
+public record ExerciseVideoVariationDto(
+    string? Species,
+    string? BreedCategory,
+    string VideoUrl,
+    string? Title,
+    string? Notes);
+
 public record ExerciseDto(
     int ExerciseId,
     string Title,
@@ -26,7 +33,8 @@ public record ExerciseDto(
     bool HasCustomOverride,
     int? CustomExerciseId,
     bool IsCustomActive,
-    IReadOnlyList<ExerciseStepDto> Steps);
+    IReadOnlyList<ExerciseStepDto> Steps,
+    IReadOnlyList<ExerciseVideoVariationDto>? VideoVariations = null);
 
 public record CreateExerciseStepRequestDto(
     int StepNumber,
@@ -45,7 +53,8 @@ public record CreateExerciseRequestDto(
     string? TargetSpecies,
     string? ConditionCategory,
     int DifficultyLevel,
-    IReadOnlyList<CreateExerciseStepRequestDto>? Steps);
+    IReadOnlyList<CreateExerciseStepRequestDto>? Steps,
+    IReadOnlyList<ExerciseVideoVariationDto>? VideoVariations = null);
 
 public record UpdateExerciseRequestDto(
     string Title,
@@ -59,7 +68,8 @@ public record UpdateExerciseRequestDto(
     string? TargetSpecies,
     string? ConditionCategory,
     int DifficultyLevel,
-    IReadOnlyList<CreateExerciseStepRequestDto>? Steps);
+    IReadOnlyList<CreateExerciseStepRequestDto>? Steps,
+    IReadOnlyList<ExerciseVideoVariationDto>? VideoVariations = null);
 
 public record UploadExerciseMediaResultDto(
     string Url,

@@ -200,6 +200,14 @@ using (var scope = app.Services.CreateScope())
             BEGIN
                 ALTER TABLE [Users] ADD [IsApproved] bit NOT NULL CONSTRAINT [DF_Users_IsApproved] DEFAULT (1);
             END
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = 'ProfilePictureUrl')
+            BEGIN
+                ALTER TABLE [Users] ADD [ProfilePictureUrl] nvarchar(1000) NULL;
+            END
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Pets' AND COLUMN_NAME = 'ProfilePictureUrl')
+            BEGIN
+                ALTER TABLE [Pets] ADD [ProfilePictureUrl] nvarchar(1000) NULL;
+            END
             IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'SoapNotes')
             BEGIN
                 CREATE TABLE [SoapNotes] (

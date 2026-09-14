@@ -10,6 +10,7 @@ class AuthUser {
   final String? clinicName;
   final String? clinicInviteCode;
   final bool isEmailVerified;
+  final String? profilePictureUrl;
 
   const AuthUser({
     required this.userId,
@@ -23,6 +24,7 @@ class AuthUser {
     this.clinicName,
     this.clinicInviteCode,
     this.isEmailVerified = false,
+    this.profilePictureUrl,
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class AuthUser {
       clinicName: json['clinicName'] as String?,
       clinicInviteCode: json['clinicInviteCode'] as String?,
       isEmailVerified: json['isEmailVerified'] as bool? ?? false,
+      profilePictureUrl: json['profilePictureUrl'] as String?,
     );
   }
 }

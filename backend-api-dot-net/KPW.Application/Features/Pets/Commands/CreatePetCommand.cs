@@ -59,7 +59,8 @@ public class CreatePetCommandHandler : IRequestHandler<CreatePetCommand, PetDto>
                     Species = request.Species,
                     Breed = request.Breed?.Trim(),
                     BirthDate = request.BirthDate,
-                    WeightKg = request.WeightKg
+                    WeightKg = request.WeightKg,
+                    ProfilePictureUrl = request.ProfilePictureUrl?.Trim()
                 };
 
                 _dbContext.Set<Pet>().Add(pet);

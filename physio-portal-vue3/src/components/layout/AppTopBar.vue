@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Bell,
@@ -13,11 +13,17 @@ import {
 } from '@lucide/vue'
 import { useAuthStore } from '../../store/auth'
 import { type PortalNotification, useNotificationsStore } from '../../store/notifications'
+import { resolveMediaUrl } from '../../api/videos'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const notificationsStore = useNotificationsStore()
+const imageError = ref(false)
+
+watch(() => auth.user?.profilePictureUrl, () => {
+  imageError.value = false
+})
 
 const pageTitle = computed(() => (route.meta.title as string) ?? 'Dashboard')
 const isPopoverOpen = ref(false)
@@ -215,14 +221,24 @@ onUnmounted(() => {
           <CircleHelp class="h-5 w-5" :stroke-width="1.75" />
         </button>
 
-        <!-- User Initials Avatar -->
-        <div
+        <!-- User Avatar -->
+        <router-link
           v-if="auth.user"
-          class="flex h-9 w-9 items-center justify-center rounded-full bg-sage/20 text-xs font-bold text-sage"
+          to="/settings"
+          class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-sage/20 text-xs font-bold text-sage transition-transform hover:scale-105"
           :title="`${auth.user.firstName} ${auth.user.lastName}`"
         >
-          {{ auth.user.firstName?.[0] }}{{ auth.user.lastName?.[0] }}
-        </div>
+          <img
+            v-if="auth.user.profilePictureUrl && !imageError"
+            :src="resolveMediaUrl(auth.user.profilePictureUrl)!"
+            :alt="`${auth.user.firstName} ${auth.user.lastName}`"
+            class="h-full w-full object-cover"
+            @error="imageError = true"
+          />
+          <span v-else>
+            {{ auth.user.firstName?.[0] }}{{ auth.user.lastName?.[0] }}
+          </span>
+        </router-link>
       </div>
     </div>
   </header>

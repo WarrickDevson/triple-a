@@ -286,7 +286,11 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                                 onTap: () => _openThread(pet),
                                 child: Row(
                                   children: [
-                                    PetAvatar(name: pet.petName, species: pet.species),
+                                    PetAvatar(
+                                      name: pet.petName,
+                                      species: pet.species,
+                                      imageUrl: pet.profilePictureUrl,
+                                    ),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(

@@ -59,6 +59,20 @@ export async function updateProfile(payload: UpdateProfileRequest): Promise<Auth
   return data
 }
 
+export async function uploadProfilePicture(file: File): Promise<AuthUser> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const { data } = await apiClient.post<AuthUser>('/api/auth/profile-picture', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
+export async function deleteProfilePicture(): Promise<AuthUser> {
+  const { data } = await apiClient.delete<AuthUser>('/api/auth/profile-picture')
+  return data
+}
+
 export async function forgotPassword(payload: ForgotPasswordRequest): Promise<MessageResponse> {
   const { data } = await apiClient.post<MessageResponse>('/api/auth/forgot-password', payload)
   return data

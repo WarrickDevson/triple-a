@@ -280,7 +280,12 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen> {
         children: [
           Row(
             children: [
-              PetAvatar(name: pet.petName, species: pet.species, size: 48),
+              PetAvatar(
+                name: pet.petName,
+                species: pet.species,
+                imageUrl: pet.profilePictureUrl,
+                size: 48,
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

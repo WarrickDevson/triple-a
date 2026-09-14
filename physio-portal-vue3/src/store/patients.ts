@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { createPet, getClinicPatients } from '../api/pets'
+import { createPet, deletePetPhoto, getClinicPatients, uploadPetPhoto } from '../api/pets'
 import type { CreatePetRequest, Pet } from '../types/pet'
 
 export const usePatientsStore = defineStore('patients', () => {
@@ -41,9 +41,54 @@ export const usePatientsStore = defineStore('patients', () => {
     }
   }
 
+  async function uploadPhoto(petId: number, file: File) {
+    loading.value = true
+    error.value = null
+    try {
+      const updatedPet = await uploadPetPhoto(petId, file)
+      const index = patients.value.findIndex((p) => p.petId === petId)
+      if (index !== -1) {
+        patients.value[index] = updatedPet
+      }
+      return updatedPet
+    } catch {
+      error.value = 'Unable to upload pet photo.'
+      throw new Error(error.value)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function removePhoto(petId: number) {
+    loading.value = true
+    error.value = null
+    try {
+      const updatedPet = await deletePetPhoto(petId)
+      const index = patients.value.findIndex((p) => p.petId === petId)
+      if (index !== -1) {
+        patients.value[index] = updatedPet
+      }
+      return updatedPet
+    } catch {
+      error.value = 'Unable to remove pet photo.'
+      throw new Error(error.value)
+    } finally {
+      loading.value = false
+    }
+  }
+
   function getPatientById(petId: number) {
     return patients.value.find((p) => p.petId === petId) ?? null
   }
 
-  return { patients, loading, error, fetchClinicPatients, createPatient, getPatientById }
+  return {
+    patients,
+    loading,
+    error,
+    fetchClinicPatients,
+    createPatient,
+    uploadPhoto,
+    removePhoto,
+    getPatientById,
+  }
 })

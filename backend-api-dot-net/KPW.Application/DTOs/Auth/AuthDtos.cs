@@ -13,7 +13,8 @@ public record AuthUserDto(
     string? ClinicName = null,
     string? ClinicInviteCode = null,
     bool IsEmailVerified = false,
-    bool IsApproved = true);
+    bool IsApproved = true,
+    string? ProfilePictureUrl = null);
 
 public record AuthResponseDto(
     string AccessToken,
@@ -43,7 +44,8 @@ public record PhysioApprovalDto(
     bool IsEmailVerified,
     bool IsApproved,
     bool IsActive,
-    DateTime CreatedDate);
+    DateTime CreatedDate,
+    string? ProfilePictureUrl = null);
 
 public record SendAdminInviteRequestDto(
     string RecipientEmail,
@@ -98,7 +100,8 @@ public record UpdateProfileRequestDto(
     string FirstName,
     string LastName,
     string? PhoneNumber = null,
-    string? ClinicName = null);
+    string? ClinicName = null,
+    string? ProfilePictureUrl = null);
 
 public record DataDeletionRequestDto(
     string Email,
@@ -124,11 +127,9 @@ public record AdminUserSummaryDto(
     bool IsApproved,
     int PetCount,
     DateTime CreatedDate,
-    bool IsEmailVerified = false);
+    bool IsEmailVerified = false,
+    string? ProfilePictureUrl = null);
 
 public record AdminPurgeUserRequestDto(
     bool PurgeMediaAndLogs = true,
     string? AdminNotes = null);
-
-
-

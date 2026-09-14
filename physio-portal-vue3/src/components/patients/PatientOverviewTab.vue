@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { Camera, Trash2 } from '@lucide/vue'
 import DonutChart from '../dashboard/DonutChart.vue'
 import type { Appointment } from '../../types/appointment'
 import type { PatientDemoMeta } from '../../data/patientDemo'
@@ -7,6 +8,8 @@ import { statusBadgeClass, statusLabel } from '../../data/patientDemo'
 import type { RehabProgram } from '../../types/exercise'
 import type { Pet } from '../../types/pet'
 import { formatSaDate, formatSaTime } from '../../utils/dateTime'
+import { resolveMediaUrl } from '../../api/videos'
+import { usePatientsStore } from '../../store/patients'
 
 const props = defineProps<{
   patient: Pet
@@ -38,15 +41,97 @@ function formatDate(value: string) {
 function formatTime(value: string) {
   return formatSaTime(value)
 }
+
+const patientsStore = usePatientsStore()
+const fileInput = ref<HTMLInputElement | null>(null)
+const uploading = ref(false)
+const imageError = ref(false)
+
+watch(() => props.patient.profilePictureUrl, () => {
+  imageError.value = false
+})
+
+async function onPhotoSelected(e: Event) {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  uploading.value = true
+  try {
+    await patientsStore.uploadPhoto(props.patient.petId, file)
+  } catch (_) {
+    // handled in store
+  } finally {
+    uploading.value = false
+    target.value = ''
+  }
+}
+
+async function onRemovePhoto() {
+  uploading.value = true
+  try {
+    await patientsStore.removePhoto(props.patient.petId)
+  } catch (_) {
+    // handled in store
+  } finally {
+    uploading.value = false
+  }
+}
 </script>
 
 <template>
   <div class="space-y-5">
     <div class="flex flex-wrap items-start gap-4">
       <div
-        class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-sage-muted text-lg font-bold text-sage"
+        class="group relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sage-muted text-lg font-bold text-sage ring-2 ring-sage/20"
       >
-        {{ patient.petName.slice(0, 2).toUpperCase() }}
+        <img
+          v-if="patient.profilePictureUrl && !imageError"
+          :src="resolveMediaUrl(patient.profilePictureUrl)!"
+          :alt="patient.petName"
+          class="h-full w-full object-cover"
+          @error="imageError = true"
+        />
+        <span v-else>
+          {{ patient.petName.slice(0, 2).toUpperCase() }}
+        </span>
+
+        <!-- Hover overlay for upload/remove -->
+        <div class="absolute inset-0 flex items-center justify-center gap-1 bg-navy/60 opacity-0 transition-opacity group-hover:opacity-100">
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            class="hidden"
+            @change="onPhotoSelected"
+          />
+          <button
+            type="button"
+            :disabled="uploading"
+            class="rounded p-1 text-white hover:bg-white/20"
+            title="Upload pet photo"
+            @click="fileInput?.click()"
+          >
+            <Camera class="h-4 w-4" />
+          </button>
+          <button
+            v-if="patient.profilePictureUrl"
+            type="button"
+            :disabled="uploading"
+            class="rounded p-1 text-red-300 hover:bg-white/20 hover:text-red-100"
+            title="Remove photo"
+            @click="onRemovePhoto"
+          >
+            <Trash2 class="h-4 w-4" />
+          </button>
+        </div>
+
+        <div
+          v-if="uploading"
+          class="absolute inset-0 flex items-center justify-center bg-navy/70 text-xs text-white"
+        >
+          ...
+        </div>
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-2">

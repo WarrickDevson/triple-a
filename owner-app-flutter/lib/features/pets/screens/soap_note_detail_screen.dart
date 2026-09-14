@@ -256,7 +256,12 @@ class _SoapNoteDetailScreenState extends ConsumerState<SoapNoteDetailScreen> {
         children: [
           Row(
             children: [
-              PetAvatar(name: widget.pet.petName, species: widget.pet.species, size: 48),
+              PetAvatar(
+                name: widget.pet.petName,
+                species: widget.pet.species,
+                imageUrl: widget.pet.profilePictureUrl,
+                size: 48,
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

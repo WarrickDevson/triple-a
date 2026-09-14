@@ -14,6 +14,7 @@ public class PetConfiguration : IEntityTypeConfiguration<Pet>
         builder.Property(p => p.Species).HasMaxLength(50).IsRequired();
         builder.Property(p => p.Breed).HasMaxLength(100);
         builder.Property(p => p.WeightKg).HasPrecision(5, 2);
+        builder.Property(p => p.ProfilePictureUrl).HasMaxLength(1000);
 
         builder.HasOne(p => p.Owner)
             .WithMany(u => u.Pets)

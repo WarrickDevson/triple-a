@@ -1,11 +1,15 @@
 using FluentValidation;
 using KPW.Application.DTOs.Auth;
+using KPW.Application.Features.Auth;
 using KPW.Application.Features.Auth.Commands;
 using KPW.Application.Features.Auth.Queries;
 using KPW.Application.Features.Auth.Validators;
+using KPW.Application.Interfaces;
+using KPW.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace KPW.Api.Controllers;
 
@@ -185,6 +189,99 @@ public class AuthController : ControllerBase
         {
             return Unauthorized(new { message = ex.Message });
         }
+    }
+
+    [HttpPost("profile-picture")]
+    [Authorize]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<AuthUserDto>> UploadProfilePicture(
+        [FromForm] IFormFile file,
+        [FromServices] IFileStorageService fileStorageService,
+        [FromServices] DbContext dbContext,
+        [FromServices] ICurrentUserService currentUserService,
+        CancellationToken cancellationToken)
+    {
+        if (currentUserService.UserId is null)
+        {
+            return Unauthorized(new { message = "User is not authenticated." });
+        }
+
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { message = "No image selected." });
+        }
+
+        const long maxBytes = 5 * 1024 * 1024; // 5 MB
+        if (file.Length > maxBytes)
+        {
+            return BadRequest(new { message = "Image size exceeds 5 MB limit." });
+        }
+
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!allowedExtensions.Contains(ext))
+        {
+            return BadRequest(new { message = "Only JPG, PNG, and WebP images are allowed." });
+        }
+
+        var user = await dbContext.Set<User>()
+            .FirstOrDefaultAsync(u => u.UserId == currentUserService.UserId, cancellationToken);
+
+        if (user is null)
+        {
+            return Unauthorized(new { message = "User not found." });
+        }
+
+        await using var stream = file.OpenReadStream();
+        var storagePath = await fileStorageService.UploadAsync(
+            stream,
+            file.FileName,
+            folder: "avatars",
+            contentType: file.ContentType,
+            cancellationToken: cancellationToken);
+
+        user.ProfilePictureUrl = fileStorageService.GetPublicUrl(storagePath);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var clinic = user.ClinicId is null
+            ? null
+            : await dbContext.Set<Clinic>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.ClinicId == user.ClinicId, cancellationToken);
+
+        return Ok(AuthUserMapper.ToDto(user, clinic));
+    }
+
+    [HttpDelete("profile-picture")]
+    [Authorize]
+    public async Task<ActionResult<AuthUserDto>> DeleteProfilePicture(
+        [FromServices] DbContext dbContext,
+        [FromServices] ICurrentUserService currentUserService,
+        CancellationToken cancellationToken)
+    {
+        if (currentUserService.UserId is null)
+        {
+            return Unauthorized(new { message = "User is not authenticated." });
+        }
+
+        var user = await dbContext.Set<User>()
+            .FirstOrDefaultAsync(u => u.UserId == currentUserService.UserId, cancellationToken);
+
+        if (user is null)
+        {
+            return Unauthorized(new { message = "User not found." });
+        }
+
+        user.ProfilePictureUrl = null;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var clinic = user.ClinicId is null
+            ? null
+            : await dbContext.Set<Clinic>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.ClinicId == user.ClinicId, cancellationToken);
+
+        return Ok(AuthUserMapper.ToDto(user, clinic));
     }
 
     [HttpPost("verify-email")]

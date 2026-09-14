@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/section_card.dart';
+import '../../auth/models/auth_user.dart';
 import '../../ai/providers/ai_preferences_provider.dart';
 import '../../ai/screens/ai_chat_screen.dart';
 import '../../appointments/screens/appointments_screen.dart';
@@ -66,6 +68,24 @@ class MoreScreen extends ConsumerWidget {
     );
   }
 
+  String _resolveUrl(String path) {
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    final base = AppConfig.fromEnvironment().apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
+    final cleanPath = path.startsWith('/') ? path : '/$path';
+    return '$base$cleanPath';
+  }
+
+  Widget _buildUserInitials(AuthUser? user) {
+    final first = (user?.firstName.isNotEmpty ?? false) ? user!.firstName[0] : 'O';
+    final last = (user?.lastName.isNotEmpty ?? false) ? user!.lastName[0] : '';
+    return Center(
+      child: Text(
+        '$first$last'.toUpperCase(),
+        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.sage),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider.select((s) => s.user));
@@ -85,6 +105,27 @@ class MoreScreen extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.sageMuted,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.sage.withValues(alpha: 0.25)),
+                      ),
+                      child: ClipOval(
+                        child: user?.profilePictureUrl != null && user!.profilePictureUrl!.trim().isNotEmpty
+                            ? Image.network(
+                                _resolveUrl(user.profilePictureUrl!.trim()),
+                                width: 48,
+                                height: 48,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => _buildUserInitials(user),
+                              )
+                            : _buildUserInitials(user),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

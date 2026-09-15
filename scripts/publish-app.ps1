@@ -167,15 +167,18 @@ try {
         throw "flutter pub get failed to resolve packages."
     }
 
+    $bundlePath = Join-Path $FlutterDir "build\app\outputs\bundle\release\app-release.aab"
+    if (Test-Path $bundlePath) {
+        Remove-Item $bundlePath -Force -ErrorAction SilentlyContinue
+    }
+
     Write-Host ""
     Write-Host "--> Building Android App Bundle (.aab) for release..." -ForegroundColor Cyan
-    Write-Host "    API Base URL: $ApiBaseUrl" -ForegroundColor DarkGray
     & flutter build appbundle --release --dart-define="API_BASE_URL=$ApiBaseUrl"
-    
+
     # Check if bundle output exists
-    $bundlePath = Join-Path $FlutterDir "build\app\outputs\bundle\release\app-release.aab"
     if (-not (Test-Path $bundlePath)) {
-        throw "Build completed but bundle file was not found at $bundlePath"
+        throw "flutter build appbundle failed with exit code $LASTEXITCODE and no bundle was produced."
     }
 
     $bundleItem = Get-Item $bundlePath

@@ -26,6 +26,32 @@ public class GcsFileStorage : IFileStorageService
         _storageClient = StorageClient.Create();
         _urlSigner = UrlSigner.FromCredential(Google.Apis.Auth.OAuth2.GoogleCredential.GetApplicationDefault());
         _logger.LogInformation("GCS file storage configured for bucket {Bucket}", _options.Bucket);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var bucket = await _storageClient.GetBucketAsync(_options.Bucket);
+                var hasCors = bucket.Cors != null && bucket.Cors.Any(c => c.Origin != null && c.Origin.Contains("*"));
+                if (!hasCors)
+                {
+                    bucket.Cors ??= new List<Google.Apis.Storage.v1.Data.Bucket.CorsData>();
+                    bucket.Cors.Add(new Google.Apis.Storage.v1.Data.Bucket.CorsData
+                    {
+                        Origin = new List<string> { "*" },
+                        Method = new List<string> { "GET", "HEAD", "PUT", "POST", "DELETE", "OPTIONS" },
+                        ResponseHeader = new List<string> { "*" },
+                        MaxAgeSeconds = 3600
+                    });
+                    await _storageClient.UpdateBucketAsync(bucket);
+                    _logger.LogInformation("Successfully configured CORS on GCS bucket {Bucket}", _options.Bucket);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not automatically configure CORS on GCS bucket {Bucket}: {Message}", _options.Bucket, ex.Message);
+            }
+        });
     }
 
     public async Task<string> UploadAsync(

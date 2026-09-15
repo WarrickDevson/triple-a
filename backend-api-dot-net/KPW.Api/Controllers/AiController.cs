@@ -50,7 +50,7 @@ public class AiController : ControllerBase
     }
 
     [HttpPut("prompt-config")]
-    [Authorize(Roles = "SysAdmin,ClinicAdmin,Physiotherapist")]
+    [Authorize(Roles = "SysAdmin,Physio,Physiotherapist,ClinicAdmin")]
     public async Task<ActionResult<AiPromptConfigDto>> UpdatePromptConfig(
         [FromBody] UpdateAiPromptConfigRequestDto request,
         [FromServices] IAiPromptConfigService promptConfigService,
@@ -68,7 +68,7 @@ public class AiController : ControllerBase
     }
 
     [HttpPost("prompt-config/reset")]
-    [Authorize(Roles = "SysAdmin,ClinicAdmin,Physiotherapist")]
+    [Authorize(Roles = "SysAdmin,Physio,Physiotherapist,ClinicAdmin")]
     public async Task<ActionResult<AiPromptConfigDto>> ResetPromptConfig(
         [FromServices] IAiPromptConfigService promptConfigService,
         [FromServices] ICurrentUserService currentUserService,

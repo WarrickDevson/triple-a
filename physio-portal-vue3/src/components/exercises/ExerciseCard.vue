@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Activity, Edit3, Eye, FileVideo, Sparkles, Star } from '@lucide/vue'
+import { Activity, Edit3, Eye, FileVideo, Film, Sparkles, Star } from '@lucide/vue'
 import { getCategoryLabel } from '../../data/exerciseDemo'
 import { useAuthStore } from '../../store/auth'
 import type { Exercise } from '../../types/exercise'
@@ -29,6 +29,17 @@ const displayImage = computed(() => {
 
 const isCustomOverride = computed(() => Boolean(props.exercise.baseExerciseId))
 const isStandaloneCustom = computed(() => !props.exercise.isSystemDefault && !props.exercise.baseExerciseId)
+
+const breedVariations = computed(() => {
+  if (!props.exercise.videoVariations) return []
+  const list: string[] = []
+  for (const v of props.exercise.videoVariations) {
+    if (v.breedCategory && !list.includes(v.breedCategory)) {
+      list.push(v.breedCategory)
+    }
+  }
+  return list
+})
 </script>
 
 <template>
@@ -132,6 +143,25 @@ const isStandaloneCustom = computed(() => !props.exercise.isSystemDefault && !pr
           </span>
           <span v-if="exercise.steps?.length" class="inline-flex items-center rounded-md bg-sage-muted/30 px-2.5 py-1 text-[11px] font-semibold text-sage">
             {{ exercise.steps.length }} steps
+          </span>
+        </div>
+
+        <!-- Breed / Conformation variations badge -->
+        <div v-if="breedVariations.length > 0" class="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <span
+            v-for="b in breedVariations.slice(0, 3)"
+            :key="b"
+            class="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-900 border border-amber-200/70"
+            :title="`Tailored for ${b}`"
+          >
+            <Film class="h-2.5 w-2.5 text-amber-600" />
+            {{ b }}
+          </span>
+          <span
+            v-if="breedVariations.length > 3"
+            class="text-[10px] font-semibold text-neutral-muted"
+          >
+            +{{ breedVariations.length - 3 }} more
           </span>
         </div>
 

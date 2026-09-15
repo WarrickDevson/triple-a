@@ -32,11 +32,15 @@ public class PetsController : ControllerBase
         [FromServices] IValidator<CreatePetRequestDto> validator,
         CancellationToken cancellationToken)
     {
-        await validator.ValidateAndThrowAsync(request, cancellationToken);
         try
         {
+            await validator.ValidateAndThrowAsync(request, cancellationToken);
             var result = await _mediator.Send(new CreatePetCommand(request), cancellationToken);
             return CreatedAtAction(nameof(GetByOwner), new { id = result.OwnerId }, result);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message, errors = ex.Errors.Select(e => e.ErrorMessage) });
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -83,11 +87,15 @@ public class PetsController : ControllerBase
         [FromServices] IValidator<UpdatePetRequestDto> validator,
         CancellationToken cancellationToken)
     {
-        await validator.ValidateAndThrowAsync(request, cancellationToken);
         try
         {
+            await validator.ValidateAndThrowAsync(request, cancellationToken);
             var result = await _mediator.Send(new UpdatePetCommand(id, request), cancellationToken);
             return Ok(result);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message, errors = ex.Errors.Select(e => e.ErrorMessage) });
         }
         catch (KeyNotFoundException ex)
         {

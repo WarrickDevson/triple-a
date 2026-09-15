@@ -106,11 +106,17 @@ const isDirectVideoUrl = computed(() => {
 })
 
 function addVideoVariation() {
+  const currentSpecies = targetSpecies.value && targetSpecies.value !== 'All'
+    ? targetSpecies.value
+    : (speciesStore.speciesList[0]?.name || 'Canine')
+  const availableBreeds = speciesStore.breedsForSpecies(currentSpecies)
+  const defaultBreed = availableBreeds[0]?.name || ''
+
   videoVariations.value.push({
-    species: targetSpecies.value || 'Canine',
-    breedCategory: 'Chondrodystrophic (Dachshund/Corgi)',
+    species: currentSpecies,
+    breedCategory: defaultBreed,
     videoUrl: '',
-    title: '',
+    title: defaultBreed ? `${currentSpecies} - ${defaultBreed}` : '',
     notes: '',
   })
 }
@@ -179,6 +185,7 @@ watch(
 )
 
 function initForm() {
+  speciesStore.loadConfig(true).catch(() => undefined)
   errorMessage.value = ''
   isSubmitting.value = false
   activeTab.value = props.initialTab || 'editor'
@@ -706,7 +713,7 @@ const modalSubtitle = computed(() => {
                     </button>
                   </div>
 
-                  <div class="grid grid-cols-2 gap-2">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <label class="block text-[11px] font-semibold text-navy mb-0.5">Target Species</label>
                       <select
@@ -722,11 +729,46 @@ const modalSubtitle = computed(() => {
                       <label class="block text-[11px] font-semibold text-navy mb-0.5">Breed / Conformation Tag</label>
                       <input
                         v-model="variation.breedCategory"
+                        :list="`breed-datalist-${vIdx}`"
                         type="text"
-                        placeholder="e.g. Chondrodystrophic (Dachshund/Corgi), Giant, Toy"
+                        placeholder="Select or type breed (e.g. Dachshund, German Shepherd)"
                         class="w-full rounded-md border border-neutral-grey bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-sage"
                       />
+                      <datalist :id="`breed-datalist-${vIdx}`">
+                        <option
+                          v-for="br in speciesStore.breedsForSpecies(variation.species)"
+                          :key="br.name"
+                          :value="br.name"
+                        >
+                          {{ br.name }} ({{ br.sizeCategory }} - {{ br.conformation }})
+                        </option>
+                      </datalist>
                     </div>
+                  </div>
+
+                  <!-- Quick Breed Selection Chips from Species & Breed Config -->
+                  <div
+                    v-if="speciesStore.breedsForSpecies(variation.species).length > 0"
+                    class="flex flex-wrap items-center gap-1.5 rounded-md bg-slate-50 p-2 border border-neutral-grey/50"
+                  >
+                    <span class="text-[10px] font-semibold text-neutral-muted">Configured Breeds:</span>
+                    <button
+                      v-for="br in speciesStore.breedsForSpecies(variation.species).slice(0, 8)"
+                      :key="br.name"
+                      type="button"
+                      class="rounded px-2 py-0.5 text-[10px] font-medium transition-colors"
+                      :class="
+                        variation.breedCategory === br.name
+                          ? 'bg-sage text-white font-bold shadow-2xs'
+                          : 'bg-white border border-neutral-grey/70 text-navy hover:bg-sage/10 hover:border-sage/40'
+                      "
+                      @click="
+                        variation.breedCategory = br.name;
+                        if (!variation.title) variation.title = `${variation.species || 'Target'} - ${br.name}`;
+                      "
+                    >
+                      {{ br.name }}
+                    </button>
                   </div>
 
                   <div>

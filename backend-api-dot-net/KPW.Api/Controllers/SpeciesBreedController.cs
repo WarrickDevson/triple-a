@@ -23,6 +23,7 @@ public class SpeciesBreedController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<SpeciesBreedConfigDto>> GetConfig(CancellationToken cancellationToken)
     {
         var config = await _configService.GetConfigAsync(cancellationToken);
@@ -30,7 +31,7 @@ public class SpeciesBreedController : ControllerBase
     }
 
     [HttpPut]
-    [Authorize(Roles = "SysAdmin,ClinicAdmin,Physiotherapist")]
+    [Authorize(Roles = "SysAdmin,Physio,Physiotherapist,ClinicAdmin")]
     public async Task<ActionResult<SpeciesBreedConfigDto>> UpdateConfig(
         [FromBody] UpdateSpeciesBreedConfigRequestDto request,
         CancellationToken cancellationToken)
@@ -46,7 +47,7 @@ public class SpeciesBreedController : ControllerBase
     }
 
     [HttpPost("reset")]
-    [Authorize(Roles = "SysAdmin,ClinicAdmin,Physiotherapist")]
+    [Authorize(Roles = "SysAdmin,Physio,Physiotherapist,ClinicAdmin")]
     public async Task<ActionResult<SpeciesBreedConfigDto>> ResetConfig(CancellationToken cancellationToken)
     {
         var modifiedBy = _currentUserService.Email ?? _currentUserService.UserId?.ToString() ?? "Admin";

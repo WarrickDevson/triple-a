@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -100,10 +100,10 @@ class PetsNotifier extends StateNotifier<PetsState> {
     state = PetsState(pets: state.pets, isLoading: true);
     try {
       MultipartFile filePart;
-      if (filePath != null && filePath.isNotEmpty) {
-        filePart = await MultipartFile.fromFile(filePath, filename: fileName);
-      } else if (bytes != null) {
+      if (bytes != null) {
         filePart = MultipartFile.fromBytes(bytes, filename: fileName);
+      } else if (!kIsWeb && filePath != null && filePath.isNotEmpty) {
+        filePart = await MultipartFile.fromFile(filePath, filename: fileName);
       } else {
         state = PetsState(pets: state.pets, error: 'No image data available.');
         return false;

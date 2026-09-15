@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -435,10 +435,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState(user: state.user, isLoading: true);
     try {
       MultipartFile filePart;
-      if (filePath != null && filePath.isNotEmpty) {
-        filePart = await MultipartFile.fromFile(filePath, filename: fileName);
-      } else if (bytes != null) {
+      if (bytes != null) {
         filePart = MultipartFile.fromBytes(bytes, filename: fileName);
+      } else if (!kIsWeb && filePath != null && filePath.isNotEmpty) {
+        filePart = await MultipartFile.fromFile(filePath, filename: fileName);
       } else {
         state = AuthState(user: state.user, error: 'No image data available.');
         return false;

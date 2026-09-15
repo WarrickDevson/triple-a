@@ -57,7 +57,7 @@ public class GetExercisesQueryHandler : IRequestHandler<GetExercisesQuery, IRead
         if (!string.IsNullOrWhiteSpace(query.Species))
         {
             exercisesQuery = exercisesQuery.Where(e =>
-                e.TargetSpecies == null || e.TargetSpecies == query.Species);
+                e.TargetSpecies == null || e.TargetSpecies == "All" || e.TargetSpecies == query.Species);
         }
 
         if (!string.IsNullOrWhiteSpace(query.Condition))

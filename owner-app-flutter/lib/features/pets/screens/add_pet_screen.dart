@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
-import '../models/pet.dart';
 import '../providers/pets_provider.dart';
+import '../providers/species_breed_provider.dart';
 
 class AddPetScreen extends ConsumerStatefulWidget {
   const AddPetScreen({super.key});
@@ -20,7 +20,7 @@ class _AddPetScreenState extends ConsumerState<AddPetScreen> {
   final _diagnosisController = TextEditingController();
   final _conditionController = TextEditingController();
 
-  String _species = petSpecies.first;
+  String? _selectedSpecies;
   DateTime? _birthDate;
   String? _formError;
 
@@ -54,9 +54,13 @@ class _AddPetScreenState extends ConsumerState<AddPetScreen> {
         ? null
         : double.tryParse(_weightController.text.trim());
 
+    final speciesState = ref.read(speciesBreedProvider);
+    final activeSpecies = _selectedSpecies ??
+        (speciesState.species.isNotEmpty ? speciesState.species.first.name : 'Canine');
+
     final success = await ref.read(petsProvider.notifier).createPet(
           petName: _petNameController.text.trim(),
-          species: _species,
+          species: activeSpecies,
           breed: _breedController.text.trim(),
           birthDate: _birthDate,
           weightKg: weight,
@@ -79,6 +83,11 @@ class _AddPetScreenState extends ConsumerState<AddPetScreen> {
   @override
   Widget build(BuildContext context) {
     final petsState = ref.watch(petsProvider);
+    final speciesBreedState = ref.watch(speciesBreedProvider);
+    final availableSpecies = speciesBreedState.species;
+    final currentSpecies = _selectedSpecies ??
+        (availableSpecies.isNotEmpty ? availableSpecies.first.name : 'Canine');
+    final currentBreeds = speciesBreedState.breedsForSpecies(currentSpecies);
 
     return AppPageScaffold(
       title: 'Add New Pet',
@@ -112,20 +121,65 @@ class _AddPetScreenState extends ConsumerState<AddPetScreen> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    initialValue: _species,
+                    key: ValueKey(currentSpecies),
+                    initialValue: availableSpecies.any((s) => s.name == currentSpecies)
+                        ? currentSpecies
+                        : (availableSpecies.isNotEmpty ? availableSpecies.first.name : null),
                     decoration: const InputDecoration(labelText: 'Species'),
-                    items: petSpecies
-                        .map((species) => DropdownMenuItem(value: species, child: Text(species)))
+                    items: availableSpecies
+                        .map((s) => DropdownMenuItem(
+                              value: s.name,
+                              child: Text(s.displayName),
+                            ))
                         .toList(),
                     onChanged: (value) {
-                      if (value != null) setState(() => _species = value);
+                      if (value != null) {
+                        setState(() {
+                          _selectedSpecies = value;
+                          _breedController.clear();
+                        });
+                      }
                     },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _breedController,
-                    decoration: const InputDecoration(labelText: 'Breed'),
+                    decoration: InputDecoration(
+                      labelText: 'Breed',
+                      hintText: currentBreeds.isNotEmpty
+                          ? 'e.g. ${currentBreeds.first.name}'
+                          : 'Enter breed name',
+                    ),
                   ),
+                  if (currentBreeds.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: currentBreeds.take(6).map((b) {
+                        final isSelected =
+                            _breedController.text.trim().toLowerCase() == b.name.toLowerCase();
+                        return ActionChip(
+                          label: Text(
+                            b.name,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? Colors.white : AppColors.primaryDark,
+                            ),
+                          ),
+                          backgroundColor: isSelected ? AppColors.accent : Colors.grey.shade100,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          onPressed: () {
+                            setState(() {
+                              _breedController.text = b.name;
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   ListTile(
                     contentPadding: EdgeInsets.zero,

@@ -101,7 +101,7 @@ export const useSpeciesBreedStore = defineStore('speciesBreed', () => {
     })),
   )
 
-  function breedsForSpecies(speciesName?: string): BreedConfig[] {
+  function breedsForSpecies(speciesName?: string | null): BreedConfig[] {
     if (!speciesName) return []
     const match = speciesList.value.find(
       (s) => s.name.toLowerCase() === speciesName.trim().toLowerCase(),

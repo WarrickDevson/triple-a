@@ -1,23 +1,56 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Bookmark, ClipboardList, Dumbbell, Plus } from '@lucide/vue'
 import { BODY_REGIONS } from '../../data/exerciseDemo'
-import { PET_SPECIES } from '../../types/pet'
+import { useSpeciesBreedStore } from '../../store/speciesBreed'
 
-defineProps<{
-  species: string
-  bodyRegion: string
-  difficulty: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    species: string
+    breed?: string
+    bodyRegion: string
+    difficulty: string
+  }>(),
+  {
+    breed: 'All Breeds',
+  },
+)
 
 const emit = defineEmits<{
   'update:species': [value: string]
+  'update:breed': [value: string]
   'update:bodyRegion': [value: string]
   'update:difficulty': [value: string]
   clear: []
 }>()
 
-const speciesOptions = ['All Species', ...PET_SPECIES]
+const speciesStore = useSpeciesBreedStore()
+
+onMounted(() => {
+  speciesStore.loadConfig().catch(() => undefined)
+})
+
+const speciesOptions = computed(() => {
+  const configured = speciesStore.speciesList.map((s) => s.name)
+  return ['All Species', ...configured]
+})
+
+const breedOptions = computed(() => {
+  if (props.species && props.species !== 'All Species') {
+    const list = speciesStore.breedsForSpecies(props.species)
+    return ['All Breeds', ...list.map((b) => b.name)]
+  }
+  // If "All Species", collect all breeds across all species
+  const allBreeds = new Set<string>()
+  for (const sp of speciesStore.speciesList) {
+    for (const br of sp.breeds || []) {
+      allBreeds.add(br.name)
+    }
+  }
+  return ['All Breeds', ...Array.from(allBreeds).sort()]
+})
+
 const difficultyOptions = ['All Levels', '1', '2', '3', '4', '5']
 </script>
 
@@ -68,6 +101,16 @@ const difficultyOptions = ['All Levels', '1', '2', '3', '4', '5']
             @change="emit('update:species', ($event.target as HTMLSelectElement).value)"
           >
             <option v-for="opt in speciesOptions" :key="opt" :value="opt">{{ opt }}</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-xs font-medium text-neutral-muted">Breed / Conformation</span>
+          <select
+            :value="breed || 'All Breeds'"
+            class="mt-1 w-full rounded-lg border border-neutral-grey bg-surface px-3 py-2 text-sm text-navy outline-none focus:border-sage"
+            @change="emit('update:breed', ($event.target as HTMLSelectElement).value)"
+          >
+            <option v-for="opt in breedOptions" :key="opt" :value="opt">{{ opt }}</option>
           </select>
         </label>
         <label class="block">

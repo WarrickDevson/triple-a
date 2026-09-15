@@ -11,10 +11,12 @@ import BaseButton from '../components/BaseButton.vue'
 import { getCategoryLabel } from '../data/exerciseDemo'
 import { useAuthStore } from '../store/auth'
 import { useExercisesStore } from '../store/exercises'
+import { useSpeciesBreedStore } from '../store/speciesBreed'
 import type { Exercise } from '../types/exercise'
 
 const authStore = useAuthStore()
 const exercisesStore = useExercisesStore()
+const speciesStore = useSpeciesBreedStore()
 
 const isSysAdmin = computed(() => authStore.user?.userRole === 'SysAdmin')
 
@@ -22,6 +24,7 @@ const search = ref('')
 const selectedCategory = ref('All Categories')
 const activeTab = ref<'all' | 'favourites' | 'region' | 'templates'>('all')
 const speciesFilter = ref('All Species')
+const breedFilter = ref('All Breeds')
 const bodyRegionFilter = ref('All Regions')
 const difficultyFilter = ref('All Levels')
 const libraryFilter = ref<'all' | 'defaults' | 'custom' | 'overrides'>('all')
@@ -34,9 +37,11 @@ const showFiltersMobile = ref(false)
 
 onMounted(() => {
   exercisesStore.fetchExercises().catch(() => undefined)
+  speciesStore.loadConfig().catch(() => undefined)
 })
 
 watch(speciesFilter, async (value) => {
+  breedFilter.value = 'All Breeds'
   const species = value === 'All Species' ? undefined : value
   await exercisesStore.fetchExercises(species, undefined, true).catch(() => undefined)
 })
@@ -84,6 +89,19 @@ const filteredExercises = computed(() => {
 
   if (difficultyFilter.value !== 'All Levels') {
     list = list.filter((e) => e.difficultyLevel === Number(difficultyFilter.value))
+  }
+
+  if (breedFilter.value !== 'All Breeds') {
+    const bQuery = breedFilter.value.trim().toLowerCase()
+    list = list.filter((e) => {
+      const inVariations = e.videoVariations?.some(
+        (v) => v.breedCategory?.toLowerCase().includes(bQuery),
+      )
+      const inTitle = e.title.toLowerCase().includes(bQuery)
+      const inDesc = e.shortDescription?.toLowerCase().includes(bQuery) ?? false
+      const inMuscles = e.targetedMuscles?.toLowerCase().includes(bQuery) ?? false
+      return inVariations || inTitle || inDesc || inMuscles
+    })
   }
 
   if (activeTab.value === 'region' && bodyRegionFilter.value === 'All Regions') {
@@ -139,6 +157,7 @@ async function handleToggleActive(exerciseId: number) {
 
 function clearFilters() {
   speciesFilter.value = 'All Species'
+  breedFilter.value = 'All Breeds'
   bodyRegionFilter.value = 'All Regions'
   difficultyFilter.value = 'All Levels'
   selectedCategory.value = 'All Categories'
@@ -274,6 +293,7 @@ function clearFilters() {
       <div class="hidden min-h-[600px] xl:block" :class="{ '!block': showFiltersMobile }">
         <ExerciseFilterPanel
           v-model:species="speciesFilter"
+          v-model:breed="breedFilter"
           v-model:body-region="bodyRegionFilter"
           v-model:difficulty="difficultyFilter"
           @clear="clearFilters"

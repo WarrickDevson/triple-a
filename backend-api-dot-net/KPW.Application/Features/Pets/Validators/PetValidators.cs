@@ -9,8 +9,7 @@ public class CreatePetRequestValidator : AbstractValidator<CreatePetRequestDto>
     public CreatePetRequestValidator()
     {
         RuleFor(x => x.PetName).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Species).Must(s => PetSpecies.All.Contains(s))
-            .WithMessage($"Species must be one of: {string.Join(", ", PetSpecies.All)}");
+        RuleFor(x => x.Species).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Breed).MaximumLength(100);
         RuleFor(x => x.WeightKg).GreaterThan(0).When(x => x.WeightKg.HasValue);
         RuleFor(x => x.BirthDate).LessThanOrEqualTo(DateOnly.FromDateTime(DateTime.UtcNow))
@@ -34,8 +33,7 @@ public class UpdatePetRequestValidator : AbstractValidator<UpdatePetRequestDto>
     public UpdatePetRequestValidator()
     {
         RuleFor(x => x.PetName).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Species).Must(s => PetSpecies.All.Contains(s))
-            .WithMessage($"Species must be one of: {string.Join(", ", PetSpecies.All)}");
+        RuleFor(x => x.Species).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Breed).MaximumLength(100);
         RuleFor(x => x.WeightKg).GreaterThan(0).When(x => x.WeightKg.HasValue);
         RuleFor(x => x.BirthDate).LessThanOrEqualTo(DateOnly.FromDateTime(DateTime.UtcNow))

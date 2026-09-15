@@ -12,7 +12,8 @@ public record MessageDto(
     string? AttachmentName,
     string? AttachmentType,
     DateTime? ReadAt,
-    DateTime CreatedDate);
+    DateTime CreatedDate,
+    string? SenderProfilePictureUrl = null);
 
 public record MessageThreadDto(
     int MessageThreadId,
@@ -24,7 +25,10 @@ public record MessageThreadDto(
     string PhysioName,
     string? LastMessagePreview,
     DateTime? LastMessageAt,
-    int UnreadCount);
+    int UnreadCount,
+    string? PetProfilePictureUrl = null,
+    string? OwnerProfilePictureUrl = null,
+    string? PhysioProfilePictureUrl = null);
 
 public record SendMessageRequestDto(
     string Body,

@@ -3,30 +3,27 @@ import '../config/app_config.dart';
 import '../theme/app_colors.dart';
 import 'full_screen_image_viewer.dart';
 
-class PetAvatar extends StatelessWidget {
-  const PetAvatar({
+class UserAvatar extends StatelessWidget {
+  const UserAvatar({
     super.key,
     required this.name,
-    this.size = 48,
-    this.species,
+    this.roleTitle,
     this.imageUrl,
+    this.size = 40,
     this.enableViewer = false,
+    this.backgroundColor,
+    this.textColor,
     this.onTap,
   });
 
   final String name;
-  final double size;
-  final String? species;
+  final String? roleTitle;
   final String? imageUrl;
+  final double size;
   final bool enableViewer;
+  final Color? backgroundColor;
+  final Color? textColor;
   final VoidCallback? onTap;
-
-  IconData get _icon => switch (species?.toLowerCase()) {
-        'feline' || 'cat' => Icons.pets,
-        'equine' || 'horse' => Icons.agriculture_outlined,
-        'avian' || 'bird' => Icons.flutter_dash,
-        _ => Icons.pets_rounded,
-      };
 
   String _resolveUrl(String path) {
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
@@ -35,8 +32,24 @@ class PetAvatar extends StatelessWidget {
     return '$base$cleanPath';
   }
 
+  String _getInitials() {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.isEmpty || parts[0].isEmpty) return 'U';
+    if (parts.length == 1) return parts[0][0].toUpperCase();
+    return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
+  }
+
   Widget _buildFallback() {
-    return Icon(_icon, color: AppColors.sage, size: size * 0.45);
+    return Center(
+      child: Text(
+        _getInitials(),
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: size * 0.38,
+          color: textColor ?? AppColors.sage,
+        ),
+      ),
+    );
   }
 
   @override
@@ -47,9 +60,11 @@ class PetAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.sageMuted,
+        color: backgroundColor ?? AppColors.sageMuted,
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.sage.withValues(alpha: 0.25)),
+        border: Border.all(
+          color: (textColor ?? AppColors.sage).withValues(alpha: 0.25),
+        ),
       ),
       child: ClipOval(
         child: hasImage
@@ -65,7 +80,10 @@ class PetAvatar extends StatelessWidget {
                     child: SizedBox(
                       width: size * 0.4,
                       height: size * 0.4,
-                      child: const CircularProgressIndicator(strokeWidth: 2, color: AppColors.sage),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: textColor ?? AppColors.sage,
+                      ),
                     ),
                   );
                 },
@@ -82,7 +100,7 @@ class PetAvatar extends StatelessWidget {
                 context,
                 imageUrl: imageUrl!,
                 title: name,
-                subtitle: species,
+                subtitle: roleTitle,
               );
             },
         child: avatar,
@@ -94,4 +112,3 @@ class PetAvatar extends StatelessWidget {
     return avatar;
   }
 }
-

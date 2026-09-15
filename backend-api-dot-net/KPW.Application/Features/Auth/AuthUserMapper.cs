@@ -1,11 +1,12 @@
 using KPW.Application.DTOs.Auth;
+using KPW.Application.Interfaces;
 using KPW.Domain.Entities;
 
 namespace KPW.Application.Features.Auth;
 
 public static class AuthUserMapper
 {
-    public static AuthUserDto ToDto(User user, Clinic? clinic = null) =>
+    public static AuthUserDto ToDto(User user, Clinic? clinic = null, IFileStorageService? fileStorage = null) =>
         new(
             user.UserId,
             user.Email,
@@ -18,5 +19,7 @@ public static class AuthUserMapper
             clinic?.InviteCode,
             user.IsEmailVerified,
             user.IsApproved,
-            user.ProfilePictureUrl);
+            fileStorage != null && !string.IsNullOrWhiteSpace(user.ProfilePictureUrl)
+                ? fileStorage.GetPublicUrl(user.ProfilePictureUrl)
+                : user.ProfilePictureUrl);
 }

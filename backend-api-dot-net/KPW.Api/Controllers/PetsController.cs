@@ -101,6 +101,7 @@ public class PetsController : ControllerBase
 
     [HttpPost("{id:int}/photo")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(30 * 1024 * 1024)]
     public async Task<ActionResult<PetDto>> UploadPhoto(
         int id,
         [FromForm] IFormFile file,
@@ -114,17 +115,17 @@ public class PetsController : ControllerBase
             return BadRequest(new { message = "No image selected." });
         }
 
-        const long maxBytes = 5 * 1024 * 1024; // 5 MB
+        const long maxBytes = 25 * 1024 * 1024; // 25 MB
         if (file.Length > maxBytes)
         {
-            return BadRequest(new { message = "Image size exceeds 5 MB limit." });
+            return BadRequest(new { message = "Image size exceeds 25 MB limit." });
         }
 
-        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".jfif", ".heic", ".heif" };
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!allowedExtensions.Contains(ext))
+        if (!string.IsNullOrEmpty(ext) && !allowedExtensions.Contains(ext))
         {
-            return BadRequest(new { message = "Only JPG, PNG, and WebP images are allowed." });
+            return BadRequest(new { message = "Only image formats (JPG, PNG, WebP, HEIC) are allowed." });
         }
 
         try

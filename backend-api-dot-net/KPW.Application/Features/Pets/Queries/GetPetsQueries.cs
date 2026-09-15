@@ -13,11 +13,16 @@ public class GetPetsByOwnerQueryHandler : IRequestHandler<GetPetsByOwnerQuery, I
 {
     private readonly DbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IFileStorageService _fileStorageService;
 
-    public GetPetsByOwnerQueryHandler(DbContext dbContext, ICurrentUserService currentUserService)
+    public GetPetsByOwnerQueryHandler(
+        DbContext dbContext,
+        ICurrentUserService currentUserService,
+        IFileStorageService fileStorageService)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<IReadOnlyList<PetDto>> Handle(GetPetsByOwnerQuery query, CancellationToken cancellationToken)
@@ -31,7 +36,7 @@ public class GetPetsByOwnerQueryHandler : IRequestHandler<GetPetsByOwnerQuery, I
             .OrderBy(p => p.PetName)
             .ToListAsync(cancellationToken);
 
-        return pets.Select(PetMapper.ToDto).ToList();
+        return pets.Select(p => PetMapper.ToDto(p, _fileStorageService)).ToList();
     }
 }
 
@@ -41,11 +46,16 @@ public class GetClinicPatientsQueryHandler : IRequestHandler<GetClinicPatientsQu
 {
     private readonly DbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IFileStorageService _fileStorageService;
 
-    public GetClinicPatientsQueryHandler(DbContext dbContext, ICurrentUserService currentUserService)
+    public GetClinicPatientsQueryHandler(
+        DbContext dbContext,
+        ICurrentUserService currentUserService,
+        IFileStorageService fileStorageService)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<IReadOnlyList<PetDto>> Handle(GetClinicPatientsQuery request, CancellationToken cancellationToken)
@@ -75,6 +85,6 @@ public class GetClinicPatientsQueryHandler : IRequestHandler<GetClinicPatientsQu
         }
 
         var pets = await query.OrderBy(p => p.PetName).ToListAsync(cancellationToken);
-        return pets.Select(PetMapper.ToDto).ToList();
+        return pets.Select(p => PetMapper.ToDto(p, _fileStorageService)).ToList();
     }
 }

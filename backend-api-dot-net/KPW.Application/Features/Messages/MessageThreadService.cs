@@ -9,7 +9,7 @@ namespace KPW.Application.Features.Messages;
 
 internal static class MessageMapper
 {
-    public static MessageDto ToDto(Message message)
+    public static MessageDto ToDto(Message message, IFileStorageService? fileStorage = null)
     {
         string? videoTitle = null;
         if (message.VideoSubmission != null)
@@ -27,6 +27,9 @@ internal static class MessageMapper
             videoTitle = $"Video #{message.VideoSubmissionId}";
         }
 
+        var senderDp = message.Sender?.ProfilePictureUrl;
+        var attachmentUrl = message.AttachmentUrl;
+
         return new(
             message.MessageId,
             message.MessageThreadId,
@@ -35,11 +38,16 @@ internal static class MessageMapper
             message.Body,
             message.VideoSubmissionId,
             videoTitle,
-            message.AttachmentUrl,
+            fileStorage != null && !string.IsNullOrWhiteSpace(attachmentUrl)
+                ? fileStorage.GetPublicUrl(attachmentUrl)
+                : attachmentUrl,
             message.AttachmentName,
             message.AttachmentType,
             message.ReadAt,
-            message.CreatedDate);
+            message.CreatedDate,
+            fileStorage != null && !string.IsNullOrWhiteSpace(senderDp)
+                ? fileStorage.GetPublicUrl(senderDp)
+                : senderDp);
     }
 }
 

@@ -1,4 +1,5 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
@@ -168,20 +169,35 @@ class _OverviewTab extends ConsumerWidget {
   Future<void> _pickAndUploadPhoto(BuildContext context, WidgetRef ref, Pet pet) async {
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
+        type: FileType.image,
+        withData: kIsWeb,
       );
-      if (result == null || result.files.single.path == null) return;
+      if (result == null || result.files.isEmpty) return;
 
-      final path = result.files.single.path!;
-      final name = result.files.single.name;
+      final file = result.files.single;
+      final path = file.path;
+      final bytes = file.bytes;
+      final name = file.name;
+
+      if ((path == null || path.isEmpty) && bytes == null) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selected photo could not be read.')),
+        );
+        return;
+      }
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Uploading pet photo...'), duration: Duration(seconds: 2)),
       );
 
-      final ok = await ref.read(petsProvider.notifier).uploadPetPhoto(pet.petId, path, name);
+      final ok = await ref.read(petsProvider.notifier).uploadPetPhoto(
+            pet.petId,
+            filePath: path,
+            bytes: bytes,
+            fileName: name,
+          );
       if (!context.mounted) return;
       if (ok) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -189,13 +205,19 @@ class _OverviewTab extends ConsumerWidget {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ref.read(petsProvider).error ?? 'Failed to upload photo.')),
+          SnackBar(
+            content: Text(ref.read(petsProvider).error ?? 'Failed to upload photo.'),
+            backgroundColor: AppColors.alertRed,
+          ),
         );
       }
-    } catch (_) {
+    } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to pick photo.')),
+        SnackBar(
+          content: Text('Unable to pick photo: $e'),
+          backgroundColor: AppColors.alertRed,
+        ),
       );
     }
   }
@@ -234,6 +256,7 @@ class _OverviewTab extends ConsumerWidget {
                       species: pet.species,
                       imageUrl: pet.profilePictureUrl,
                       size: 64,
+                      enableViewer: true,
                     ),
                     GestureDetector(
                       onTap: () => _pickAndUploadPhoto(context, ref, pet),

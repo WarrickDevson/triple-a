@@ -17,7 +17,8 @@ import { useAuthStore } from '../store/auth'
 import { useNotificationsStore } from '../store/notifications'
 import InviteOwnerModal from '../components/clinic/InviteOwnerModal.vue'
 import EditProfileModal from '../components/profile/EditProfileModal.vue'
-import { Camera, Trash2, Upload } from '@lucide/vue'
+import ImageViewerModal from '../components/common/ImageViewerModal.vue'
+import { Camera, Maximize2, Trash2, Upload } from '@lucide/vue'
 import AiPromptEditor from '../components/admin/AiPromptEditor.vue'
 import SpeciesBreedManager from '../components/admin/SpeciesBreedManager.vue'
 import { resolveMediaUrl } from '../api/videos'
@@ -28,6 +29,17 @@ const imageError = ref(false)
 const profileFileInput = ref<HTMLInputElement | null>(null)
 const uploadingProfilePhoto = ref(false)
 const photoMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null)
+const viewerModal = ref<{ url: string; title: string; subtitle?: string | null } | null>(null)
+
+function openViewer(url: string, title: string, subtitle?: string | null) {
+  const resolved = resolveMediaUrl(url)
+  if (!resolved) return
+  viewerModal.value = {
+    url: resolved,
+    title,
+    subtitle,
+  }
+}
 
 watch(() => auth.user?.profilePictureUrl, () => {
   imageError.value = false
@@ -75,10 +87,8 @@ async function removeProfilePhoto() {
 }
 
 const activeTab = ref<'profile' | 'clinic' | 'species-breeds' | 'ai-prompt' | 'notifications' | 'security' | 'privacy'>('profile')
-const showStubModal = ref(false)
 const showInviteModal = ref(false)
 const showEditProfileModal = ref(false)
-const stubMessage = ref('')
 
 const clinic = ref<ClinicSettings>(loadClinicSettings())
 const notifications = ref<NotificationSettings>(loadNotificationSettings())
@@ -205,7 +215,11 @@ function logout() {
         <!-- Direct Profile Picture Management on Settings Page -->
         <div class="flex flex-col sm:flex-row sm:items-center gap-5 rounded-2xl border border-neutral-grey/70 bg-surface/80 p-5">
           <div class="relative group h-20 w-20 shrink-0">
-            <div class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-sage-muted text-2xl font-bold text-sage ring-2 ring-sage/30 shadow-sm">
+            <div
+              class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-sage-muted text-2xl font-bold text-sage ring-2 ring-sage/30 shadow-sm"
+              :class="auth.user.profilePictureUrl && !imageError ? 'cursor-pointer' : ''"
+              @click="auth.user.profilePictureUrl && !imageError && openViewer(auth.user.profilePictureUrl, `${auth.user.firstName} ${auth.user.lastName}`, displayRole(auth.user.userRole))"
+            >
               <img
                 v-if="auth.user.profilePictureUrl && !imageError"
                 :src="resolveMediaUrl(auth.user.profilePictureUrl)!"
@@ -251,6 +265,16 @@ function logout() {
                 <Upload class="mr-1.5 h-3.5 w-3.5 inline" />
                 {{ uploadingProfilePhoto ? 'Uploading...' : (auth.user.profilePictureUrl ? 'Change Photo' : 'Upload Photo') }}
               </BaseButton>
+
+              <button
+                v-if="auth.user.profilePictureUrl && !imageError"
+                type="button"
+                class="inline-flex items-center gap-1 text-xs font-semibold text-navy hover:text-sage px-2 py-1 rounded border border-neutral-grey/80 hover:border-sage/40 transition-colors"
+                @click="openViewer(auth.user.profilePictureUrl, `${auth.user.firstName} ${auth.user.lastName}`, displayRole(auth.user.userRole))"
+              >
+                <Maximize2 class="h-3.5 w-3.5" />
+                View Full Screen
+              </button>
 
               <button
                 v-if="auth.user.profilePictureUrl"
@@ -485,14 +509,11 @@ function logout() {
   <InviteOwnerModal v-if="showInviteModal" @close="showInviteModal = false" />
   <EditProfileModal v-if="showEditProfileModal" @close="showEditProfileModal = false" @updated="onProfileUpdated" />
 
-  <div
-    v-if="showStubModal"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4"
-    @click.self="showStubModal = false"
-  >
-    <div class="portal-card max-w-sm p-6 text-center">
-      <p class="text-sm text-neutral-muted">{{ stubMessage }}</p>
-      <BaseButton class="mt-4" size="sm" @click="showStubModal = false">Close</BaseButton>
-    </div>
-  </div>
+  <ImageViewerModal
+    v-if="viewerModal"
+    :image-url="viewerModal.url"
+    :title="viewerModal.title"
+    :subtitle="viewerModal.subtitle"
+    @close="viewerModal = null"
+  />
 </template>

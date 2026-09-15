@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -63,7 +64,7 @@ class PetsNotifier extends StateNotifier<PetsState> {
           'species': species,
           if (breed != null && breed.isNotEmpty) 'breed': breed,
           if (birthDate != null) 'birthDate': _formatDate(birthDate),
-          'weightKg': ?weightKg,
+          'weightKg': weightKg,
           if (diagnosis != null && diagnosis.isNotEmpty)
             'initialMedicalHistory': {
               'diagnosis': diagnosis,
@@ -90,11 +91,26 @@ class PetsNotifier extends StateNotifier<PetsState> {
     return '${date.year}-$month-$day';
   }
 
-  Future<bool> uploadPetPhoto(int petId, String filePath, String fileName) async {
+  Future<bool> uploadPetPhoto(
+    int petId, {
+    String? filePath,
+    Uint8List? bytes,
+    required String fileName,
+  }) async {
     state = PetsState(pets: state.pets, isLoading: true);
     try {
+      MultipartFile filePart;
+      if (filePath != null && filePath.isNotEmpty) {
+        filePart = await MultipartFile.fromFile(filePath, filename: fileName);
+      } else if (bytes != null) {
+        filePart = MultipartFile.fromBytes(bytes, filename: fileName);
+      } else {
+        state = PetsState(pets: state.pets, error: 'No image data available.');
+        return false;
+      }
+
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+        'file': filePart,
       });
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/pets/$petId/photo',
@@ -106,9 +122,12 @@ class PetsNotifier extends StateNotifier<PetsState> {
       return true;
     } on DioException catch (e) {
       final serverMsg = e.response?.data is Map
-          ? (e.response?.data['message'] ?? e.response?.data['title']?.toString())
-          : null;
-      state = PetsState(pets: state.pets, error: serverMsg?.toString() ?? 'Unable to upload pet photo.');
+          ? (e.response?.data['message'] ?? e.response?.data['title']?.toString() ?? e.response?.data['errors']?.toString())
+          : (e.response?.data is String && (e.response!.data as String).isNotEmpty ? e.response!.data : null);
+      state = PetsState(pets: state.pets, error: serverMsg?.toString() ?? 'Unable to upload pet photo (${e.message}).');
+      return false;
+    } catch (e) {
+      state = PetsState(pets: state.pets, error: 'Upload error: $e');
       return false;
     }
   }

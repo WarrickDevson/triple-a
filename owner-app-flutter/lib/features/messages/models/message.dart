@@ -12,6 +12,7 @@ class PetMessage {
     this.attachmentType,
     this.readAt,
     required this.createdDate,
+    this.senderProfilePictureUrl,
   });
 
   final int messageId;
@@ -26,6 +27,7 @@ class PetMessage {
   final String? attachmentType;
   final DateTime? readAt;
   final DateTime createdDate;
+  final String? senderProfilePictureUrl;
 
   factory PetMessage.fromJson(Map<String, dynamic> json) {
     return PetMessage(
@@ -41,6 +43,7 @@ class PetMessage {
       attachmentType: json['attachmentType'] as String?,
       readAt: json['readAt'] != null ? DateTime.parse(json['readAt'] as String) : null,
       createdDate: DateTime.parse(json['createdDate'] as String),
+      senderProfilePictureUrl: json['senderProfilePictureUrl'] as String?,
     );
   }
 }

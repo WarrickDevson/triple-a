@@ -14,26 +14,36 @@ public class GetMessageThreadsQueryHandler : IRequestHandler<GetMessageThreadsQu
 {
     private readonly DbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IFileStorageService _fileStorageService;
 
-    public GetMessageThreadsQueryHandler(DbContext dbContext, ICurrentUserService currentUserService)
+    public GetMessageThreadsQueryHandler(
+        DbContext dbContext,
+        ICurrentUserService currentUserService,
+        IFileStorageService fileStorageService)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<IReadOnlyList<MessageThreadDto>> Handle(
         GetMessageThreadsQuery request,
         CancellationToken cancellationToken)
     {
-        if (_currentUserService.Role is not (UserRole.Physio or UserRole.SysAdmin))
+        if (_currentUserService.UserId is null)
         {
             throw new UnauthorizedAccessException();
         }
 
-        var currentUserId = _currentUserService.UserId!.Value;
+        var currentUserId = _currentUserService.UserId.Value;
         var currentUser = await _dbContext.Set<User>()
             .AsNoTracking()
-            .FirstAsync(u => u.UserId == currentUserId, cancellationToken);
+            .FirstOrDefaultAsync(u => u.UserId == currentUserId, cancellationToken);
+
+        if (currentUser is null)
+        {
+            throw new UnauthorizedAccessException();
+        }
 
         var query = _dbContext.Set<MessageThread>()
             .Include(t => t.Pet)
@@ -43,7 +53,11 @@ public class GetMessageThreadsQueryHandler : IRequestHandler<GetMessageThreadsQu
                 .ThenInclude(m => m.Sender)
             .AsQueryable();
 
-        if (_currentUserService.Role == UserRole.Physio)
+        if (_currentUserService.Role == UserRole.Owner)
+        {
+            query = query.Where(t => t.OwnerId == currentUserId);
+        }
+        else if (_currentUserService.Role == UserRole.Physio)
         {
             if (currentUser.ClinicId is not null)
             {
@@ -84,7 +98,16 @@ public class GetMessageThreadsQueryHandler : IRequestHandler<GetMessageThreadsQu
                     $"{t.Physio.FirstName} {t.Physio.LastName}",
                     lastMessage?.Body,
                     lastMessage?.CreatedDate,
-                    unreadCount);
+                    unreadCount,
+                    !string.IsNullOrWhiteSpace(t.Pet.ProfilePictureUrl)
+                        ? _fileStorageService.GetPublicUrl(t.Pet.ProfilePictureUrl)
+                        : t.Pet.ProfilePictureUrl,
+                    !string.IsNullOrWhiteSpace(t.Owner.ProfilePictureUrl)
+                        ? _fileStorageService.GetPublicUrl(t.Owner.ProfilePictureUrl)
+                        : t.Owner.ProfilePictureUrl,
+                    !string.IsNullOrWhiteSpace(t.Physio.ProfilePictureUrl)
+                        ? _fileStorageService.GetPublicUrl(t.Physio.ProfilePictureUrl)
+                        : t.Physio.ProfilePictureUrl);
             })
             .OrderByDescending(t => t.LastMessageAt ?? DateTime.MinValue)
             .ToList();

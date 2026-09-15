@@ -13,11 +13,16 @@ public class GetPetMessagesQueryHandler : IRequestHandler<GetPetMessagesQuery, I
 {
     private readonly DbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IFileStorageService _fileStorageService;
 
-    public GetPetMessagesQueryHandler(DbContext dbContext, ICurrentUserService currentUserService)
+    public GetPetMessagesQueryHandler(
+        DbContext dbContext,
+        ICurrentUserService currentUserService,
+        IFileStorageService fileStorageService)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<IReadOnlyList<MessageDto>> Handle(
@@ -62,7 +67,7 @@ public class GetPetMessagesQueryHandler : IRequestHandler<GetPetMessagesQuery, I
 
         return thread.Messages
             .OrderBy(m => m.CreatedDate)
-            .Select(MessageMapper.ToDto)
+            .Select(m => MessageMapper.ToDto(m, _fileStorageService))
             .ToList();
     }
 }

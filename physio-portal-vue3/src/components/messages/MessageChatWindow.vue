@@ -22,6 +22,22 @@ const auth = useAuthStore()
 
 const activePetId = computed(() => props.thread?.petId ?? props.patient?.petId ?? props.selectedPetId ?? null)
 
+const petName = computed(() => props.thread?.petName ?? props.patient?.petName ?? 'Patient')
+const ownerName = computed(() => props.thread?.ownerName ?? props.patient?.ownerName ?? 'Owner')
+const petDp = computed(() => props.thread?.petProfilePictureUrl ?? props.patient?.profilePictureUrl ?? null)
+const ownerDp = computed(() => props.thread?.ownerProfilePictureUrl ?? props.patient?.ownerProfilePictureUrl ?? null)
+
+function getSenderDp(message: Message) {
+  return message.senderProfilePictureUrl || ownerDp.value
+}
+
+function openImage(url: string, title: string, subtitle?: string) {
+  const resolved = resolveMediaUrl(url)
+  if (resolved) {
+    previewImage.value = { url: resolved, name: subtitle ? `${title} (${subtitle})` : title }
+  }
+}
+
 const headerTitle = computed(() => {
   if (props.thread) return `${props.thread.petName} / Owner: ${props.thread.ownerName}`
   if (props.patient) return `${props.patient.petName} / Owner: ${props.patient.ownerName}`
@@ -112,15 +128,57 @@ function scrollToBottom() {
 
 <template>
   <section class="portal-card flex h-full flex-col overflow-hidden relative">
-    <div class="flex items-center justify-between border-b border-neutral-grey/80 px-4 py-3">
-      <div>
-        <h2 class="text-sm font-bold text-navy">{{ headerTitle }}</h2>
-        <p v-if="activePetId" class="text-xs text-success-green">Online</p>
+    <div class="flex items-center justify-between border-b border-neutral-grey/80 px-4 py-2.5">
+      <div v-if="activePetId" class="flex items-center gap-3 min-w-0">
+        <!-- Overlapping Pet & Owner Avatars -->
+        <div class="flex items-center shrink-0">
+          <div
+            class="relative z-10 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-sage-muted text-xs font-bold text-sage ring-2 ring-sage/30 shadow-xs hover:ring-sage transition"
+            :title="`${petName} (Click to view full photo)`"
+            @click="petDp ? openImage(petDp, petName, 'Pet Patient') : null"
+          >
+            <img
+              v-if="petDp"
+              :src="resolveMediaUrl(petDp)!"
+              :alt="petName"
+              class="h-full w-full object-cover"
+            />
+            <span v-else>{{ petName.slice(0, 2).toUpperCase() }}</span>
+          </div>
+
+          <div
+            class="relative -ml-3 z-20 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-surface text-[11px] font-bold text-navy ring-2 ring-white shadow-xs hover:ring-sage transition"
+            :title="`${ownerName} (Click to view full photo)`"
+            @click="ownerDp ? openImage(ownerDp, ownerName, 'Pet Owner') : null"
+          >
+            <img
+              v-if="ownerDp"
+              :src="resolveMediaUrl(ownerDp)!"
+              :alt="ownerName"
+              class="h-full w-full object-cover"
+            />
+            <span v-else>{{ ownerName.slice(0, 2).toUpperCase() }}</span>
+          </div>
+        </div>
+
+        <div class="min-w-0">
+          <h2 class="text-sm font-bold text-navy truncate">
+            {{ petName }} <span class="text-xs font-medium text-neutral-muted">· {{ ownerName }}</span>
+          </h2>
+          <p class="text-[11px] text-success-green flex items-center gap-1">
+            <span class="h-1.5 w-1.5 rounded-full bg-success-green inline-block"></span>
+            Active Conversation
+          </p>
+        </div>
       </div>
+      <div v-else>
+        <h2 class="text-sm font-bold text-navy">{{ headerTitle }}</h2>
+      </div>
+
       <RouterLink
         v-if="activePetId"
         :to="{ name: 'patient-detail', params: { petId: String(activePetId) } }"
-        class="text-xs font-semibold text-sage hover:text-navy"
+        class="text-xs font-semibold text-sage hover:text-navy shrink-0 ml-2"
       >
         Patient Profile
       </RouterLink>
@@ -139,9 +197,25 @@ function scrollToBottom() {
         <div
           v-for="message in messages"
           :key="message.messageId"
-          class="flex"
+          class="flex items-end gap-2"
           :class="isOutgoing(message) ? 'justify-end' : 'justify-start'"
         >
+          <!-- Owner Avatar for incoming messages -->
+          <div
+            v-if="!isOutgoing(message)"
+            class="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-sage-muted text-[10px] font-bold text-sage ring-1 ring-sage/20 mb-1"
+            :title="`${message.senderName} (Click to view photo)`"
+            @click="getSenderDp(message) ? openImage(getSenderDp(message)!, message.senderName, 'Pet Owner') : null"
+          >
+            <img
+              v-if="getSenderDp(message)"
+              :src="resolveMediaUrl(getSenderDp(message))!"
+              :alt="message.senderName"
+              class="h-full w-full object-cover"
+            />
+            <span v-else>{{ message.senderName.slice(0, 2).toUpperCase() }}</span>
+          </div>
+
           <div
             class="max-w-[80%] rounded-2xl px-4 py-2.5 text-sm"
             :class="

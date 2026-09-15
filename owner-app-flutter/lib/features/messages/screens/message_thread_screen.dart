@@ -10,6 +10,8 @@ import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/pet_avatar.dart';
+import '../../../core/widgets/user_avatar.dart';
+import '../../../core/widgets/full_screen_image_viewer.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../pets/models/pet.dart';
 import '../../pets/providers/pets_provider.dart';
@@ -337,28 +339,101 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen> {
       }
     });
 
+    PetMessage? physioMessage;
+    for (final m in messagesState.messages.reversed) {
+      if (m.senderUserId != userId) {
+        physioMessage = m;
+        break;
+      }
+    }
+    final physioName = physioMessage?.senderName ?? 'Practice Physiotherapist';
+    final physioDp = physioMessage?.senderProfilePictureUrl;
+
     return AppPageScaffold(
       title: pet.petName,
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-            child: Row(
-              children: [
-                PetAvatar(
-                  name: pet.petName,
-                  species: pet.species,
-                  imageUrl: pet.profilePictureUrl,
-                  size: 40,
-                ),
-                const SizedBox(width: 10),
-                const Expanded(
-                  child: Text(
-                    'Physiotherapist',
-                    style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.neutralMuted),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.neutralGrey),
+              ),
+              child: Row(
+                children: [
+                  PetAvatar(
+                    name: pet.petName,
+                    species: pet.species,
+                    imageUrl: pet.profilePictureUrl,
+                    size: 42,
+                    enableViewer: true,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          pet.petName,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.navy),
+                        ),
+                        Text(
+                          '${pet.species}${pet.breed != null ? " · ${pet.breed}" : ""}',
+                          style: const TextStyle(fontSize: 11, color: AppColors.neutralMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: physioDp != null && physioDp.isNotEmpty
+                        ? () => showFullScreenImageViewer(
+                              context,
+                              imageUrl: physioDp,
+                              title: physioName,
+                              subtitle: 'Physiotherapist',
+                            )
+                        : null,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                physioName,
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: AppColors.navy),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const Text(
+                                'Physiotherapist',
+                                style: TextStyle(fontSize: 10, color: AppColors.sage, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                          UserAvatar(
+                            name: physioName,
+                            roleTitle: 'Physiotherapist',
+                            imageUrl: physioDp,
+                            size: 34,
+                            enableViewer: true,
+                            backgroundColor: AppColors.sageMuted,
+                            textColor: AppColors.sage,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(
@@ -519,35 +594,10 @@ class _MessageBubble extends StatelessWidget {
   }
 
   void _openImagePreview(BuildContext context, String url, String? name) {
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(16),
-        child: Stack(
-          alignment: Alignment.topRight,
-          children: [
-            InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 4.0,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  _resolveAttachmentUrl(url),
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            IconButton(
-              icon: const CircleAvatar(
-                backgroundColor: Colors.black54,
-                child: Icon(Icons.close, color: Colors.white, size: 20),
-              ),
-              onPressed: () => Navigator.of(ctx).pop(),
-            ),
-          ],
-        ),
-      ),
+    showFullScreenImageViewer(
+      context,
+      imageUrl: url,
+      title: name ?? 'Attachment Image',
     );
   }
 
@@ -560,34 +610,32 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        constraints: const BoxConstraints(maxWidth: 300),
-        decoration: BoxDecoration(
-          color: isMine ? AppColors.sage : AppColors.neutralGrey,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(18),
-            topRight: const Radius.circular(18),
-            bottomLeft: Radius.circular(isMine ? 18 : 4),
-            bottomRight: Radius.circular(isMine ? 4 : 18),
-          ),
+    final bubbleContent = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      constraints: const BoxConstraints(maxWidth: 290),
+      decoration: BoxDecoration(
+        color: isMine ? AppColors.sage : AppColors.neutralGrey,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(18),
+          topRight: const Radius.circular(18),
+          bottomLeft: Radius.circular(isMine ? 18 : 4),
+          bottomRight: Radius.circular(isMine ? 4 : 18),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (!isMine)
-              Text(
-                message.senderName,
-                style: const TextStyle(
-                  color: AppColors.sage,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isMine) ...[
+            Text(
+              message.senderName,
+              style: const TextStyle(
+                color: AppColors.sage,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
-            if (!isMine) const SizedBox(height: 4),
+            ),
+            const SizedBox(height: 4),
+          ],
             if (message.videoSubmissionId != null) ...[
               Container(
                 margin: const EdgeInsets.only(bottom: 6),
@@ -740,6 +788,26 @@ class _MessageBubble extends StatelessWidget {
             ),
           ],
         ),
+      );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        mainAxisAlignment: isMine ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isMine) ...[
+            UserAvatar(
+              name: message.senderName,
+              roleTitle: 'Physiotherapist',
+              imageUrl: message.senderProfilePictureUrl,
+              size: 32,
+              enableViewer: true,
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(child: bubbleContent),
+        ],
       ),
     );
   }

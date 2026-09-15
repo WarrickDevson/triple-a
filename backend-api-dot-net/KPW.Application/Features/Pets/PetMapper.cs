@@ -9,7 +9,7 @@ namespace KPW.Application.Features.Pets;
 
 public static class PetMapper
 {
-    public static PetDto ToDto(Pet pet) =>
+    public static PetDto ToDto(Pet pet, IFileStorageService? fileStorage = null) =>
         new(
             pet.PetId,
             pet.OwnerId,
@@ -25,7 +25,12 @@ public static class PetMapper
                 m.InjuryOrCondition,
                 m.SurgeryDate,
                 m.ClinicianNotes)).ToList(),
-            pet.ProfilePictureUrl);
+            fileStorage != null && !string.IsNullOrWhiteSpace(pet.ProfilePictureUrl)
+                ? fileStorage.GetPublicUrl(pet.ProfilePictureUrl)
+                : pet.ProfilePictureUrl,
+            fileStorage != null && !string.IsNullOrWhiteSpace(pet.Owner?.ProfilePictureUrl)
+                ? fileStorage.GetPublicUrl(pet.Owner.ProfilePictureUrl)
+                : pet.Owner?.ProfilePictureUrl);
 }
 
 public static class PetAuthorization

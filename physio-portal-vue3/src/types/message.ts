@@ -11,6 +11,7 @@ export interface Message {
   attachmentType?: string | null
   readAt: string | null
   createdDate: string
+  senderProfilePictureUrl?: string | null
 }
 
 export interface MessageThread {
@@ -24,6 +25,9 @@ export interface MessageThread {
   lastMessagePreview: string | null
   lastMessageAt: string | null
   unreadCount: number
+  petProfilePictureUrl?: string | null
+  ownerProfilePictureUrl?: string | null
+  physioProfilePictureUrl?: string | null
 }
 
 export interface SendMessageRequest {

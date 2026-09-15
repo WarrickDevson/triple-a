@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
+import '../../../core/widgets/full_screen_image_viewer.dart';
 import '../models/auth_user.dart';
 import '../providers/auth_provider.dart';
 
@@ -59,18 +60,27 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
+        withData: true,
       );
-      if (result == null || result.files.single.path == null) return;
+      if (result == null || result.files.isEmpty) return;
 
-      final path = result.files.single.path!;
-      final name = result.files.single.name;
+      final file = result.files.single;
+      final path = file.path;
+      final bytes = file.bytes;
+      final name = file.name;
+
+      if (path == null && bytes == null) return;
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Uploading profile picture...'), duration: Duration(seconds: 2)),
       );
 
-      final ok = await ref.read(authProvider.notifier).uploadProfilePicture(path, name);
+      final ok = await ref.read(authProvider.notifier).uploadProfilePicture(
+            filePath: path,
+            bytes: bytes,
+            fileName: name,
+          );
       if (!mounted) return;
       if (ok) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -145,25 +155,36 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     children: [
                       Stack(
                         children: [
-                          Container(
-                            width: 90,
-                            height: 90,
-                            decoration: BoxDecoration(
-                              color: AppColors.sageMuted,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.sage.withValues(alpha: 0.3), width: 2),
-                            ),
-                            child: ClipOval(
-                              child: auth.user?.profilePictureUrl != null &&
-                                      auth.user!.profilePictureUrl!.trim().isNotEmpty
-                                  ? Image.network(
-                                      _resolveUrl(auth.user!.profilePictureUrl!.trim()),
-                                      width: 90,
-                                      height: 90,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, _, _) => _buildInitials(auth.user),
+                          GestureDetector(
+                            onTap: auth.user?.profilePictureUrl != null &&
+                                    auth.user!.profilePictureUrl!.trim().isNotEmpty
+                                ? () => showFullScreenImageViewer(
+                                      context,
+                                      imageUrl: auth.user!.profilePictureUrl!.trim(),
+                                      title: '${auth.user?.firstName ?? ""} ${auth.user?.lastName ?? ""}'.trim(),
+                                      subtitle: 'Profile Picture',
                                     )
-                                  : _buildInitials(auth.user),
+                                : null,
+                            child: Container(
+                              width: 90,
+                              height: 90,
+                              decoration: BoxDecoration(
+                                color: AppColors.sageMuted,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.sage.withValues(alpha: 0.3), width: 2),
+                              ),
+                              child: ClipOval(
+                                child: auth.user?.profilePictureUrl != null &&
+                                        auth.user!.profilePictureUrl!.trim().isNotEmpty
+                                    ? Image.network(
+                                        _resolveUrl(auth.user!.profilePictureUrl!.trim()),
+                                        width: 90,
+                                        height: 90,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) => _buildInitials(auth.user),
+                                      )
+                                    : _buildInitials(auth.user),
+                              ),
                             ),
                           ),
                           Positioned(

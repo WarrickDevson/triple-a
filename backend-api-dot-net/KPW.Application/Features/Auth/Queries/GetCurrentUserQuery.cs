@@ -13,11 +13,16 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, A
 {
     private readonly DbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IFileStorageService _fileStorageService;
 
-    public GetCurrentUserQueryHandler(DbContext dbContext, ICurrentUserService currentUserService)
+    public GetCurrentUserQueryHandler(
+        DbContext dbContext,
+        ICurrentUserService currentUserService,
+        IFileStorageService fileStorageService)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<AuthUserDto> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
@@ -41,6 +46,6 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, A
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.ClinicId == user.ClinicId, cancellationToken);
 
-        return AuthUserMapper.ToDto(user, clinic);
+        return AuthUserMapper.ToDto(user, clinic, _fileStorageService);
     }
 }

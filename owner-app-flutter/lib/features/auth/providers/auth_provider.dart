@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -426,11 +427,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> uploadProfilePicture(String filePath, String fileName) async {
+  Future<bool> uploadProfilePicture({
+    String? filePath,
+    Uint8List? bytes,
+    required String fileName,
+  }) async {
     state = AuthState(user: state.user, isLoading: true);
     try {
+      MultipartFile filePart;
+      if (filePath != null && filePath.isNotEmpty) {
+        filePart = await MultipartFile.fromFile(filePath, filename: fileName);
+      } else if (bytes != null) {
+        filePart = MultipartFile.fromBytes(bytes, filename: fileName);
+      } else {
+        state = AuthState(user: state.user, error: 'No image data available.');
+        return false;
+      }
+
       final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(filePath, filename: fileName),
+        'file': filePart,
       });
       final response = await _dio.post<Map<String, dynamic>>(
         '/api/auth/profile-picture',
@@ -445,9 +460,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return true;
     } on DioException catch (e) {
       final message = e.response?.data is Map
-          ? (e.response?.data['message'] as String?) ?? 'Failed to upload profile picture.'
-          : 'Failed to upload profile picture.';
-      state = AuthState(user: state.user, error: message);
+          ? (e.response?.data['message'] ?? e.response?.data['title']?.toString() ?? e.response?.data['errors']?.toString())
+          : (e.response?.data is String && (e.response!.data as String).isNotEmpty ? e.response!.data : null);
+      state = AuthState(user: state.user, error: message?.toString() ?? 'Failed to upload profile picture (${e.message}).');
+      return false;
+    } catch (e) {
+      state = AuthState(user: state.user, error: 'Upload error: $e');
       return false;
     }
   }

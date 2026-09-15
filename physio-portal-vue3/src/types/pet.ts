@@ -17,6 +17,7 @@ export interface Pet {
   weightKg: number | null
   medicalHistories: MedicalHistory[]
   profilePictureUrl?: string | null
+  ownerProfilePictureUrl?: string | null
 }
 
 export interface CreateMedicalHistory {

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { Plus, Star } from '@lucide/vue'
 import { formatMessageTime, loadStarredThreadIds } from '../../data/messageDemo'
 import { usePatientsStore } from '../../store/patients'
+import { resolveMediaUrl } from '../../api/videos'
 import type { MessageThread } from '../../types/message'
 
 const props = defineProps<{
@@ -150,9 +151,17 @@ function selectThread(petId: number) {
           @click="selectThread(thread.petId)"
         >
           <div
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sage-muted text-xs font-bold text-sage"
+            class="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sage-muted text-xs font-bold text-sage ring-1 ring-sage/20"
           >
-            {{ thread.petName.slice(0, 2).toUpperCase() }}
+            <img
+              v-if="thread.petProfilePictureUrl"
+              :src="resolveMediaUrl(thread.petProfilePictureUrl)!"
+              :alt="thread.petName"
+              class="h-full w-full object-cover"
+            />
+            <span v-else>
+              {{ thread.petName.slice(0, 2).toUpperCase() }}
+            </span>
           </div>
           <div class="min-w-0 flex-1">
             <div class="flex items-center justify-between gap-2">

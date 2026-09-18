@@ -13,11 +13,16 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
 {
     private readonly DbContext _dbContext;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IFileStorageService _fileStorageService;
 
-    public RefreshTokenCommandHandler(DbContext dbContext, IJwtTokenService jwtTokenService)
+    public RefreshTokenCommandHandler(
+        DbContext dbContext,
+        IJwtTokenService jwtTokenService,
+        IFileStorageService fileStorageService)
     {
         _dbContext = dbContext;
         _jwtTokenService = jwtTokenService;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<AuthResponseDto> Handle(RefreshTokenCommand command, CancellationToken cancellationToken)
@@ -50,6 +55,6 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
             accessToken,
             newRefreshToken,
             DateTime.UtcNow.AddHours(1),
-            AuthUserMapper.ToDto(user, clinic));
+            AuthUserMapper.ToDto(user, clinic, _fileStorageService));
     }
 }

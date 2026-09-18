@@ -170,7 +170,7 @@ public class PetsController : ControllerBase
         pet.ProfilePictureUrl = fileStorageService.GetPublicUrl(storagePath);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return Ok(PetMapper.ToDto(pet));
+        return Ok(PetMapper.ToDto(pet, fileStorageService));
     }
 
     [HttpDelete("{id:int}/photo")]

@@ -164,6 +164,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
         profilePictureUrl: prefs.getString('${_userKeyPrefix}profilePictureUrl'),
       ),
     );
+
+    // Refresh user in background to get fresh signed avatar URL and profile details
+    fetchCurrentUser();
+  }
+
+  Future<void> fetchCurrentUser() async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>('/api/auth/me');
+      if (response.data != null) {
+        final user = AuthUser.fromJson(response.data!);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('${_userKeyPrefix}firstName', user.firstName);
+        await prefs.setString('${_userKeyPrefix}lastName', user.lastName);
+        if (user.profilePictureUrl != null) {
+          await prefs.setString('${_userKeyPrefix}profilePictureUrl', user.profilePictureUrl!);
+        } else {
+          await prefs.remove('${_userKeyPrefix}profilePictureUrl');
+        }
+        state = AuthState(user: user);
+      }
+    } catch (_) {
+      // Ignore network/offline errors during background refresh
+    }
   }
 
   void clearFeedback() {

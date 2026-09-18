@@ -16,17 +16,20 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
     private readonly DbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IFileStorageService _fileStorageService;
     private readonly ILogger<LoginCommandHandler> _logger;
 
     public LoginCommandHandler(
         DbContext dbContext,
         IPasswordHasher passwordHasher,
         IJwtTokenService jwtTokenService,
+        IFileStorageService fileStorageService,
         ILogger<LoginCommandHandler> logger)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
+        _fileStorageService = fileStorageService;
         _logger = logger;
     }
 
@@ -86,6 +89,6 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             accessToken,
             refreshToken,
             DateTime.UtcNow.AddHours(1),
-            AuthUserMapper.ToDto(user, clinic));
+            AuthUserMapper.ToDto(user, clinic, _fileStorageService));
     }
 }

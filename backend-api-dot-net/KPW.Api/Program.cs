@@ -174,6 +174,27 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<Microsoft.EntityFrameworkCore.DbContext>();
     try
     {
+        await Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.ExecuteSqlRawAsync(
+            dbContext.Database,
+            @"IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NOT NULL
+              AND EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Users' AND COLUMN_NAME = 'ProfilePictureUrl')
+              AND NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = '20260910083151_AddProfilePicturesToUserAndPet')
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Pets' AND COLUMN_NAME = 'ProfilePictureUrl')
+                BEGIN
+                    ALTER TABLE [Pets] ADD [ProfilePictureUrl] nvarchar(1000) NULL;
+                END
+                INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+                VALUES ('20260910083151_AddProfilePicturesToUserAndPet', '8.0.0');
+            END");
+    }
+    catch
+    {
+        // Non-critical pre-migration alignment check
+    }
+
+    try
+    {
         await Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.MigrateAsync(dbContext.Database);
     }
     catch (Exception ex)
@@ -327,8 +348,8 @@ using (var scope = app.Services.CreateScope())
             
             IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'VideoVariationsJson')
             BEGIN
-                EXEC(N'UPDATE [Exercises] SET [VideoVariationsJson] = ''[{""""Species"""":""""Canine"""",""""BreedCategory"""":""""Chondrodystrophic (Dachshund/Corgi/Basset)"""",""""VideoUrl"""":""""https://www.youtube.com/watch?v=TRDnqYOtlKM"""",""""Title"""":""""Cavaletti for Low-Rider / Long-Backed Dogs"""",""""Notes"""":""""Poles set at wrist/hock height (2-3 inches max) with 1.5x body length spacing.""""},{""""Species"""":""""Canine"""",""""BreedCategory"""":""""Large / Giant Breeds"""",""""VideoUrl"""":""""https://www.youtube.com/watch?v=TRDnqYOtlKM"""",""""Title"""":""""Cavaletti for Large Dogs"""",""""Notes"""":""""Poles spaced at standard shoulder-height stride distance to promote full extension.""""} ]'' WHERE [ExerciseId] = 4 AND [VideoVariationsJson] IS NULL');
-                EXEC(N'UPDATE [Exercises] SET [VideoVariationsJson] = ''[{""""Species"""":""""Feline"""",""""BreedCategory"""":""""All Cats"""",""""VideoUrl"""":""""https://www.youtube.com/watch?v=-XRBJ7oPw74"""",""""Title"""":""""Feline Passive Range of Motion"""",""""Notes"""":""""Gentle low-stress handling with towel wrap; small amplitude flexion/extension.""""} ]'' WHERE [ExerciseId] = 2 AND [VideoVariationsJson] IS NULL');
+                EXEC(N'UPDATE [Exercises] SET [VideoVariationsJson] = ''[{{{{""""Species"""":""""Canine"""",""""BreedCategory"""":""""Chondrodystrophic (Dachshund/Corgi/Basset)"""",""""VideoUrl"""":""""https://www.youtube.com/watch?v=TRDnqYOtlKM"""",""""Title"""":""""Cavaletti for Low-Rider / Long-Backed Dogs"""",""""Notes"""":""""Poles set at wrist/hock height (2-3 inches max) with 1.5x body length spacing.""""}}}},{{{{""""Species"""":""""Canine"""",""""BreedCategory"""":""""Large / Giant Breeds"""",""""VideoUrl"""":""""https://www.youtube.com/watch?v=TRDnqYOtlKM"""",""""Title"""":""""Cavaletti for Large Dogs"""",""""Notes"""":""""Poles spaced at standard shoulder-height stride distance to promote full extension.""""}}}} ]'' WHERE [ExerciseId] = 4 AND [VideoVariationsJson] IS NULL');
+                EXEC(N'UPDATE [Exercises] SET [VideoVariationsJson] = ''[{{{{""""Species"""":""""Feline"""",""""BreedCategory"""":""""All Cats"""",""""VideoUrl"""":""""https://www.youtube.com/watch?v=-XRBJ7oPw74"""",""""Title"""":""""Feline Passive Range of Motion"""",""""Notes"""":""""Gentle low-stress handling with towel wrap; small amplitude flexion/extension.""""}}}} ]'' WHERE [ExerciseId] = 2 AND [VideoVariationsJson] IS NULL');
             END");
     }
     catch (Exception ex)

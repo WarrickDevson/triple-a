@@ -250,7 +250,7 @@ public class AuthController : ControllerBase
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.ClinicId == user.ClinicId, cancellationToken);
 
-        return Ok(AuthUserMapper.ToDto(user, clinic));
+        return Ok(AuthUserMapper.ToDto(user, clinic, fileStorageService));
     }
 
     [HttpDelete("profile-picture")]

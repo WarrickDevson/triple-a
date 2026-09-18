@@ -17,7 +17,8 @@ public class CreateExerciseRequestValidator : AbstractValidator<CreateExerciseRe
         RuleFor(x => x.ClinicalPurpose).MaximumLength(1000);
         RuleFor(x => x.SafetyNotes).MaximumLength(1000);
         RuleFor(x => x.CommonMistakes).MaximumLength(1000);
-        RuleFor(x => x.VideoUrl).MaximumLength(500);
+        RuleFor(x => x.VideoUrl).MaximumLength(2048);
+        RuleFor(x => x.CoverImageUrl).MaximumLength(2048);
         RuleFor(x => x.TargetSpecies).MaximumLength(100);
         RuleFor(x => x.ConditionCategory).MaximumLength(100);
         RuleFor(x => x.DifficultyLevel).InclusiveBetween(1, 5);

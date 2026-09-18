@@ -308,7 +308,19 @@ using (var scope = app.Services.CreateScope())
             END
             IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'CoverImageUrl')
             BEGIN
-                ALTER TABLE [Exercises] ADD [CoverImageUrl] nvarchar(500) NULL;
+                ALTER TABLE [Exercises] ADD [CoverImageUrl] nvarchar(2048) NULL;
+            END
+            ELSE IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'CoverImageUrl' AND (CHARACTER_MAXIMUM_LENGTH < 2048 AND CHARACTER_MAXIMUM_LENGTH > 0))
+            BEGIN
+                ALTER TABLE [Exercises] ALTER COLUMN [CoverImageUrl] nvarchar(2048) NULL;
+            END
+            IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'VideoUrl' AND (CHARACTER_MAXIMUM_LENGTH < 2048 AND CHARACTER_MAXIMUM_LENGTH > 0))
+            BEGIN
+                ALTER TABLE [Exercises] ALTER COLUMN [VideoUrl] nvarchar(2048) NULL;
+            END
+            IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ExerciseSteps' AND COLUMN_NAME = 'ImageUrl' AND (CHARACTER_MAXIMUM_LENGTH < 2048 AND CHARACTER_MAXIMUM_LENGTH > 0))
+            BEGIN
+                ALTER TABLE [ExerciseSteps] ALTER COLUMN [ImageUrl] nvarchar(2048) NULL;
             END
             IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Exercises' AND COLUMN_NAME = 'IsSystemDefault')
             BEGIN

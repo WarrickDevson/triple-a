@@ -14,10 +14,10 @@ public class ExerciseConfiguration : IEntityTypeConfiguration<Exercise>
         builder.Property(e => e.ShortDescription).HasMaxLength(500);
         builder.Property(e => e.TargetedMuscles).HasMaxLength(250);
         builder.Property(e => e.ClinicalPurpose).HasMaxLength(500);
-        builder.Property(e => e.VideoUrl).HasMaxLength(500);
+        builder.Property(e => e.VideoUrl).HasMaxLength(2048);
         builder.Property(e => e.TargetSpecies).HasMaxLength(50);
         builder.Property(e => e.ConditionCategory).HasMaxLength(100);
-        builder.Property(e => e.CoverImageUrl).HasMaxLength(500);
+        builder.Property(e => e.CoverImageUrl).HasMaxLength(2048);
         builder.Property(e => e.IsSystemDefault).HasDefaultValue(true);
         builder.Property(e => e.IsActiveForOwners).HasDefaultValue(true);
 

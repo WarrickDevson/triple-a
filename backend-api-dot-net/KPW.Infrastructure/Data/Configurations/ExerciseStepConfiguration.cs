@@ -11,7 +11,7 @@ public class ExerciseStepConfiguration : IEntityTypeConfiguration<ExerciseStep>
         builder.ToTable("ExerciseSteps");
         builder.HasKey(s => s.ExerciseStepId);
         builder.Property(s => s.StepInstruction).HasMaxLength(1000).IsRequired();
-        builder.Property(s => s.ImageUrl).HasMaxLength(500);
+        builder.Property(s => s.ImageUrl).HasMaxLength(2048);
 
         builder.HasOne(s => s.Exercise)
             .WithMany(e => e.Steps)

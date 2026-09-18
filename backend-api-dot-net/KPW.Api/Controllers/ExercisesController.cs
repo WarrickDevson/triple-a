@@ -31,17 +31,39 @@ public class ExercisesController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<ExerciseDto>> GetById(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new GetExerciseByIdQuery(id), cancellationToken);
+        if (result is null)
+        {
+            return NotFound(new { message = $"Exercise {id} not found." });
+        }
+        return Ok(result);
+    }
+
     [HttpPost]
     public async Task<ActionResult<ExerciseDto>> Create(
         [FromBody] CreateExerciseRequestDto request,
         [FromServices] IValidator<CreateExerciseRequestDto> validator,
         CancellationToken cancellationToken)
     {
-        await validator.ValidateAndThrowAsync(request, cancellationToken);
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(new
+            {
+                message = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage)),
+                errors = validationResult.Errors.Select(e => e.ErrorMessage)
+            });
+        }
+
         try
         {
             var result = await _mediator.Send(new CreateExerciseCommand(request), cancellationToken);
-            return CreatedAtAction(nameof(Get), new { id = result.ExerciseId }, result);
+            return CreatedAtAction(nameof(GetById), new { id = result.ExerciseId }, result);
         }
         catch (UnauthorizedAccessException ex)
         {

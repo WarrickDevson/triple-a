@@ -12,13 +12,16 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
 {
     private readonly DbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IFileStorageService _fileStorageService;
 
     public UpdateProfileCommandHandler(
         DbContext dbContext,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IFileStorageService fileStorageService)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<AuthUserDto> Handle(UpdateProfileCommand command, CancellationToken cancellationToken)
@@ -84,6 +87,6 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return AuthUserMapper.ToDto(user, clinic);
+        return AuthUserMapper.ToDto(user, clinic, _fileStorageService);
     }
 }

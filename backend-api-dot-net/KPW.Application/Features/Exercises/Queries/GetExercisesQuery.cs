@@ -73,7 +73,8 @@ public class GetExercisesQueryHandler : IRequestHandler<GetExercisesQuery, IRead
         // Build mapping of custom overrides for this clinic
         var overridesByBaseId = allFetched
             .Where(e => e.BaseExerciseId.HasValue && e.ClinicId == userClinicId)
-            .ToDictionary(e => e.BaseExerciseId!.Value, e => e);
+            .GroupBy(e => e.BaseExerciseId!.Value)
+            .ToDictionary(g => g.Key, g => g.First());
 
         var dtoList = new List<ExerciseDto>();
 

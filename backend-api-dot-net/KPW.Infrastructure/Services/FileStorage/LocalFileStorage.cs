@@ -81,6 +81,105 @@ public class LocalFileStorage : IFileStorageService
         return $"{_publicBasePath}/{normalized}";
     }
 
+    public string NormalizeStoragePath(string? storagePath)
+    {
+        if (string.IsNullOrWhiteSpace(storagePath)) return string.Empty;
+
+        var path = storagePath.Trim();
+
+        // Handle API media endpoint format: /api/media/view?path=...
+        if (path.StartsWith("/api/media/view", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("api/media/view", StringComparison.OrdinalIgnoreCase))
+        {
+            var inner = ExtractQueryParam(path, "path");
+            if (!string.IsNullOrWhiteSpace(inner))
+            {
+                return NormalizeStoragePath(inner);
+            }
+        }
+
+        if (path.StartsWith("/api/media/", StringComparison.OrdinalIgnoreCase))
+        {
+            path = path["/api/media/".Length..];
+        }
+        else if (path.StartsWith("api/media/", StringComparison.OrdinalIgnoreCase))
+        {
+            path = path["api/media/".Length..];
+        }
+
+        if (path.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(path);
+                if (uri.AbsolutePath.StartsWith("/api/media/view", StringComparison.OrdinalIgnoreCase))
+                {
+                    var inner = ExtractQueryParam(uri.Query, "path");
+                    if (!string.IsNullOrWhiteSpace(inner))
+                    {
+                        return NormalizeStoragePath(inner);
+                    }
+                }
+                path = uri.AbsolutePath;
+            }
+            catch
+            {
+                // keep path
+            }
+        }
+
+        var normalized = path.Replace('\\', '/').TrimStart('/');
+        if (normalized.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized["uploads/".Length..];
+        }
+
+        return normalized.TrimStart('/');
+    }
+
+    public string GetPermanentUrl(string? storagePath)
+    {
+        if (string.IsNullOrWhiteSpace(storagePath)) return string.Empty;
+
+        if ((storagePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+             storagePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) &&
+            !storagePath.Contains("storage.googleapis.com", StringComparison.OrdinalIgnoreCase) &&
+            !storagePath.Contains("/api/media", StringComparison.OrdinalIgnoreCase))
+        {
+            return storagePath;
+        }
+
+        var normalized = NormalizeStoragePath(storagePath);
+        if (string.IsNullOrWhiteSpace(normalized)) return string.Empty;
+
+        return $"/api/media/view?path={Uri.EscapeDataString(normalized)}";
+    }
+
+    public string? GetLocalFilePath(string storagePath)
+    {
+        var normalized = NormalizeStoragePath(storagePath);
+        if (string.IsNullOrWhiteSpace(normalized)) return null;
+
+        return Path.Combine(_rootPath, normalized.Replace('/', Path.DirectorySeparatorChar));
+    }
+
     public string GetFullPath(string storagePath) =>
         Path.Combine(_rootPath, storagePath.Replace('/', Path.DirectorySeparatorChar));
+
+    private static string ExtractQueryParam(string queryOrUrl, string paramName)
+    {
+        var qIndex = queryOrUrl.IndexOf('?');
+        var query = qIndex >= 0 ? queryOrUrl[(qIndex + 1)..] : queryOrUrl;
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var eqIndex = part.IndexOf('=');
+            var key = eqIndex >= 0 ? part[..eqIndex] : part;
+            if (string.Equals(Uri.UnescapeDataString(key), paramName, StringComparison.OrdinalIgnoreCase))
+            {
+                return eqIndex >= 0 ? Uri.UnescapeDataString(part[(eqIndex + 1)..]) : string.Empty;
+            }
+        }
+        return string.Empty;
+    }
 }

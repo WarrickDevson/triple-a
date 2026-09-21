@@ -167,7 +167,7 @@ public class PetsController : ControllerBase
             contentType: file.ContentType,
             cancellationToken: cancellationToken);
 
-        pet.ProfilePictureUrl = fileStorageService.GetPublicUrl(storagePath);
+        pet.ProfilePictureUrl = fileStorageService.NormalizeStoragePath(storagePath);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return Ok(PetMapper.ToDto(pet, fileStorageService));

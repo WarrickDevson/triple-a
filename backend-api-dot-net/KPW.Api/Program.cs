@@ -11,6 +11,7 @@ using KPW.Application.Features.Auth.Queries;
 using KPW.Infrastructure;
 using KPW.Infrastructure.Logging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
@@ -142,7 +143,7 @@ if (app.Environment.IsDevelopment())
     });
     app.UseCors("DevCors");
 }
-else if (app.Environment.IsStaging())
+else
 {
     app.UseCors("StagingCors");
 }
@@ -398,14 +399,132 @@ using (var scope = app.Services.CreateScope())
         {
             await dbContext.SaveChangesAsync();
         }
+
+        var fileStorage = scope.ServiceProvider.GetService<IFileStorageService>();
+        if (fileStorage != null)
+        {
+            await SanitizeStorageUrlsAsync(dbContext, fileStorage);
+        }
     }
     catch (Exception ex)
     {
-        Log.Warning(ex, "Seed user verification encountered a transient exception during startup.");
+        Log.Warning(ex, "Seed user verification or storage sanitization encountered a transient exception during startup.");
     }
 }
 
 app.Run();
+
+static async Task SanitizeStorageUrlsAsync(DbContext dbContext, IFileStorageService fileStorage)
+{
+    try
+    {
+        bool anyChanged = false;
+
+        // 1. Sanitize Users.ProfilePictureUrl
+        var usersWithSignedUrls = await dbContext.Set<KPW.Domain.Entities.User>()
+            .IgnoreQueryFilters()
+            .Where(u => u.ProfilePictureUrl != null && (u.ProfilePictureUrl.Contains("Expires=") || u.ProfilePictureUrl.Contains("storage.googleapis.com")))
+            .ToListAsync();
+
+        foreach (var u in usersWithSignedUrls)
+        {
+            var normalized = fileStorage.NormalizeStoragePath(u.ProfilePictureUrl);
+            if (!string.IsNullOrWhiteSpace(normalized) && normalized != u.ProfilePictureUrl)
+            {
+                u.ProfilePictureUrl = normalized;
+                anyChanged = true;
+            }
+        }
+
+        // 2. Sanitize Pets.ProfilePictureUrl
+        var petsWithSignedUrls = await dbContext.Set<KPW.Domain.Entities.Pet>()
+            .IgnoreQueryFilters()
+            .Where(p => p.ProfilePictureUrl != null && (p.ProfilePictureUrl.Contains("Expires=") || p.ProfilePictureUrl.Contains("storage.googleapis.com")))
+            .ToListAsync();
+
+        foreach (var p in petsWithSignedUrls)
+        {
+            var normalized = fileStorage.NormalizeStoragePath(p.ProfilePictureUrl);
+            if (!string.IsNullOrWhiteSpace(normalized) && normalized != p.ProfilePictureUrl)
+            {
+                p.ProfilePictureUrl = normalized;
+                anyChanged = true;
+            }
+        }
+
+        // 3. Sanitize SharedReports.FileUrl
+        var reportsWithSignedUrls = await dbContext.Set<KPW.Domain.Entities.SharedReport>()
+            .IgnoreQueryFilters()
+            .Where(r => r.FileUrl != null && (r.FileUrl.Contains("Expires=") || r.FileUrl.Contains("storage.googleapis.com")))
+            .ToListAsync();
+
+        foreach (var r in reportsWithSignedUrls)
+        {
+            var normalized = fileStorage.NormalizeStoragePath(r.FileUrl);
+            if (!string.IsNullOrWhiteSpace(normalized) && normalized != r.FileUrl)
+            {
+                r.FileUrl = normalized;
+                anyChanged = true;
+            }
+        }
+
+        // 4. Sanitize Messages.AttachmentUrl
+        var messagesWithSignedUrls = await dbContext.Set<KPW.Domain.Entities.Message>()
+            .IgnoreQueryFilters()
+            .Where(m => m.AttachmentUrl != null && (m.AttachmentUrl.Contains("Expires=") || m.AttachmentUrl.Contains("storage.googleapis.com")))
+            .ToListAsync();
+
+        foreach (var m in messagesWithSignedUrls)
+        {
+            var normalized = fileStorage.NormalizeStoragePath(m.AttachmentUrl);
+            if (!string.IsNullOrWhiteSpace(normalized) && normalized != m.AttachmentUrl)
+            {
+                m.AttachmentUrl = normalized;
+                anyChanged = true;
+            }
+        }
+
+        // 5. Sanitize Exercises.CoverImageUrl & VideoUrl
+        var exercisesWithSignedUrls = await dbContext.Set<KPW.Domain.Entities.Exercise>()
+            .IgnoreQueryFilters()
+            .Where(e => (e.CoverImageUrl != null && (e.CoverImageUrl.Contains("Expires=") || e.CoverImageUrl.Contains("storage.googleapis.com"))) ||
+                        (e.VideoUrl != null && (e.VideoUrl.Contains("Expires=") || e.VideoUrl.Contains("storage.googleapis.com"))))
+            .ToListAsync();
+
+        foreach (var e in exercisesWithSignedUrls)
+        {
+            if (e.CoverImageUrl != null && (e.CoverImageUrl.Contains("Expires=") || e.CoverImageUrl.Contains("storage.googleapis.com")))
+            {
+                var normalized = fileStorage.NormalizeStoragePath(e.CoverImageUrl);
+                if (!string.IsNullOrWhiteSpace(normalized) && normalized != e.CoverImageUrl)
+                {
+                    e.CoverImageUrl = normalized;
+                    anyChanged = true;
+                }
+            }
+
+            if (e.VideoUrl != null && (e.VideoUrl.Contains("Expires=") || e.VideoUrl.Contains("storage.googleapis.com")))
+            {
+                var normalized = fileStorage.NormalizeStoragePath(e.VideoUrl);
+                if (!string.IsNullOrWhiteSpace(normalized) && normalized != e.VideoUrl)
+                {
+                    e.VideoUrl = normalized;
+                    anyChanged = true;
+                }
+            }
+        }
+
+        if (anyChanged)
+        {
+            await dbContext.SaveChangesAsync();
+            Log.Information("Successfully sanitized existing expiring storage URLs into canonical relative paths.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Failed to sanitize existing storage URLs during startup.");
+    }
+}
 
 static void ConfigureGoogleApplicationCredentials(string contentRootPath)
 {

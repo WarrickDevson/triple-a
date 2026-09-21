@@ -85,7 +85,7 @@ public class MessagesController : ControllerBase
             contentType: file.ContentType,
             cancellationToken: cancellationToken);
 
-        var attachmentUrl = fileStorageService.GetPublicUrl(storagePath);
+        var attachmentUrl = fileStorageService.GetPermanentUrl(storagePath);
         var attachmentName = file.FileName;
         var attachmentType = file.ContentType;
 

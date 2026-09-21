@@ -104,6 +104,36 @@ public static class SoapNoteMapper
             species,
             breed,
             report.IsActive,
-            report.FileUrl);
+            ResolveDocumentUrl(report.FileUrl));
+    }
+
+    private static string? ResolveDocumentUrl(string? fileUrl)
+    {
+        if (string.IsNullOrWhiteSpace(fileUrl)) return null;
+
+        var trimmed = fileUrl.Trim();
+        if (trimmed.StartsWith("/api/media", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+
+        var path = trimmed;
+        if (trimmed.Contains("storage.googleapis.com", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(trimmed);
+                var absPath = uri.AbsolutePath.TrimStart('/');
+                var slashIndex = absPath.IndexOf('/');
+                path = slashIndex >= 0 ? absPath[(slashIndex + 1)..] : absPath;
+            }
+            catch
+            {
+                // keep path
+            }
+        }
+
+        var normalized = path.TrimStart('/', '\\');
+        return $"/api/media/view?path={Uri.EscapeDataString(normalized)}";
     }
 }

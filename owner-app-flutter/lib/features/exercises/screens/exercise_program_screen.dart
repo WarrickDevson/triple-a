@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/media_url_resolver.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../pets/models/pet.dart';
 import '../models/rehab_program.dart';
@@ -9,16 +9,7 @@ import '../providers/exercise_providers.dart';
 import '../widgets/exercise_video_player.dart';
 import 'exercise_routine_screen.dart';
 
-String _resolveMediaUrl(String url) {
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
-  }
-  final base = AppConfig.fromEnvironment().apiBaseUrl;
-  if (url.startsWith('/')) {
-    return '$base$url';
-  }
-  return '$base/$url';
-}
+String _resolveMediaUrl(String url) => resolveMediaUrl(url) ?? url;
 
 class ExerciseProgramScreen extends ConsumerStatefulWidget {
   const ExerciseProgramScreen({super.key, required this.pet});

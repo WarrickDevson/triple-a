@@ -81,7 +81,7 @@ public class DocumentsController : ControllerBase
             contentType: file.ContentType,
             cancellationToken: cancellationToken);
 
-        var fileUrl = _fileStorageService.GetPublicUrl(storagePath);
+        var fileUrl = _fileStorageService.NormalizeStoragePath(storagePath);
         var documentTitle = !string.IsNullOrWhiteSpace(title) ? title.Trim() : Path.GetFileNameWithoutExtension(file.FileName);
         var reportType = !string.IsNullOrWhiteSpace(category) ? category.Trim() : "CLINICAL_DOCUMENT";
 
@@ -132,14 +132,14 @@ public class DocumentsController : ControllerBase
             .OrderByDescending(r => r.SharedAtUtc)
             .ToListAsync(cancellationToken);
 
-        // Ensure fresh signed URLs for each returned document
+        // Ensure permanent non-expiring media URLs for each returned document
         var results = reports.Select(r =>
         {
             var dto = SoapNoteMapper.ToSharedReportDto(r);
             if (!string.IsNullOrWhiteSpace(r.FileUrl))
             {
-                var refreshedUrl = _fileStorageService.GetPublicUrl(r.FileUrl);
-                return dto with { FileUrl = refreshedUrl };
+                var permanentUrl = _fileStorageService.GetPermanentUrl(r.FileUrl);
+                return dto with { FileUrl = permanentUrl };
             }
             return dto;
         }).ToList();

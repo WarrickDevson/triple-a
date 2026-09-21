@@ -3,8 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Loader2, Play, X } from '@lucide/vue'
 import MessageComposer from './MessageComposer.vue'
-import { API_BASE_URL } from '../../api/config'
-import { getPetVideos } from '../../api/videos'
+import { getPetVideos, resolveMediaUrl } from '../../api/videos'
 import { useAuthStore } from '../../store/auth'
 import type { Message, MessageThread } from '../../types/message'
 import type { Pet } from '../../types/pet'
@@ -96,17 +95,11 @@ function formatTime(value: string) {
   return formatSaTime(value)
 }
 
-function resolveMediaUrl(path: string | null | undefined): string | null {
-  if (!path) return null
-  if (path.startsWith('http://') || path.startsWith('https://')) return path
-  return `${API_BASE_URL.replace(/\/+$/, '')}${path.startsWith('/') ? path : `/${path}`}`
-}
-
 function isImageAttachment(type?: string | null, url?: string | null) {
   if (type?.startsWith('image/')) return true
   if (!url) return false
-  const lower = url.toLowerCase()
-  return lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.webp') || lower.endsWith('.gif')
+  const cleanUrl = url.split('?')[0].toLowerCase()
+  return cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.webp') || cleanUrl.endsWith('.gif') || url.toLowerCase().includes('.png') || url.toLowerCase().includes('.jpg') || url.toLowerCase().includes('.jpeg') || url.toLowerCase().includes('.webp')
 }
 
 onMounted(() => {

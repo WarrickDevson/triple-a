@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../config/app_config.dart';
 import '../theme/app_colors.dart';
+import '../utils/media_url_resolver.dart';
 import 'full_screen_image_viewer.dart';
 
 class UserAvatar extends StatelessWidget {
@@ -24,13 +24,6 @@ class UserAvatar extends StatelessWidget {
   final Color? backgroundColor;
   final Color? textColor;
   final VoidCallback? onTap;
-
-  String _resolveUrl(String path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    final base = AppConfig.fromEnvironment().apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
-    final cleanPath = path.startsWith('/') ? path : '/$path';
-    return '$base$cleanPath';
-  }
 
   String _getInitials() {
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -69,7 +62,7 @@ class UserAvatar extends StatelessWidget {
       child: ClipOval(
         child: hasImage
             ? Image.network(
-                _resolveUrl(imageUrl!.trim()),
+                resolveMediaUrl(imageUrl!.trim()) ?? imageUrl!.trim(),
                 width: size,
                 height: size,
                 fit: BoxFit.cover,

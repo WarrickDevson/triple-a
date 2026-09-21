@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
-import '../../../core/config/app_config.dart';
+import '../../../core/utils/media_url_resolver.dart';
 
 class ExerciseVideoPlayer extends StatefulWidget {
   const ExerciseVideoPlayer({super.key, required this.videoUrl});
@@ -60,12 +60,7 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
 
   String get _effectiveVideoUrl {
     final raw = widget.videoUrl.trim();
-    if (raw.startsWith('http://') || raw.startsWith('https://')) {
-      return raw;
-    }
-    final base = AppConfig.fromEnvironment().apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
-    final cleanPath = raw.startsWith('/') ? raw : '/$raw';
-    return '$base$cleanPath';
+    return resolveMediaUrl(raw) ?? raw;
   }
 
   void _checkAndInit() {

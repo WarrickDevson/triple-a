@@ -30,6 +30,11 @@ internal static class ExerciseMapper
             }
         }
 
+        var resolvedCover = ResolveMediaUrl(exercise.CoverImageUrl);
+        var resolvedVideo = ResolveMediaUrl(exercise.VideoUrl);
+
+        var resolvedVariations = variations?.Select(v => v with { VideoUrl = ResolveMediaUrl(v.VideoUrl) ?? v.VideoUrl }).ToList();
+
         return new(
             exercise.ExerciseId,
             exercise.Title,
@@ -38,8 +43,8 @@ internal static class ExerciseMapper
             exercise.ClinicalPurpose,
             exercise.SafetyNotes,
             exercise.CommonMistakes,
-            exercise.VideoUrl,
-            exercise.CoverImageUrl,
+            resolvedVideo,
+            resolvedCover,
             exercise.TargetSpecies,
             exercise.ConditionCategory,
             exercise.DifficultyLevel,
@@ -56,9 +61,48 @@ internal static class ExerciseMapper
                     s.ExerciseStepId,
                     s.StepNumber,
                     s.StepInstruction,
-                    s.ImageUrl))
+                    ResolveMediaUrl(s.ImageUrl)))
                 .ToList(),
-            variations);
+            resolvedVariations);
+    }
+
+    private static string? ResolveMediaUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+
+        var trimmed = url.Trim();
+        if (trimmed.StartsWith("/api/media", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+
+        // If external URL that doesn't point to GCS, return as-is
+        if ((trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+             trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) &&
+            !trimmed.Contains("storage.googleapis.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+
+        // Extract object path from GCS URL if needed
+        var path = trimmed;
+        if (trimmed.Contains("storage.googleapis.com", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(trimmed);
+                var absPath = uri.AbsolutePath.TrimStart('/');
+                var slashIndex = absPath.IndexOf('/');
+                path = slashIndex >= 0 ? absPath[(slashIndex + 1)..] : absPath;
+            }
+            catch
+            {
+                // keep path
+            }
+        }
+
+        var normalized = path.TrimStart('/', '\\');
+        return $"/api/media/view?path={Uri.EscapeDataString(normalized)}";
     }
 }
 

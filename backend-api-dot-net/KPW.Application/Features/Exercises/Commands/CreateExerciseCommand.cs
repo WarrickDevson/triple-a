@@ -53,8 +53,8 @@ public class CreateExerciseCommandHandler : IRequestHandler<CreateExerciseComman
             ClinicalPurpose = request.ClinicalPurpose?.Trim(),
             SafetyNotes = request.SafetyNotes?.Trim(),
             CommonMistakes = request.CommonMistakes?.Trim(),
-            VideoUrl = request.VideoUrl?.Trim(),
-            CoverImageUrl = request.CoverImageUrl?.Trim(),
+            VideoUrl = NormalizeMediaInput(request.VideoUrl),
+            CoverImageUrl = NormalizeMediaInput(request.CoverImageUrl),
             TargetSpecies = request.TargetSpecies?.Trim(),
             ConditionCategory = request.ConditionCategory?.Trim(),
             DifficultyLevel = Math.Clamp(request.DifficultyLevel, 1, 5),
@@ -77,7 +77,7 @@ public class CreateExerciseCommandHandler : IRequestHandler<CreateExerciseComman
                 {
                     StepNumber = step.StepNumber > 0 ? step.StepNumber : stepNumber++,
                     StepInstruction = step.StepInstruction.Trim(),
-                    ImageUrl = step.ImageUrl?.Trim()
+                    ImageUrl = NormalizeMediaInput(step.ImageUrl)
                 });
             }
         }
@@ -90,5 +90,26 @@ public class CreateExerciseCommandHandler : IRequestHandler<CreateExerciseComman
             .FirstAsync(e => e.ExerciseId == exercise.ExerciseId, cancellationToken);
 
         return ExerciseMapper.ToDto(created);
+    }
+
+    internal static string? NormalizeMediaInput(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+        var trimmed = url.Trim();
+        if (trimmed.Contains("storage.googleapis.com", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(trimmed);
+                var absPath = uri.AbsolutePath.TrimStart('/');
+                var slashIndex = absPath.IndexOf('/');
+                return slashIndex >= 0 ? absPath[(slashIndex + 1)..] : absPath;
+            }
+            catch
+            {
+                // keep trimmed
+            }
+        }
+        return trimmed;
     }
 }

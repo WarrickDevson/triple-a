@@ -27,27 +27,59 @@ internal static class MessageMapper
             videoTitle = $"Video #{message.VideoSubmissionId}";
         }
 
-        var senderDp = message.Sender?.ProfilePictureUrl;
-        var attachmentUrl = message.AttachmentUrl;
+        var senderName = message.Sender != null
+            ? $"{message.Sender.FirstName} {message.Sender.LastName}".Trim()
+            : "User";
 
         return new(
             message.MessageId,
             message.MessageThreadId,
             message.SenderUserId,
-            $"{message.Sender.FirstName} {message.Sender.LastName}",
+            senderName,
             message.Body,
             message.VideoSubmissionId,
             videoTitle,
-            fileStorage != null && !string.IsNullOrWhiteSpace(attachmentUrl)
-                ? fileStorage.GetPublicUrl(attachmentUrl)
-                : attachmentUrl,
+            ResolveMediaUrl(message.AttachmentUrl, fileStorage),
             message.AttachmentName,
             message.AttachmentType,
             message.ReadAt,
             message.CreatedDate,
-            fileStorage != null && !string.IsNullOrWhiteSpace(senderDp)
-                ? fileStorage.GetPublicUrl(senderDp)
-                : senderDp);
+            ResolveMediaUrl(message.Sender?.ProfilePictureUrl, fileStorage));
+    }
+
+    private static string? ResolveMediaUrl(string? path, IFileStorageService? fileStorage)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+
+        if (fileStorage != null)
+        {
+            return fileStorage.GetPermanentUrl(path);
+        }
+
+        var trimmed = path.Trim();
+        if (trimmed.StartsWith("/api/media", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+
+        var normalized = trimmed;
+        if (trimmed.Contains("storage.googleapis.com", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var uri = new Uri(trimmed);
+                var absPath = uri.AbsolutePath.TrimStart('/');
+                var slashIndex = absPath.IndexOf('/');
+                normalized = slashIndex >= 0 ? absPath[(slashIndex + 1)..] : absPath;
+            }
+            catch
+            {
+                // keep path
+            }
+        }
+
+        normalized = normalized.TrimStart('/', '\\');
+        return $"/api/media/view?path={Uri.EscapeDataString(normalized)}";
     }
 }
 

@@ -70,8 +70,8 @@ public class UpdateExerciseCommandHandler : IRequestHandler<UpdateExerciseComman
         exercise.ClinicalPurpose = request.ClinicalPurpose?.Trim();
         exercise.SafetyNotes = request.SafetyNotes?.Trim();
         exercise.CommonMistakes = request.CommonMistakes?.Trim();
-        exercise.VideoUrl = request.VideoUrl?.Trim();
-        exercise.CoverImageUrl = request.CoverImageUrl?.Trim();
+        exercise.VideoUrl = CreateExerciseCommandHandler.NormalizeMediaInput(request.VideoUrl);
+        exercise.CoverImageUrl = CreateExerciseCommandHandler.NormalizeMediaInput(request.CoverImageUrl);
         exercise.TargetSpecies = request.TargetSpecies?.Trim();
         exercise.ConditionCategory = request.ConditionCategory?.Trim();
         exercise.DifficultyLevel = Math.Clamp(request.DifficultyLevel, 1, 5);
@@ -95,7 +95,7 @@ public class UpdateExerciseCommandHandler : IRequestHandler<UpdateExerciseComman
                     ExerciseId = exercise.ExerciseId,
                     StepNumber = step.StepNumber > 0 ? step.StepNumber : stepNum++,
                     StepInstruction = step.StepInstruction.Trim(),
-                    ImageUrl = step.ImageUrl?.Trim()
+                    ImageUrl = CreateExerciseCommandHandler.NormalizeMediaInput(step.ImageUrl)
                 });
             }
         }

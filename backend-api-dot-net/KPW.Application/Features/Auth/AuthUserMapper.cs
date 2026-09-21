@@ -19,7 +19,23 @@ public static class AuthUserMapper
             clinic?.InviteCode,
             user.IsEmailVerified,
             user.IsApproved,
-            fileStorage != null && !string.IsNullOrWhiteSpace(user.ProfilePictureUrl)
-                ? fileStorage.GetPublicUrl(user.ProfilePictureUrl)
-                : user.ProfilePictureUrl);
+            ResolveAvatarUrl(user.ProfilePictureUrl, fileStorage));
+
+    private static string? ResolveAvatarUrl(string? profilePictureUrl, IFileStorageService? fileStorage)
+    {
+        if (string.IsNullOrWhiteSpace(profilePictureUrl)) return null;
+
+        if (fileStorage != null)
+        {
+            return fileStorage.GetPermanentUrl(profilePictureUrl);
+        }
+
+        if (profilePictureUrl.StartsWith("/api/media", StringComparison.OrdinalIgnoreCase))
+        {
+            return profilePictureUrl;
+        }
+
+        var normalized = profilePictureUrl.TrimStart('/', '\\');
+        return $"/api/media/view?path={Uri.EscapeDataString(normalized)}";
+    }
 }

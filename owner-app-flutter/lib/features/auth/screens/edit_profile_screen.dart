@@ -1,8 +1,8 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/media_url_resolver.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/full_screen_image_viewer.dart';
 import '../models/auth_user.dart';
@@ -37,12 +37,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.dispose();
   }
 
-  String _resolveUrl(String path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    final base = AppConfig.fromEnvironment().apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
-    final cleanPath = path.startsWith('/') ? path : '/$path';
-    return '$base$cleanPath';
-  }
+  String _resolveUrl(String path) => resolveMediaUrl(path) ?? path;
 
   Widget _buildInitials(AuthUser? user) {
     final first = (user?.firstName.isNotEmpty ?? false) ? user!.firstName[0] : 'O';

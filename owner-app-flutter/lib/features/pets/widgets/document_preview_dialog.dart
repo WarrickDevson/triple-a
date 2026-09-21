@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/media_url_resolver.dart';
 import '../../../core/utils/south_africa_time.dart';
 import '../models/shared_report_model.dart';
 
@@ -30,18 +30,7 @@ class DocumentPreviewDialog extends StatelessWidget {
     );
   }
 
-  String? get _resolvedFileUrl {
-    final raw = report.fileUrl;
-    if (raw == null || raw.trim().isEmpty) return null;
-    if (raw.startsWith('http://') ||
-        raw.startsWith('https://') ||
-        raw.startsWith('blob:') ||
-        raw.startsWith('data:')) {
-      return raw;
-    }
-    final base = AppConfig.fromEnvironment().apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
-    return '$base${raw.startsWith('/') ? raw : '/$raw'}';
-  }
+  String? get _resolvedFileUrl => resolveMediaUrl(report.fileUrl);
 
   bool get _isImage {
     final type = report.fileType?.toLowerCase() ?? '';

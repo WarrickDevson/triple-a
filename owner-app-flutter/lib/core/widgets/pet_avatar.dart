@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../config/app_config.dart';
 import '../theme/app_colors.dart';
+import '../utils/media_url_resolver.dart';
 import 'full_screen_image_viewer.dart';
 
 class PetAvatar extends StatelessWidget {
@@ -28,13 +28,6 @@ class PetAvatar extends StatelessWidget {
         _ => Icons.pets_rounded,
       };
 
-  String _resolveUrl(String path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    final base = AppConfig.fromEnvironment().apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
-    final cleanPath = path.startsWith('/') ? path : '/$path';
-    return '$base$cleanPath';
-  }
-
   Widget _buildFallback() {
     return Icon(_icon, color: AppColors.sage, size: size * 0.45);
   }
@@ -54,7 +47,7 @@ class PetAvatar extends StatelessWidget {
       child: ClipOval(
         child: hasImage
             ? Image.network(
-                _resolveUrl(imageUrl!.trim()),
+                resolveMediaUrl(imageUrl!.trim()) ?? imageUrl!.trim(),
                 width: size,
                 height: size,
                 fit: BoxFit.cover,

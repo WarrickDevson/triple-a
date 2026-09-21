@@ -6,8 +6,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../core/config/app_config.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/media_url_resolver.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/pet_avatar.dart';
 import '../../../core/widgets/user_avatar.dart';
@@ -580,18 +580,15 @@ class _MessageBubble extends StatelessWidget {
   bool _isImageAttachment(String? type, String? url) {
     if (type != null && type.startsWith('image/')) return true;
     if (url == null) return false;
-    final lower = url.toLowerCase();
-    return lower.endsWith('.png') ||
-        lower.endsWith('.jpg') ||
-        lower.endsWith('.jpeg') ||
-        lower.endsWith('.webp') ||
-        lower.endsWith('.gif');
+    final cleanUrl = url.split('?').first.toLowerCase();
+    return cleanUrl.endsWith('.png') ||
+        cleanUrl.endsWith('.jpg') ||
+        cleanUrl.endsWith('.jpeg') ||
+        cleanUrl.endsWith('.webp') ||
+        cleanUrl.endsWith('.gif');
   }
 
-  String _resolveAttachmentUrl(String path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    return '${AppConfig.fromEnvironment().apiBaseUrl}${path.startsWith('/') ? path : '/$path'}';
-  }
+  String _resolveAttachmentUrl(String path) => resolveMediaUrl(path) ?? path;
 
   void _openImagePreview(BuildContext context, String url, String? name) {
     showFullScreenImageViewer(

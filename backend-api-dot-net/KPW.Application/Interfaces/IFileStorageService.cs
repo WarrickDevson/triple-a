@@ -10,4 +10,10 @@ public interface IFileStorageService
         CancellationToken cancellationToken = default);
 
     string GetPublicUrl(string storagePath, TimeSpan? duration = null);
+
+    string GetPermanentUrl(string? storagePath);
+
+    string NormalizeStoragePath(string? storagePath);
+
+    string? GetLocalFilePath(string storagePath);
 }

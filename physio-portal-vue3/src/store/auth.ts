@@ -66,6 +66,9 @@ export const useAuthStore = defineStore('auth', () => {
       refreshToken.value = stored.refreshToken
       user.value = stored.user
       setAuthTokens(stored.accessToken, stored.refreshToken)
+
+      // Refresh current user in background to ensure fresh avatar and data
+      fetchCurrentUser().catch(() => {})
     }
   }
 

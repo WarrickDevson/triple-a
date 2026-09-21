@@ -208,10 +208,10 @@ public class ExercisesController : ControllerBase
             contentType: file.ContentType,
             cancellationToken: cancellationToken);
 
-        var publicUrl = fileStorageService.GetPublicUrl(storagePath);
+        var mediaUrl = fileStorageService.GetPermanentUrl(storagePath);
 
         return Ok(new UploadExerciseMediaResultDto(
-            publicUrl,
+            mediaUrl,
             file.FileName,
             file.ContentType,
             isVideo));

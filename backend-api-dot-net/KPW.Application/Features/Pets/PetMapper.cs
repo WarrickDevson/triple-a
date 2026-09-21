@@ -25,12 +25,26 @@ public static class PetMapper
                 m.InjuryOrCondition,
                 m.SurgeryDate,
                 m.ClinicianNotes)).ToList(),
-            fileStorage != null && !string.IsNullOrWhiteSpace(pet.ProfilePictureUrl)
-                ? fileStorage.GetPublicUrl(pet.ProfilePictureUrl)
-                : pet.ProfilePictureUrl,
-            fileStorage != null && !string.IsNullOrWhiteSpace(pet.Owner?.ProfilePictureUrl)
-                ? fileStorage.GetPublicUrl(pet.Owner.ProfilePictureUrl)
-                : pet.Owner?.ProfilePictureUrl);
+            ResolveMediaUrl(pet.ProfilePictureUrl, fileStorage),
+            ResolveMediaUrl(pet.Owner?.ProfilePictureUrl, fileStorage));
+
+    private static string? ResolveMediaUrl(string? path, IFileStorageService? fileStorage)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+
+        if (fileStorage != null)
+        {
+            return fileStorage.GetPermanentUrl(path);
+        }
+
+        if (path.StartsWith("/api/media", StringComparison.OrdinalIgnoreCase))
+        {
+            return path;
+        }
+
+        var normalized = path.TrimStart('/', '\\');
+        return $"/api/media/view?path={Uri.EscapeDataString(normalized)}";
+    }
 }
 
 public static class PetAuthorization

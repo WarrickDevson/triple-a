@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
-import '../config/app_config.dart';
 import '../theme/app_colors.dart';
-
-String resolveMediaUrl(String path) {
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  final base = AppConfig.fromEnvironment().apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
-  final cleanPath = path.startsWith('/') ? path : '/$path';
-  return '$base$cleanPath';
-}
+import '../utils/media_url_resolver.dart';
 
 void showFullScreenImageViewer(
   BuildContext context, {
@@ -53,7 +46,7 @@ class FullScreenImageViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fullUrl = resolveMediaUrl(imageUrl.trim());
+    final fullUrl = resolveMediaUrl(imageUrl.trim()) ?? imageUrl.trim();
 
     Widget imageWidget = Image.network(
       fullUrl,

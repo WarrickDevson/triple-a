@@ -133,26 +133,62 @@ public class GcsFileStorage : IFileStorageService
     {
         if (string.IsNullOrWhiteSpace(storagePath)) return string.Empty;
 
-        // If it is a gs:// URI, strip the gs://<bucket>/ prefix
-        if (storagePath.StartsWith("gs://", StringComparison.OrdinalIgnoreCase))
+        var trimmed = storagePath.Trim();
+
+        // Handle API media endpoint format: /api/media/view?path=...
+        if (trimmed.StartsWith("/api/media/view", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.StartsWith("api/media/view", StringComparison.OrdinalIgnoreCase))
         {
-            var withoutScheme = storagePath["gs://".Length..];
+            var inner = ExtractQueryParam(trimmed, "path");
+            if (!string.IsNullOrWhiteSpace(inner))
+            {
+                return NormalizeObjectPath(inner);
+            }
+        }
+
+        if (trimmed.StartsWith("/api/media/", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed["/api/media/".Length..];
+        }
+        else if (trimmed.StartsWith("api/media/", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed["api/media/".Length..];
+        }
+
+        // If it is a gs:// URI, strip the gs://<bucket>/ prefix
+        if (trimmed.StartsWith("gs://", StringComparison.OrdinalIgnoreCase))
+        {
+            var withoutScheme = trimmed["gs://".Length..];
             var slashIndex = withoutScheme.IndexOf('/');
             return slashIndex >= 0 ? withoutScheme[(slashIndex + 1)..] : withoutScheme;
         }
 
         // If it is an HTTPS Google Storage URL, extract object path and strip query params
-        if (storagePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-            storagePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             try
             {
-                var uri = new Uri(storagePath);
+                var uri = new Uri(trimmed);
+                if (uri.AbsolutePath.StartsWith("/api/media/view", StringComparison.OrdinalIgnoreCase))
+                {
+                    var inner = ExtractQueryParam(uri.Query, "path");
+                    if (!string.IsNullOrWhiteSpace(inner))
+                    {
+                        return NormalizeObjectPath(inner);
+                    }
+                }
+
                 var path = uri.AbsolutePath.TrimStart('/');
                 // Format: /storage/v1/b/{bucket}/o/{object} or /{bucket}/{object}
                 if (path.StartsWith(_options.Bucket + "/", StringComparison.OrdinalIgnoreCase))
                 {
                     return Uri.UnescapeDataString(path[(_options.Bucket.Length + 1)..]);
+                }
+                if (path.Contains("/o/", StringComparison.OrdinalIgnoreCase))
+                {
+                    var oIndex = path.IndexOf("/o/", StringComparison.OrdinalIgnoreCase);
+                    return Uri.UnescapeDataString(path[(oIndex + 3)..]);
                 }
                 return Uri.UnescapeDataString(path);
             }
@@ -162,7 +198,48 @@ public class GcsFileStorage : IFileStorageService
             }
         }
 
-        return storagePath.Replace('\\', '/').TrimStart('/');
+        return trimmed.Replace('\\', '/').TrimStart('/');
+    }
+
+    public string NormalizeStoragePath(string? storagePath) =>
+        string.IsNullOrWhiteSpace(storagePath) ? string.Empty : NormalizeObjectPath(storagePath);
+
+    public string GetPermanentUrl(string? storagePath)
+    {
+        if (string.IsNullOrWhiteSpace(storagePath)) return string.Empty;
+
+        // If it is an external URL not from our bucket or domain, leave it untouched
+        if ((storagePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+             storagePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) &&
+            !storagePath.Contains("storage.googleapis.com", StringComparison.OrdinalIgnoreCase) &&
+            !storagePath.Contains(_options.Bucket, StringComparison.OrdinalIgnoreCase) &&
+            !storagePath.Contains("/api/media", StringComparison.OrdinalIgnoreCase))
+        {
+            return storagePath;
+        }
+
+        var normalized = NormalizeStoragePath(storagePath);
+        if (string.IsNullOrWhiteSpace(normalized)) return string.Empty;
+
+        return $"/api/media/view?path={Uri.EscapeDataString(normalized)}";
+    }
+
+    public string? GetLocalFilePath(string storagePath) => null;
+
+    private static string ExtractQueryParam(string queryOrUrl, string paramName)
+    {
+        var qIndex = queryOrUrl.IndexOf('?');
+        var query = qIndex >= 0 ? queryOrUrl[(qIndex + 1)..] : queryOrUrl;
+        foreach (var part in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var eqIndex = part.IndexOf('=');
+            var key = eqIndex >= 0 ? part[..eqIndex] : part;
+            if (string.Equals(Uri.UnescapeDataString(key), paramName, StringComparison.OrdinalIgnoreCase))
+            {
+                return eqIndex >= 0 ? Uri.UnescapeDataString(part[(eqIndex + 1)..]) : string.Empty;
+            }
+        }
+        return string.Empty;
     }
 
     private static string GetContentType(string extension) =>

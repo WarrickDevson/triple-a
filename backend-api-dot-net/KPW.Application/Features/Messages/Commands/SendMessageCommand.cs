@@ -14,15 +14,18 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Mes
     private readonly DbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
     private readonly IChatNotificationService? _chatNotificationService;
+    private readonly IFileStorageService? _fileStorageService;
 
     public SendMessageCommandHandler(
         DbContext dbContext,
         ICurrentUserService currentUserService,
-        IChatNotificationService? chatNotificationService = null)
+        IChatNotificationService? chatNotificationService = null,
+        IFileStorageService? fileStorageService = null)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
         _chatNotificationService = chatNotificationService;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<MessageDto> Handle(SendMessageCommand command, CancellationToken cancellationToken)
@@ -74,7 +77,7 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Mes
                 .ThenInclude(v => v!.Exercise)
             .FirstAsync(m => m.MessageId == message.MessageId, cancellationToken);
 
-        var dto = MessageMapper.ToDto(created);
+        var dto = MessageMapper.ToDto(created, _fileStorageService);
 
         if (_chatNotificationService is not null)
         {

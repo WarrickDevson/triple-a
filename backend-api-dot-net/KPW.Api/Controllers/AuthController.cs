@@ -241,7 +241,7 @@ public class AuthController : ControllerBase
             contentType: file.ContentType,
             cancellationToken: cancellationToken);
 
-        user.ProfilePictureUrl = fileStorageService.GetPublicUrl(storagePath);
+        user.ProfilePictureUrl = fileStorageService.NormalizeStoragePath(storagePath);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var clinic = user.ClinicId is null

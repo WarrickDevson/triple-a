@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace KPW.Api.Controllers;
 
 [ApiController]
+[Route("media")]
 [Route("api/media")]
 [AllowAnonymous]
 public class MediaController : ControllerBase

@@ -86,13 +86,6 @@ public class GcsFileStorage : IFileStorageService
     {
         if (string.IsNullOrWhiteSpace(storagePath)) return string.Empty;
 
-        // If it's a local upload path, return directly
-        if (storagePath.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase) ||
-            storagePath.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase))
-        {
-            return storagePath.StartsWith('/') ? storagePath : $"/{storagePath}";
-        }
-
         // If it is an external URL not from our bucket, return directly
         if ((storagePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
              storagePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) &&
@@ -198,7 +191,12 @@ public class GcsFileStorage : IFileStorageService
             }
         }
 
-        return trimmed.Replace('\\', '/').TrimStart('/');
+        var normalized = trimmed.Replace('\\', '/').TrimStart('/');
+        if (normalized.StartsWith("uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized["uploads/".Length..];
+        }
+        return normalized.TrimStart('/');
     }
 
     public string NormalizeStoragePath(string? storagePath) =>

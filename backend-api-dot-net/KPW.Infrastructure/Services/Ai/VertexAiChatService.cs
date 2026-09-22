@@ -1,3 +1,4 @@
+using System.Text;
 using Google.Cloud.AIPlatform.V1;
 using KPW.Application.Interfaces;
 using KPW.Infrastructure;
@@ -13,30 +14,20 @@ public class VertexAiChatService : IAiChatService
         "I don't have enough approved clinical information to answer that confidently. " +
         "Please book a consultation with your physiotherapist at Triple A Veterinary Physiotherapy for personalised guidance.";
 
-    private const string DirectSystemInstruction =
-        "You are the wellness assistant for Triple A Veterinary Physiotherapy, a veterinary physiotherapy practice. " +
-        "Only answer questions about pet rehabilitation, home exercises, pain/mobility/energy tracking, recovery expectations, and safe at-home care after injury or surgery. " +
-        "Keep answers concise, practical, and compassionate. " +
-        "Do not diagnose new conditions, prescribe medication, or give emergency advice—direct those to a veterinarian. " +
-        "For pet-specific treatment plans or worsening symptoms, suggest booking a consultation with their physiotherapist. " +
-        "Decline unrelated topics politely.";
-
-    private const string RagSystemInstruction =
-        "You are an assistant for Triple A Veterinary Physiotherapy. Answer only with information present in the retrieved educational texts provided in the user message. " +
-        "If the retrieved texts do not contain enough information to answer, suggest booking a consultation with their physiotherapist. " +
-        "Do not invent clinical advice. Keep answers concise and compassionate.";
-
     private readonly PredictionServiceClient _client;
     private readonly AiOptions _options;
+    private readonly IAiPromptConfigService _promptConfigService;
     private readonly IReadOnlyList<EducationChunk> _chunks;
     private readonly ILogger<VertexAiChatService> _logger;
 
     public VertexAiChatService(
         IOptions<AiOptions> options,
+        IAiPromptConfigService promptConfigService,
         IHostEnvironment environment,
         ILogger<VertexAiChatService> logger)
     {
         _options = options.Value;
+        _promptConfigService = promptConfigService;
         _logger = logger;
         _chunks = EducationDocumentLoader.Load(environment);
 
@@ -51,114 +42,194 @@ public class VertexAiChatService : IAiChatService
         }.Build();
 
         _logger.LogInformation(
-            "Vertex AI chat configured for model {Model} in {Location} (RAG chunks: {UseRag})",
-            _options.Model,
-            _options.Location,
-            _options.UseEducationChunks);
+            "VertexAiChatService initialized with {Count} education chunks for model {Model} in {Location}",
+            _chunks.Count,
+            GetEffectiveModel(),
+            _options.Location);
     }
 
-    public async Task<AiChatResult> ChatAsync(string message, string? clinicalContext = null, AiChatAttachment? attachment = null, IReadOnlyList<AiChatHistoryTurn>? history = null, CancellationToken cancellationToken = default)
+    private string GetEffectiveModel()
+    {
+        var envModel = Environment.GetEnvironmentVariable("AI__MODEL") ??
+                       Environment.GetEnvironmentVariable("Ai__Model") ??
+                       Environment.GetEnvironmentVariable("AI_MODEL");
+        var model = !string.IsNullOrWhiteSpace(envModel) ? envModel.Trim().Trim('"', '\'', ' ') : _options.Model;
+
+        if (string.IsNullOrWhiteSpace(model) || model.Contains("3.5", StringComparison.OrdinalIgnoreCase))
+        {
+            return "gemini-2.0-flash";
+        }
+
+        return model;
+    }
+
+    public async Task<AiChatResult> ChatAsync(
+        string message,
+        string? clinicalContext = null,
+        AiChatAttachment? attachment = null,
+        IReadOnlyList<AiChatHistoryTurn>? history = null,
+        CancellationToken cancellationToken = default)
     {
         var trimmed = message.Trim();
-        if (string.IsNullOrWhiteSpace(trimmed))
+        if (string.IsNullOrWhiteSpace(trimmed) && attachment is null)
         {
             return new AiChatResult(FallbackMessage, []);
         }
 
-        if (_options.UseEducationChunks)
-        {
-            return await ChatWithRagAsync(trimmed, cancellationToken);
-        }
-
-        return await ChatDirectAsync(trimmed, cancellationToken);
-    }
-
-    private async Task<AiChatResult> ChatDirectAsync(string message, CancellationToken cancellationToken)
-    {
-        var request = BuildRequest(DirectSystemInstruction, message);
-
-        try
-        {
-            var response = await _client.GenerateContentAsync(request, cancellationToken: cancellationToken);
-            var answer = ExtractAnswer(response);
-
-            if (string.IsNullOrWhiteSpace(answer))
-            {
-                return new AiChatResult(FallbackMessage, []);
-            }
-
-            return new AiChatResult(answer, []);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Vertex AI direct chat request failed.");
-            return new AiChatResult(FallbackMessage, []);
-        }
-    }
-
-    private async Task<AiChatResult> ChatWithRagAsync(string message, CancellationToken cancellationToken)
-    {
-        var topChunks = EducationChunkRetriever.RetrieveTopChunks(_chunks, message);
-        if (topChunks.Count == 0)
-        {
-            return new AiChatResult(FallbackMessage, []);
-        }
-
+        var topChunks = EducationChunkRetriever.RetrieveTopChunks(_chunks, trimmed);
         var sources = topChunks
             .Select(c => new AiChatSource(c.Title, Truncate(c.Content, 180)))
             .ToList();
 
-        var groundingContext = EducationChunkRetriever.BuildGroundingContext(topChunks);
-        var userPrompt = $"Retrieved educational texts:\n{groundingContext}\n\nOwner question: {message}";
-
-        var request = BuildRequest(RagSystemInstruction, userPrompt);
-
         try
         {
-            var response = await _client.GenerateContentAsync(request, cancellationToken: cancellationToken);
-            var answer = ExtractAnswer(response);
-
-            if (string.IsNullOrWhiteSpace(answer))
+            var cloudResponse = await ChatWithVertexAsync(trimmed, topChunks, clinicalContext, attachment, history, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(cloudResponse))
             {
-                return new AiChatResult(FallbackMessage, sources);
+                return new AiChatResult(cloudResponse, sources);
             }
-
-            return new AiChatResult(answer, sources);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Vertex AI RAG chat request failed.");
-            return new AiChatResult(FallbackMessage, sources);
+            _logger.LogError(ex, "Vertex AI chat processing failed. Reverting to local clinical knowledge fallback.");
         }
+
+        return FallbackToLocalKnowledge(trimmed, topChunks, sources);
     }
 
-    private GenerateContentRequest BuildRequest(string systemInstruction, string userContent)
+    private async Task<string?> ChatWithVertexAsync(
+        string message,
+        IReadOnlyList<EducationChunk> chunks,
+        string? clinicalContext,
+        AiChatAttachment? attachment,
+        IReadOnlyList<AiChatHistoryTurn>? history,
+        CancellationToken cancellationToken)
     {
-        var modelResource =
-            $"projects/{_options.ProjectId}/locations/{_options.Location}/publishers/google/models/{_options.Model}";
-
-        return new GenerateContentRequest
+        var effectiveModel = GetEffectiveModel();
+        var candidateModels = new[]
         {
-            Model = modelResource,
-            SystemInstruction = new Content
+            effectiveModel,
+            "gemini-2.0-flash",
+            "gemini-1.5-flash"
+        }.Distinct();
+
+        var baseSystemPrompt = await _promptConfigService.GetEffectiveSystemPromptAsync(cancellationToken);
+        var systemInstructionBuilder = new StringBuilder(baseSystemPrompt);
+
+        if (!string.IsNullOrWhiteSpace(clinicalContext))
+        {
+            systemInstructionBuilder.AppendLine();
+            systemInstructionBuilder.AppendLine();
+            systemInstructionBuilder.AppendLine("=== REGISTERED PETS CLINICAL PROFILES (BACKGROUND CONTEXT) ===");
+            systemInstructionBuilder.AppendLine(clinicalContext);
+        }
+
+        if (chunks.Count > 0)
+        {
+            systemInstructionBuilder.AppendLine();
+            systemInstructionBuilder.AppendLine();
+            systemInstructionBuilder.AppendLine("=== APPROVED REFERENCE CLINICAL MATERIAL FROM TRIPLE A ===");
+            systemInstructionBuilder.AppendLine(EducationChunkRetriever.BuildGroundingContext(chunks));
+        }
+
+        var userMessageBuilder = new StringBuilder();
+        if (attachment != null)
+        {
+            userMessageBuilder.AppendLine("[Pet owner attached a photo/document for your review]");
+        }
+        userMessageBuilder.AppendLine(string.IsNullOrWhiteSpace(message) ? "Please review the attached photo/document." : message.Trim());
+
+        foreach (var model in candidateModels)
+        {
+            try
             {
-                Parts = { new Part { Text = systemInstruction } }
-            },
-            Contents =
-            {
-                new Content
+                var request = new GenerateContentRequest
                 {
-                    Role = "user",
-                    Parts = { new Part { Text = userContent } }
+                    Model = $"projects/{_options.ProjectId}/locations/{_options.Location}/publishers/google/models/{model}",
+                    SystemInstruction = new Content
+                    {
+                        Parts = { new Part { Text = systemInstructionBuilder.ToString() } }
+                    }
+                };
+
+                // Inject preceding conversation turns from this session
+                if (history != null && history.Count > 0)
+                {
+                    var recentHistory = history.TakeLast(8);
+                    foreach (var turn in recentHistory)
+                    {
+                        var role = string.Equals(turn.Role, "assistant", StringComparison.OrdinalIgnoreCase) ||
+                                   string.Equals(turn.Role, "model", StringComparison.OrdinalIgnoreCase)
+                            ? "model"
+                            : "user";
+
+                        request.Contents.Add(new Content
+                        {
+                            Role = role,
+                            Parts = { new Part { Text = turn.Content } }
+                        });
+                    }
+                }
+
+                // Current turn
+                var currentTurn = new Content { Role = "user" };
+
+                // Handle multimodal attachment
+                if (attachment != null && !string.IsNullOrWhiteSpace(attachment.Base64Data))
+                {
+                    var mimeType = !string.IsNullOrWhiteSpace(attachment.MimeType)
+                        ? attachment.MimeType
+                        : "image/jpeg";
+
+                    currentTurn.Parts.Add(new Part
+                    {
+                        InlineData = new Blob
+                        {
+                            MimeType = mimeType,
+                            Data = Google.Protobuf.ByteString.FromBase64(attachment.Base64Data)
+                        }
+                    });
+                }
+
+                currentTurn.Parts.Add(new Part { Text = userMessageBuilder.ToString().Trim() });
+                request.Contents.Add(currentTurn);
+
+                var response = await _client.GenerateContentAsync(request, cancellationToken: cancellationToken);
+                var answer = ExtractAnswer(response);
+
+                if (!string.IsNullOrWhiteSpace(answer))
+                {
+                    return answer;
                 }
             }
-        };
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Vertex AI call failed for model {Model}. Attempting next candidate...", model);
+            }
+        }
+
+        return null;
     }
 
     private static string? ExtractAnswer(GenerateContentResponse response) =>
         response.Candidates
             .FirstOrDefault()?.Content?.Parts
             .FirstOrDefault()?.Text?.Trim();
+
+    private static AiChatResult FallbackToLocalKnowledge(
+        string message,
+        IReadOnlyList<EducationChunk> topChunks,
+        List<AiChatSource> sources)
+    {
+        if (topChunks.Count == 0)
+        {
+            return new AiChatResult(FallbackMessage, []);
+        }
+
+        var intro = "Based on Triple A Veterinary Physiotherapy educational materials:";
+        var body = string.Join(" ", topChunks.Select(c => c.Content));
+        return new AiChatResult($"{intro} {body}", sources);
+    }
 
     private static string Truncate(string value, int maxLength) =>
         value.Length <= maxLength ? value : value[..maxLength].TrimEnd() + "…";

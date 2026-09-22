@@ -36,6 +36,7 @@ internal static class RehabProgramMapper
                             s.StepNumber,
                             s.StepInstruction,
                             s.ImageUrl))
-                        .ToList()))
+                        .ToList(),
+                    e.PhaseId > 0 ? e.PhaseId : 1))
                 .ToList());
 }

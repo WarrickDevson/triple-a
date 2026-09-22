@@ -62,6 +62,7 @@ class RehabProgramExercise {
     this.coverImageUrl,
     this.videoVariations = const [],
     required this.steps,
+    this.phaseId = 1,
   });
 
   final int rehabProgramExerciseId;
@@ -70,6 +71,7 @@ class RehabProgramExercise {
   final int repetitions;
   final int sets;
   final int frequencyPerDay;
+  final int phaseId;
   final String? shortDescription;
   final String? safetyNotes;
   final String? commonMistakes;
@@ -138,6 +140,7 @@ class RehabProgramExercise {
       steps: (json['steps'] as List<dynamic>? ?? [])
           .map((item) => ExerciseStep.fromJson(item as Map<String, dynamic>))
           .toList(),
+      phaseId: json['phaseId'] as int? ?? 1,
     );
   }
 }

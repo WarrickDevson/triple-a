@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { Dumbbell } from '@lucide/vue'
+import { resolveMediaUrl } from '../../api/videos'
 import { getExerciseStatus, statusBadgeClass } from '../../data/planDemo'
 import type { RehabProgramExercise } from '../../types/exercise'
 
@@ -6,8 +9,15 @@ defineProps<{
   exercises: RehabProgramExercise[]
 }>()
 
-function exerciseImage(exercise: { steps: { imageUrl: string | null }[] }) {
-  return exercise.steps.find((s) => s.imageUrl)?.imageUrl ?? null
+const brokenImages = ref<Record<number, boolean>>({})
+
+function handleImageError(id: number) {
+  brokenImages.value[id] = true
+}
+
+function exerciseImage(exercise: RehabProgramExercise) {
+  const raw = exercise.coverImageUrl || exercise.steps?.find((s) => s.imageUrl)?.imageUrl
+  return resolveMediaUrl(raw)
 }
 </script>
 
@@ -34,15 +44,16 @@ function exerciseImage(exercise: { steps: { imageUrl: string | null }[] }) {
           <td class="py-3 pr-4">
             <div class="flex items-center gap-3">
               <div
-                class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sage-muted/50 text-[10px] text-sage"
+                class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sage/15 text-[10px] text-sage"
               >
                 <img
-                  v-if="exerciseImage(exercise)"
+                  v-if="exerciseImage(exercise) && !brokenImages[exercise.rehabProgramExerciseId]"
                   :src="exerciseImage(exercise)!"
                   :alt="exercise.title"
                   class="h-full w-full object-cover"
+                  @error="handleImageError(exercise.rehabProgramExerciseId)"
                 />
-                <span v-else>Ex</span>
+                <Dumbbell v-else class="h-4 w-4" />
               </div>
               <span class="font-medium text-navy">{{ exercise.title }}</span>
             </div>

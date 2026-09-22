@@ -16,6 +16,9 @@ public class RehabProgramExerciseConfiguration : IEntityTypeConfiguration<RehabP
             .HasForeignKey(r => r.RehabProgramId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.Property(r => r.PhaseId)
+            .HasDefaultValue(1);
+
         builder.HasOne(r => r.Exercise)
             .WithMany(e => e.RehabProgramExercises)
             .HasForeignKey(r => r.ExerciseId)

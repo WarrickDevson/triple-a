@@ -14,7 +14,8 @@ public record RehabProgramExerciseDto(
     string? CommonMistakes,
     string? VideoUrl,
     string? CoverImageUrl,
-    IReadOnlyList<ExerciseStepDto> Steps);
+    IReadOnlyList<ExerciseStepDto> Steps,
+    int PhaseId = 1);
 
 public record RehabProgramDto(
     int RehabProgramId,
@@ -30,7 +31,8 @@ public record CreateRehabProgramExerciseDto(
     int ExerciseId,
     int Repetitions,
     int Sets,
-    int FrequencyPerDay);
+    int FrequencyPerDay,
+    int PhaseId = 1);
 
 public record CreateRehabProgramRequestDto(
     int PetId,

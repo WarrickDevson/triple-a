@@ -105,6 +105,7 @@ export interface RehabProgramExercise {
   safetyNotes: string | null
   commonMistakes: string | null
   videoUrl: string | null
+  coverImageUrl?: string | null
   steps: ExerciseStep[]
 }
 

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Activity, Edit3, Eye, FileVideo, Film, Sparkles, Star } from '@lucide/vue'
 import { getCategoryLabel } from '../../data/exerciseDemo'
 import { useAuthStore } from '../../store/auth'
+import { resolveMediaUrl } from '../../api/videos'
 import type { Exercise } from '../../types/exercise'
 
 const props = defineProps<{
@@ -22,9 +23,8 @@ const authStore = useAuthStore()
 const isSysAdmin = computed(() => authStore.user?.userRole === 'SysAdmin')
 
 const displayImage = computed(() => {
-  if (props.exercise.coverImageUrl) return props.exercise.coverImageUrl
-  const stepWithImg = props.exercise.steps.find((s) => s.imageUrl)
-  return stepWithImg ? stepWithImg.imageUrl : null
+  const raw = props.exercise.coverImageUrl || props.exercise.steps.find((s) => s.imageUrl)?.imageUrl
+  return resolveMediaUrl(raw)
 })
 
 const isCustomOverride = computed(() => Boolean(props.exercise.baseExerciseId))

@@ -9,7 +9,7 @@ Live providers are wired behind existing interfaces. Switch back to local adapte
 | GCP project | `devson-development` |
 | Bucket | `kpw-movewell` (US multi-region, private) |
 | API region | `us-central1` |
-| Vertex model | `gemini-3.5-flash-lite` |
+| Vertex model | `gemini-2.0-flash` |
 
 ## One-time GCP setup
 
@@ -52,7 +52,7 @@ Live providers are wired behind existing interfaces. Switch back to local adapte
   "Provider": "Vertex",
   "ProjectId": "devson-development",
   "Location": "us-central1",
-  "Model": "gemini-3.5-flash-lite"
+  "Model": "gemini-2.0-flash"
 }
 ```
 

@@ -84,7 +84,8 @@ public class CreateRehabProgramCommandHandler : IRequestHandler<CreateRehabProgr
                         ExerciseId = exercise.ExerciseId,
                         Repetitions = exercise.Repetitions,
                         Sets = exercise.Sets,
-                        FrequencyPerDay = exercise.FrequencyPerDay
+                        FrequencyPerDay = exercise.FrequencyPerDay,
+                        PhaseId = exercise.PhaseId > 0 ? exercise.PhaseId : 1
                     });
                 }
 
@@ -92,10 +93,37 @@ public class CreateRehabProgramCommandHandler : IRequestHandler<CreateRehabProgr
                 await transaction.CommitAsync(cancellationToken);
 
                 var created = await _dbContext.Set<RehabProgram>()
+                    .Include(p => p.Pet)
+                        .ThenInclude(pet => pet.Owner)
                     .Include(p => p.RehabProgramExercises)
                         .ThenInclude(e => e.Exercise)
                             .ThenInclude(ex => ex.Steps)
                     .FirstAsync(p => p.RehabProgramId == rehabProgram.RehabProgramId, cancellationToken);
+
+                var petClinicId = created.Pet?.Owner?.ClinicId;
+                if (petClinicId.HasValue)
+                {
+                    var baseExerciseIds = created.RehabProgramExercises
+                        .Select(re => re.Exercise.ExerciseId)
+                        .Distinct()
+                        .ToList();
+
+                    var activeOverrides = await _dbContext.Set<Exercise>()
+                        .Include(ex => ex.Steps)
+                        .Where(ex => ex.ClinicId == petClinicId.Value &&
+                                     ex.BaseExerciseId.HasValue &&
+                                     baseExerciseIds.Contains(ex.BaseExerciseId.Value) &&
+                                     ex.IsActiveForOwners)
+                        .ToDictionaryAsync(ex => ex.BaseExerciseId!.Value, cancellationToken);
+
+                    foreach (var re in created.RehabProgramExercises)
+                    {
+                        if (activeOverrides.TryGetValue(re.ExerciseId, out var customOverride))
+                        {
+                            re.Exercise = customOverride;
+                        }
+                    }
+                }
 
                 return RehabProgramMapper.ToDto(created);
             }

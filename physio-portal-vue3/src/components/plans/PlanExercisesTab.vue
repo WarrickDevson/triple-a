@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Dumbbell, Plus, Trash2, Edit3, Repeat } from '@lucide/vue'
 import BaseButton from '../BaseButton.vue'
+import { resolveMediaUrl } from '../../api/videos'
 import type { PlanPhase } from '../../data/planDemo'
 import type { RehabProgram, RehabProgramExercise } from '../../types/exercise'
 
-defineProps<{
+const props = defineProps<{
   program: RehabProgram | null
   phases: PlanPhase[]
 }>()
@@ -16,8 +17,15 @@ const emit = defineEmits<{
 }>()
 
 function getPhaseLabel(phaseId?: number) {
-  if (!phaseId) return 'Phase 1'
-  return `Phase ${phaseId}`
+  const pId = phaseId ?? 1
+  const phase = props.phases?.find((p) => p.id === pId)
+  if (phase) return `${phase.label}: ${phase.title}`
+  return `Phase ${pId}`
+}
+
+function getExerciseImage(exercise: RehabProgramExercise) {
+  const raw = exercise.coverImageUrl || exercise.steps?.find((s) => s.imageUrl)?.imageUrl
+  return resolveMediaUrl(raw)
 }
 </script>
 
@@ -54,8 +62,14 @@ function getPhaseLabel(phaseId?: number) {
           <!-- Header info -->
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-3">
-              <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sage/15 text-sage">
-                <Dumbbell class="h-6 w-6" />
+              <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sage/15 text-sage overflow-hidden">
+                <img
+                  v-if="getExerciseImage(exercise)"
+                  :src="getExerciseImage(exercise)!"
+                  :alt="exercise.title"
+                  class="h-full w-full object-cover"
+                />
+                <Dumbbell v-else class="h-6 w-6" />
               </div>
               <div>
                 <h4 class="text-sm font-bold text-navy">{{ exercise.title }}</h4>

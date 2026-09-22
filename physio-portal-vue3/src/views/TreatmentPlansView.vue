@@ -19,7 +19,8 @@ import { useTreatmentPlan } from '../composables/useTreatmentPlan'
 import { DEFAULT_PHASES, type PlanPhase } from '../data/planDemo'
 import { usePatientsStore } from '../store/patients'
 import { useExercisesStore } from '../store/exercises'
-import type { Exercise } from '../types/exercise'
+import { resolveMediaUrl } from '../api/videos'
+import type { Exercise, RehabProgramExercise } from '../types/exercise'
 
 const patientsStore = usePatientsStore()
 const exercisesStore = useExercisesStore()
@@ -47,6 +48,7 @@ const exerciseForm = reactive({
   frequencyPerDay: 1,
 })
 const addingExercise = ref(false)
+const targetPhaseId = ref(1)
 
 const selectedPetId = computed(() => {
   const param = route.params.petId
@@ -71,11 +73,16 @@ const activePhase = computed(
 
 const phaseExercises = computed(() => {
   if (!program.value) return []
-  return program.value.exercises.filter((ex, index) => {
-    const assignedPhase = ex.phaseId ?? ((index % planPhases.value.length) + 1)
+  return program.value.exercises.filter((ex) => {
+    const assignedPhase = ex.phaseId ?? 1
     return assignedPhase === activePhaseId.value
   })
 })
+
+function getExerciseImage(exercise: Exercise) {
+  const raw = exercise.coverImageUrl || exercise.steps?.find((s: any) => s.imageUrl)?.imageUrl
+  return resolveMediaUrl(raw)
+}
 
 const availableExercises = computed(() => {
   const query = exerciseSearchQuery.value.trim().toLowerCase()
@@ -122,7 +129,8 @@ async function createPlan() {
   showCreateModal.value = false
 }
 
-function openAddExerciseModal() {
+function openAddExerciseModal(phaseId?: number) {
+  targetPhaseId.value = phaseId ?? activePhaseId.value ?? 1
   selectedExerciseForPlan.value = null
   exerciseSearchQuery.value = ''
   exerciseForm.sets = 3
@@ -131,16 +139,39 @@ function openAddExerciseModal() {
   showAddExerciseModal.value = true
 }
 
+function openEditPrescriptionModal(exercise: RehabProgramExercise) {
+  targetPhaseId.value = exercise.phaseId ?? 1
+  selectedExerciseForPlan.value = exercisesStore.exercises.find((e) => e.exerciseId === exercise.exerciseId) ?? {
+    exerciseId: exercise.exerciseId,
+    title: exercise.title,
+    shortDescription: exercise.shortDescription,
+    targetedMuscles: null,
+    clinicalPurpose: null,
+    safetyNotes: exercise.safetyNotes,
+    commonMistakes: exercise.commonMistakes,
+    videoUrl: exercise.videoUrl,
+    targetSpecies: null,
+    conditionCategory: null,
+    difficultyLevel: 1,
+    steps: exercise.steps,
+  }
+  exerciseSearchQuery.value = ''
+  exerciseForm.sets = exercise.sets
+  exerciseForm.repetitions = exercise.repetitions
+  exerciseForm.frequencyPerDay = exercise.frequencyPerDay
+  showAddExerciseModal.value = true
+}
+
 async function addExerciseToPlan() {
   if (!selectedPetId.value || !selectedExerciseForPlan.value) return
   addingExercise.value = true
   try {
-    const existing = (program.value?.exercises ?? []).map((e, index) => ({
+    const existing = (program.value?.exercises ?? []).map((e) => ({
       exerciseId: e.exerciseId,
       sets: e.sets,
       repetitions: e.repetitions,
       frequencyPerDay: e.frequencyPerDay,
-      phaseId: e.phaseId ?? ((index % planPhases.value.length) + 1),
+      phaseId: e.phaseId ?? 1,
     }))
 
     const newEx = {
@@ -148,7 +179,7 @@ async function addExerciseToPlan() {
       sets: Number(exerciseForm.sets) || 3,
       repetitions: Number(exerciseForm.repetitions) || 10,
       frequencyPerDay: Number(exerciseForm.frequencyPerDay) || 1,
-      phaseId: activePhaseId.value,
+      phaseId: targetPhaseId.value || activePhaseId.value || 1,
     }
 
     const title = program.value?.programTitle ?? 'Rehabilitation Program'
@@ -168,12 +199,12 @@ async function removeExerciseFromPlan(exerciseId: number) {
   if (!selectedPetId.value || !program.value) return
   const remaining = program.value.exercises
     .filter((e) => e.exerciseId !== exerciseId)
-    .map((e, index) => ({
+    .map((e) => ({
       exerciseId: e.exerciseId,
       sets: e.sets,
       repetitions: e.repetitions,
       frequencyPerDay: e.frequencyPerDay,
-      phaseId: e.phaseId ?? ((index % planPhases.value.length) + 1),
+      phaseId: e.phaseId ?? 1,
     }))
 
   await plan.createProgram(selectedPetId.value, program.value.programTitle, program.value.startDate, remaining)
@@ -205,12 +236,12 @@ function handleSavePhase(phaseId: number, data: { title: string; goals: string[]
 
 async function handleSaveNotes(notesText: string) {
   if (!selectedPetId.value || !program.value) return
-  const currentExercises = program.value.exercises.map((e, index) => ({
+  const currentExercises = program.value.exercises.map((e) => ({
     exerciseId: e.exerciseId,
     sets: e.sets,
     repetitions: e.repetitions,
     frequencyPerDay: e.frequencyPerDay,
-    phaseId: e.phaseId ?? ((index % planPhases.value.length) + 1),
+    phaseId: e.phaseId ?? 1,
   }))
   await plan.createProgram(selectedPetId.value, program.value.programTitle, program.value.startDate, currentExercises)
   if (program.value) {
@@ -264,7 +295,7 @@ async function handleSaveNotes(notesText: string) {
               :phase="activePhase"
               :exercises="phaseExercises"
               @edit-phase="openEditPhaseModal"
-              @add-exercise="openAddExerciseModal"
+              @add-exercise="openAddExerciseModal(activePhase.id)"
             />
             <PlanDetailsSidebar
               :program="program"
@@ -287,7 +318,7 @@ async function handleSaveNotes(notesText: string) {
             :phases="planPhases"
             @add-exercise="openAddExerciseModal"
             @remove-exercise="removeExerciseFromPlan"
-            @edit-prescription="openAddExerciseModal"
+            @edit-prescription="openEditPrescriptionModal"
           />
 
           <!-- Notes Tab -->
@@ -385,6 +416,26 @@ async function handleSaveNotes(notesText: string) {
         </div>
 
         <div class="mt-4 space-y-4 overflow-y-auto flex-1 pr-1">
+          <!-- Phase Selection -->
+          <div class="flex flex-col gap-1.5 rounded-xl border border-sage/30 bg-sage-muted/20 p-3">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-bold uppercase tracking-wider text-navy">
+                Assign to Phase
+              </label>
+              <span class="rounded bg-sage px-2 py-0.5 text-[10px] font-bold text-white">
+                {{ planPhases.find((p: PlanPhase) => p.id === targetPhaseId)?.label ?? ('Phase ' + targetPhaseId) }}
+              </span>
+            </div>
+            <select
+              v-model="targetPhaseId"
+              class="w-full rounded-lg border border-neutral-grey bg-white px-3 py-2 text-sm font-medium text-navy outline-none focus:border-sage focus:ring-2 focus:ring-sage/20"
+            >
+              <option v-for="phase in planPhases" :key="phase.id" :value="phase.id">
+                {{ phase.label }}: {{ phase.title }}
+              </option>
+            </select>
+          </div>
+
           <!-- Search input -->
           <div class="relative">
             <Search class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-muted" />
@@ -414,8 +465,8 @@ async function handleSaveNotes(notesText: string) {
             >
               <div class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sage/15 text-sage">
                 <img
-                  v-if="exercise.steps?.find((s: any) => s.imageUrl)?.imageUrl"
-                  :src="exercise.steps.find((s: any) => s.imageUrl)!.imageUrl!"
+                  v-if="getExerciseImage(exercise)"
+                  :src="getExerciseImage(exercise)!"
                   :alt="exercise.title"
                   class="h-full w-full object-cover"
                 />

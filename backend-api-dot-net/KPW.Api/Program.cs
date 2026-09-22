@@ -230,6 +230,10 @@ using (var scope = app.Services.CreateScope())
             BEGIN
                 ALTER TABLE [Pets] ADD [ProfilePictureUrl] nvarchar(1000) NULL;
             END
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'RehabProgramExercises' AND COLUMN_NAME = 'PhaseId')
+            BEGIN
+                ALTER TABLE [RehabProgramExercises] ADD [PhaseId] int NOT NULL CONSTRAINT [DF_RehabProgramExercises_PhaseId] DEFAULT (1);
+            END
             IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'SoapNotes')
             BEGIN
                 CREATE TABLE [SoapNotes] (
@@ -531,24 +535,40 @@ static void ConfigureGoogleApplicationCredentials(string contentRootPath)
     var envPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
     if (!string.IsNullOrWhiteSpace(envPath))
     {
-        var fullEnvPath = Path.IsPathRooted(envPath) ? envPath : Path.Combine(contentRootPath, envPath);
-        if (File.Exists(fullEnvPath))
+        var candidates = new[]
         {
-            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", Path.GetFullPath(fullEnvPath));
-            return;
-        }
-        else
+            envPath,
+            Path.IsPathRooted(envPath) ? envPath : Path.Combine(contentRootPath, envPath),
+            Path.IsPathRooted(envPath) ? envPath : Path.Combine(contentRootPath, "..", "..", envPath)
+        };
+
+        foreach (var candidate in candidates)
         {
-            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", null);
+            if (File.Exists(candidate))
+            {
+                Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", Path.GetFullPath(candidate));
+                return;
+            }
         }
+
+        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", null);
     }
 
-    var credentialsPath = Path.Combine(contentRootPath, GcpCredentialsFileName);
-    if (File.Exists(credentialsPath))
+    var defaultCandidates = new[]
     {
-        Environment.SetEnvironmentVariable(
-            "GOOGLE_APPLICATION_CREDENTIALS",
-            Path.GetFullPath(credentialsPath));
+        Path.Combine(contentRootPath, GcpCredentialsFileName),
+        Path.Combine(contentRootPath, "..", "..", GcpCredentialsFileName)
+    };
+
+    foreach (var candidate in defaultCandidates)
+    {
+        if (File.Exists(candidate))
+        {
+            Environment.SetEnvironmentVariable(
+                "GOOGLE_APPLICATION_CREDENTIALS",
+                Path.GetFullPath(candidate));
+            return;
+        }
     }
 }
 
@@ -625,6 +645,16 @@ static void LoadDotEnv(string contentRootPath)
                     else if (key.Equals("AI_MODEL", StringComparison.OrdinalIgnoreCase))
                     {
                         Environment.SetEnvironmentVariable("Ai__Model", value);
+                    }
+                    else if (key.Equals("AI_PROJECT_ID", StringComparison.OrdinalIgnoreCase) ||
+                             key.Equals("GCP_PROJECT_ID", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("Ai__ProjectId", value);
+                    }
+                    else if (key.Equals("AI_LOCATION", StringComparison.OrdinalIgnoreCase) ||
+                             key.Equals("GCP_LOCATION", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Environment.SetEnvironmentVariable("Ai__Location", value);
                     }
                 }
             }

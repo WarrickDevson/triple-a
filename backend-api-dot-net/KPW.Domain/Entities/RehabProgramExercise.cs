@@ -10,6 +10,7 @@ public class RehabProgramExercise : AuditableEntity
     public int Repetitions { get; set; } = 10;
     public int Sets { get; set; } = 3;
     public int FrequencyPerDay { get; set; } = 1;
+    public int PhaseId { get; set; } = 1;
 
     public RehabProgram RehabProgram { get; set; } = null!;
     public Exercise Exercise { get; set; } = null!;

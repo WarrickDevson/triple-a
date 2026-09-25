@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/services/app_update_service.dart';
 import '../../core/widgets/app_bottom_nav.dart';
+import '../../core/widgets/app_update_banner.dart';
 import '../../core/widgets/unverified_account_banner.dart';
 import '../dashboard/screens/home_screen.dart';
 import '../messages/screens/messages_screen.dart';
@@ -32,6 +34,11 @@ class _MainShellState extends ConsumerState<MainShell> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialTab;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        AppUpdateService.silentCheck(ref);
+      }
+    });
   }
 
   @override
@@ -54,6 +61,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       body: Column(
         children: [
           const UnverifiedAccountBanner(),
+          const AppUpdateBanner(),
           Expanded(
             child: IndexedStack(
               index: _currentIndex,

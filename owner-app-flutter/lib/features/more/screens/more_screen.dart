@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/services/app_update_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_chrome.dart';
 import '../../../core/widgets/section_card.dart';
@@ -220,6 +221,15 @@ class MoreScreen extends ConsumerWidget {
               subtitle: 'Request deletion of your account and personal records',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const DataDeletionScreen()),
+              ),
+            ),
+            _MoreTile(
+              icon: Icons.system_update_alt_rounded,
+              title: 'Check for updates',
+              subtitle: 'Check if a newer version is available on Google Play',
+              onTap: () => AppUpdateService.manualCheck(
+                context: context,
+                ref: ref,
               ),
             ),
             const SizedBox(height: 8),
